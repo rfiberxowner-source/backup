@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "159583415029",
+    "project_id": "portal-c293a",
+    "storage_bucket": "portal-c293a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:159583415029:android:bb5221ff531fa1005a33bc",
+        "android_client_info": {
+          "package_name": "com.rfiberx.technician"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
