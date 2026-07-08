@@ -194,46 +194,45 @@ export const clientViews = {
       
       if (reports.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem 0; color: #94a3b8; font-size: 0.85rem;">You have not created any service requests.</td></tr>';
-        return;
+      } else {
+        // Sort logic: Pending/Read first by date, then Fixed by processedDate
+        reports.sort((a, b) => {
+          if (a.status !== 'Fixed' && b.status === 'Fixed') return -1;
+          if (a.status === 'Fixed' && b.status !== 'Fixed') return 1;
+          
+          if (a.status === 'Fixed' && b.status === 'Fixed') {
+            return new Date(b.processedDate || b.date) - new Date(a.processedDate || a.date);
+          }
+          return new Date(b.date) - new Date(a.date);
+        });
+        
+        let html = '';
+        reports.forEach(r => {
+          let badge = '';
+          if (r.status === 'Read') {
+            badge = '<span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Read</span>';
+          } else if (r.status === 'Fixed') {
+            badge = '<span style="background: rgba(99,102,241,0.1); color: #6366f1; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Fixed</span>';
+          } else {
+            badge = '<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Pending</span>';
+          }
+          
+          let doneBtn = '';
+          if (r.status === 'Read') {
+            doneBtn = '<button onclick="window.markReportFixed(event, \'' + r.id + '\')" style="background: #3b82f6; color: #fff; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">Done</button>';
+          }
+          
+          html += '<tr onclick="window.viewClientReport(\'' + r.id + '\')" style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseout="this.style.background=\'transparent\'">';
+          html += '<td style="padding: 1rem 0; color: #fff; font-size: 0.8rem; font-weight: 500;">' + (r.reportId || '-') + '</td>';
+          html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.subject || '-') + '</td>';
+          html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.category || '-') + '</td>';
+          html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.address || 'None') + '</td>';
+          html += '<td style="padding: 1rem 0;">' + badge + '</td>';
+          html += '<td style="padding: 1rem 0;">' + doneBtn + '</td>';
+          html += '</tr>';
+        });
+        tbody.innerHTML = html;
       }
-      
-      // Sort logic: Pending/Read first by date, then Fixed by processedDate
-      reports.sort((a, b) => {
-        if (a.status !== 'Fixed' && b.status === 'Fixed') return -1;
-        if (a.status === 'Fixed' && b.status !== 'Fixed') return 1;
-        
-        if (a.status === 'Fixed' && b.status === 'Fixed') {
-          return new Date(b.processedDate || b.date) - new Date(a.processedDate || a.date);
-        }
-        return new Date(b.date) - new Date(a.date);
-      });
-      
-      let html = '';
-      reports.forEach(r => {
-        let badge = '';
-        if (r.status === 'Read') {
-          badge = '<span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Read</span>';
-        } else if (r.status === 'Fixed') {
-          badge = '<span style="background: rgba(99,102,241,0.1); color: #6366f1; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Fixed</span>';
-        } else {
-          badge = '<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Pending</span>';
-        }
-        
-        let doneBtn = '';
-        if (r.status === 'Read') {
-          doneBtn = '<button onclick="window.markReportFixed(event, \'' + r.id + '\')" style="background: #3b82f6; color: #fff; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">Done</button>';
-        }
-        
-        html += '<tr onclick="window.viewClientReport(\'' + r.id + '\')" style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseout="this.style.background=\'transparent\'">';
-        html += '<td style="padding: 1rem 0; color: #fff; font-size: 0.8rem; font-weight: 500;">' + (r.reportId || '-') + '</td>';
-        html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.subject || '-') + '</td>';
-        html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.category || '-') + '</td>';
-        html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.address || 'None') + '</td>';
-        html += '<td style="padding: 1rem 0;">' + badge + '</td>';
-        html += '<td style="padding: 1rem 0;">' + doneBtn + '</td>';
-        html += '</tr>';
-      });
-      tbody.innerHTML = html;
       
       // Update Dashboard Overview dynamically
       const recBox = document.getElementById('recent-updates-box');
@@ -1159,23 +1158,7 @@ export const clientViews = {
             </div>
           </div>
         `;
-      } else if (method === 'maya') {
-        html = `
-          <div style="display: flex; gap: 2rem; align-items: center;">
-            <div style="width: 80px; height: 80px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 2.5rem; color: #000; font-family: sans-serif;">
-               M
-            </div>
-            <div>
-              <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Maya Business</div>
-              <div style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 0.5rem;">Send your payment to our official Maya business number.</div>
-              <div style="color: #cbd5e1; font-size: 0.9rem;">Maya Number: <strong style="color: #fff; letter-spacing: 1px; font-size: 1.1rem; margin-left: 0.25rem;">0928-987-6543</strong></div>
-              <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #10b981; display: flex; align-items: center; gap: 0.5rem;">
-                <div style="width:16px; height:16px; background:#10b981; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.6rem;">✓</div>
-                Verified Business Account
-              </div>
-            </div>
-          </div>
-        `;
+
       } else if (method === 'cc') {
         html = `
           <div style="display: flex; gap: 2rem; align-items: center;">
@@ -1791,7 +1774,7 @@ export const clientViews = {
                   <h3 style="color: #fff; font-size: 1rem; font-weight: 600; margin: 0 0 0.25rem 0;">Preferred payment method</h3>
                   <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">Choose how you would like to pay your monthly bill.</p>
                   
-                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
                     <div id="payment-btn-gcash" class="payment-btn" onclick="window.togglePaymentMethod('gcash')" style="border: 1px solid rgba(255,255,255,0.05); background: transparent; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s;">
                       <div style="width: 24px; height: 24px; background: #007DFE; color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700;">G</div>
                       <div>
@@ -1799,13 +1782,7 @@ export const clientViews = {
                         <div style="color: #64748b; font-size: 0.7rem;">Pay using mobile wallet</div>
                       </div>
                     </div>
-                    <div id="payment-btn-maya" class="payment-btn" onclick="window.togglePaymentMethod('maya')" style="border: 1px solid rgba(255,255,255,0.05); background: transparent; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s;">
-                      <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700;">M</div>
-                      <div>
-                        <div style="color: #fff; font-size: 0.85rem; font-weight: 600;">Maya</div>
-                        <div style="color: #64748b; font-size: 0.7rem;">Pay using Maya wallet</div>
-                      </div>
-                    </div>
+
                     <div id="payment-btn-cc" class="payment-btn" onclick="window.togglePaymentMethod('cc')" style="border: 1px solid rgba(255,255,255,0.05); background: transparent; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s;">
                       <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700;">CC</div>
                       <div>

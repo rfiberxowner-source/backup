@@ -28,6 +28,11 @@ export class Router {
       this.appContent.style.marginTop = isIsolatedRoute ? '0' : '70px';
     }
 
+    if (!isIsolatedRoute) {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+
     this.appContent.innerHTML = window.views[path]();
     this.setupScrollAnimations();
     this.updateNavLinks(path);
