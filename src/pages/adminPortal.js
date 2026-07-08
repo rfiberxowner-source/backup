@@ -104,11 +104,14 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       </div>
 
       <!-- Main Content Area -->
-      <div style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto;">
+      <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto;">
         
         <!-- Header -->
-        <header style="height: 80px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 5;">
+        <header class="dashboard-topbar" style="height: 80px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 5;">
           <div style="display: flex; align-items: center; gap: 1rem;">
+            <button class="portal-mobile-toggle" onclick="document.getElementById('admin-sidebar').classList.toggle('open')" aria-label="Toggle Sidebar">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
             <h1 style="font-size: 1.25rem; font-weight: 600; color: #fff; margin: 0; font-family: 'Outfit', sans-serif;">${pageTitle}</h1>
           </div>
           <div style="display: flex; align-items: center; gap: 1.5rem;">
@@ -322,37 +325,15 @@ export const adminViews = {
         </div>
         </div>
 
-        <!-- Payment Methods Donut (Dummy) -->
+        <!-- Payment Methods Donut (Dynamic) -->
         <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; display: flex; flex-direction: column;">
-          <h2 style="font-size: 1.1rem; color: #fff; margin: 0 0 0.25rem 0;">Payment Methods</h2>
-          <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1.5rem;">Online vs Cash Transactions</div>
+          <h2 style="font-size: 1.1rem; color: #fff; margin: 0 0 1.5rem 0;">Payment Methods</h2>
           
-          <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
-            <!-- CSS-based Donut chart with conic-gradient -->
-            <div style="width: 160px; height: 160px; border-radius: 50%; background: conic-gradient(#3b82f6 0% 75%, #10b981 75% 100%); display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-              <!-- Inner circle to make it a donut -->
-              <div style="width: 110px; height: 110px; border-radius: 50%; background: #0b0f19; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                <div style="font-size: 1.25rem; font-weight: 700; color: #fff;">100%</div>
-                <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total</div>
-              </div>
-            </div>
+          <div id="metric-payment-donut-container" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="font-size: 0.75rem; color: #64748b;">Loading...</div>
           </div>
           
-          <div style="display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05);">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 12px; height: 12px; border-radius: 4px; background: #3b82f6;"></div>
-              <div>
-                <div style="font-size: 0.85rem; color: #fff; font-weight: 500;">Online</div>
-                <div style="font-size: 0.7rem; color: #94a3b8;">75%</div>
-              </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 12px; height: 12px; border-radius: 4px; background: #10b981;"></div>
-              <div>
-                <div style="font-size: 0.85rem; color: #fff; font-weight: 500;">Cash</div>
-                <div style="font-size: 0.7rem; color: #94a3b8;">25%</div>
-              </div>
-            </div>
+          <div id="metric-payment-legend" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05);">
           </div>
         </div>
       </div>
@@ -532,10 +513,11 @@ export const adminViews = {
               <th style="padding: 1rem;">AMOUNT</th>
               <th style="padding: 1rem;">DUE DATE</th>
               <th style="padding: 1rem;">STATUS</th>
+              <th style="padding: 1rem;">ACTION</th>
             </tr>
           </thead>
           <tbody id="bm-tbody">
-            <tr><td colspan="8" style="padding: 1rem; color: #fff; text-transform: none; text-align: center;">Loading bills...</td></tr>
+            <tr><td colspan="9" style="padding: 1rem; color: #fff; text-transform: none; text-align: center;">Loading bills...</td></tr>
           </tbody>
           </table>
         </div>
@@ -578,7 +560,7 @@ export const adminViews = {
               <th style="padding: 1rem;">MONTH</th>
               <th style="padding: 1rem;">PLAN</th>
               <th style="padding: 1rem;">AMOUNT</th>
-              <th style="padding: 1rem;">PAYMENT METHOD</th>
+              <th style="padding: 1rem;">PAYMENT CHANNEL</th>
               <th style="padding: 1rem;">DATE PAID</th>
               <th style="padding: 1rem;">STATUS</th>
             </tr>
@@ -1641,6 +1623,79 @@ window.initDashboard = async function () {
 
     if (dashRevenue) dashRevenue.innerText = '₱' + thisMonthRev.toLocaleString();
 
+    // Payment Methods Donut Logic
+    const payColors = ['#3b82f6', '#10b981', '#f59e0b']; // Online, Cash, Pending
+    let payLegendHtml = '';
+    let payDonutHtml = `
+      <div style="position:relative; width:160px; height:160px;">
+        <div id="pay-donut-tooltip" style="display:none; position:absolute; top:-40px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:0.4rem 0.6rem; border-radius:6px; font-size:0.65rem; font-weight:600; white-space:nowrap; z-index:20; pointer-events:none; flex-direction:column; align-items:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
+          <span id="pay-donut-tooltip-title" style="color:#94a3b8; font-size:0.55rem; text-transform:uppercase; margin-bottom:2px;"></span>
+          <span id="pay-donut-tooltip-val"></span>
+        </div>
+        <svg width="160" height="160" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
+    `;
+    
+    let pendingCount = 0;
+    billsSnap.docs.forEach(d => {
+      const b = d.data();
+      let status = (b.status || 'Pending').toLowerCase();
+      if (status !== 'paid' && status !== 'completed') {
+        pendingCount++;
+      }
+    });
+    
+    let onlineCount = 0;
+    let cashCount = 0;
+    paymentsSnap.docs.forEach(d => {
+      const p = d.data();
+      let method = (p.method || p.paymentMethod || 'Online payment').toLowerCase();
+      if (method.includes('cash')) {
+        cashCount++;
+      } else {
+        onlineCount++;
+      }
+    });
+
+    const payStats = [
+      { name: 'Online', count: onlineCount },
+      { name: 'Cash', count: cashCount },
+      { name: 'Pending', count: pendingCount }
+    ].filter(s => s.count > 0);
+
+    const payTotal = onlineCount + cashCount + pendingCount;
+    let payCumPct = 0;
+
+    payStats.forEach((stat, i) => {
+      const c = payColors[i % payColors.length];
+      const pct = payTotal > 0 ? (stat.count / payTotal) * 100 : 0;
+      const offset = 25 - payCumPct;
+
+      const hoverIn = `document.getElementById('pay-donut-tooltip').style.display='flex'; document.getElementById('pay-donut-tooltip-title').innerText='${stat.name}'; document.getElementById('pay-donut-tooltip-val').innerText='${stat.count} (${pct.toFixed(1)}%)'; this.style.strokeWidth='10';`;
+      const hoverOut = `document.getElementById('pay-donut-tooltip').style.display='none'; this.style.strokeWidth='8';`;
+
+      payDonutHtml += `<circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="${c}" stroke-width="8" stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${offset}" style="transition: stroke-width 0.2s; cursor: pointer;" onmouseover="${hoverIn}" onmouseout="${hoverOut}"></circle>`;
+
+      payLegendHtml += `<div style="display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:0.75rem;"><div style="width:12px; height:12px; border-radius:4px; background:${c}; box-shadow: 0 0 4px ${c};"></div><div><div style="font-size:0.85rem; color:#fff; font-weight:500;">${stat.name}</div><div style="font-size:0.7rem; color:#94a3b8;">${pct.toFixed(1)}%</div></div></div><div style="font-size:0.85rem; color:#fff; font-weight:600;">${stat.count}</div></div>`;
+
+      payCumPct += pct;
+    });
+
+    payDonutHtml += `
+          <!-- Inner text -->
+          <div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
+            <div style="font-size:1.5rem; font-weight:700; color:#fff;">${payTotal}</div>
+            <div style="font-size:0.7rem; color:#64748b; text-transform:uppercase;">Total</div>
+          </div>
+        </svg>
+      </div>
+    `;
+
+    const payContainer = document.getElementById('metric-payment-donut-container');
+    if (payContainer) payContainer.innerHTML = payTotal > 0 ? payDonutHtml : '<div style="font-size:0.75rem; color:#64748b;">No data</div>';
+    
+    const payLegend = document.getElementById('metric-payment-legend');
+    if (payLegend) payLegend.innerHTML = payLegendHtml;
+
     // Chart processing
     let maxRev = 1; // Prevent division by zero
     for (const mk of monthKeys) {
@@ -1823,9 +1878,6 @@ window.renderBills = async function () {
       const badgeColor = displayStatus === 'Overdue' ? '#E53935' : '#f59e0b';
       const realBillId = b.billId || d.id;
 
-      const receiptAction = `window.openReceiptPage('${realBillId}', true)`;
-      const receiptBtn = `<button onclick="${receiptAction}" style="background: rgba(59,130,246,0.1); color:#3b82f6; border: 1px solid rgba(59,130,246,0.2); padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; font-family: inherit; font-size: 0.75rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> View</button>`;
-
       html += `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer;"
             onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'"
@@ -1839,6 +1891,9 @@ window.renderBills = async function () {
           <td style="padding: 1rem; color: #fff;">₱${parseFloat(b.amount || 0).toLocaleString()}</td>
           <td style="padding: 1rem;">${b.dueDate || '-'}</td>
           <td style="padding: 1rem;"><span style="color: ${badgeColor}; background: ${badgeColor}22; padding: 0.2rem 0.5rem; border-radius: 4px;">${displayStatus}</span></td>
+          <td style="padding: 1rem;">
+            <button onclick="window.markAdminBillPaid(this, '${realBillId}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}')" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>
+          </td>
         </tr>
       `;
     });
@@ -1910,7 +1965,7 @@ window.renderPayments = async function () {
           <td style="padding: 1rem;">${pm.month || pm.billingMonth || pm.period || '-'}</td>
           <td style="padding: 1rem;">${pm.plan || '-'}</td>
           <td style="padding: 1rem; color: #fff;">₱${parseFloat(pm.amount || 0).toLocaleString()}</td>
-          <td style="padding: 1rem;">${pm.method || 'Online'}</td>
+          <td style="padding: 1rem;">${(() => { let m = pm.method || 'Online payment'; return (m === 'Instant Payment' || m === 'Digital Payment' || m === 'Online') ? 'Online payment' : m; })()}</td>
           <td style="padding: 1rem;">${dateStr}</td>
           <td style="padding: 1rem;"><span style="color: #10b981; background: rgba(16,185,129,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${displayStatus}</span></td>
         </tr>
@@ -2829,7 +2884,8 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     const customerName = pm.customerName || pm.name || 'Unknown';
     const acct = pm.accountNumber || 'N/A';
     const plan = pm.plan || 'N/A';
-    const payMethod = pm.paymentMethod || 'Instant Payment';
+    let payMethod = pm.paymentMethod || 'Online payment';
+    if (payMethod === 'Instant Payment' || payMethod === 'Digital Payment') payMethod = 'Online payment';
 
     // Format currency
     const fmt = (val) => '₱' + parseFloat(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -3154,4 +3210,42 @@ window.renderDashActivity = async function () {
     console.error(e);
     tb.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align:center; color: #e53935;">Error loading activity</td></tr>';
   }
+};
+
+window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, billMonth, billPlan, cName, acct, ev) {
+    if (ev) ev.stopPropagation();
+    if (btn.disabled) return;
+    
+    btn.innerHTML = 'Processing...';
+    btn.disabled = true;
+
+    try {
+        const { db, firestore } = await window._getAdminDb();
+        const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
+        
+        await firestore.updateDoc(billDocRef, { status: 'paid' });
+        
+        const now = new Date();
+        const payData = {
+            userId: customerId,
+            billId: billId,
+            amount: parseFloat(amountStr) || 0,
+            billingMonth: billMonth || '-',
+            plan: billPlan || '-',
+            method: 'Online payment',
+            datePaid: now.toISOString(),
+            status: 'completed',
+            timestamp: now,
+            customerName: cName,
+            accountNumber: acct
+        };
+        
+        await firestore.addDoc(firestore.collection(db, "payments"), payData);
+        
+        if (window.renderBills) await window.renderBills();
+        if (window.renderPayments) await window.renderPayments();
+    } catch(e) {
+        console.error("Error marking bill paid:", e);
+        btn.innerHTML = 'Failed';
+    }
 };

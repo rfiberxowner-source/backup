@@ -84,9 +84,9 @@ export const clientViews = {
     };
 
     return `
-      <div style="height: 100vh; background: #0b0f19; display: flex; font-family: 'Inter', sans-serif;">
+      <div class="split-layout" style="height: 100vh; background: #0b0f19; display: flex; font-family: 'Inter', sans-serif;">
         <!-- Left Side -->
-        <div style="flex: 1; position: relative; background: #1a202c; display: flex; flex-direction: column; justify-content: space-between; padding: 4rem;">
+        <div class="split-layout-hide-mobile" style="flex: 1; position: relative; background: #1a202c; display: flex; flex-direction: column; justify-content: space-between; padding: 4rem;">
           
           <div style="position: absolute; top: 0; left: 0; bottom: 0; right: 0; overflow: hidden; pointer-events: none;">
             <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: 80%; height: 80%; background: radial-gradient(circle, rgba(229,57,53,0.15) 0%, rgba(26,32,44,0) 70%); filter: blur(60px);"></div>
@@ -731,12 +731,12 @@ export const clientViews = {
           userId: userId,
           accountNumber: userObj.accountNumber || userObj.account || '',
           name: userObj.name || '',
-          amount: amountStr,
+          amount: Number(balanceAmt),
           plan: billPlan || '',
           billingMonth: billMonth || '',
           dueDate: billDueDate || '',
           period: billMonth,
-          method: 'Instant Payment',
+          method: 'Online payment',
           datePaid: now.toISOString(),
           status: 'Completed'
         });
@@ -877,7 +877,8 @@ export const clientViews = {
         const plan = pay.plan || '-';
         const amount = parseFloat(String(pay.amount).replace(/,/g, '')) || 0;
         const billingPeriod = pay.period || pay.billingMonth || '-';
-        const paymentMethod = pay.method || (isPaid ? 'Instant Payment' : 'N/A');
+        let paymentMethod = pay.method || (isPaid ? 'Online payment' : 'N/A');
+        if (paymentMethod === 'Instant Payment' || paymentMethod === 'Digital Payment') paymentMethod = 'Online payment';
 
         // Fetch previous month's payment for same account
         let prevCharges = 0;
@@ -1482,7 +1483,6 @@ export const clientViews = {
                     var statusText = isOverdue ? 'Overdue' : 'Pending';
 
                     tHtml += '<td style="padding: 1rem 0;"><span style="background: ' + badgeBg + '; color: ' + badgeColor + '; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + statusText + '</span></td>';
-                    tHtml += '<td style="padding: 1rem 0;"><button data-billid="' + be.id + '" data-amount="' + (be.amount || '0') + '" data-month="' + (be.billingMonth || '-') + '" data-plan="' + (be.plan || '') + '" data-due="' + (be.dueDate || '') + '" onclick="window.payBillInstantly(this, this.dataset.billid, this.dataset.amount, this.dataset.month, this.dataset.plan, this.dataset.due)" style="background: #E53935; color: #fff; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background=\'#d32f2f\'" onmouseout="this.style.background=\'#E53935\'">Pay Instantly</button></td>';
                     tHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + be.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
 
                     tHtml += '</tr>';
@@ -1528,7 +1528,9 @@ export const clientViews = {
                       pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.period || '-') + '</td>';
                       pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.plan || '-') + '</td>';
                       pHtml += '<td style="padding: 1rem 0; color: #10b981; font-size: 0.85rem; font-weight: 600;">+₱' + (p.amount || '0') + '</td>';
-                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.method || 'Instant Payment') + '</td>';
+                      let displayMethod = p.method || 'Online payment';
+                      if (displayMethod === 'Instant Payment' || displayMethod === 'Digital Payment') displayMethod = 'Online payment';
+                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + displayMethod + '</td>';
                       pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + pDate + '</td>';
                       pHtml += '<td style="padding: 1rem 0;"><span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + (p.status || 'Paid') + '</span></td>';
                       pHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + p.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
@@ -1622,7 +1624,7 @@ export const clientViews = {
       <div style="height: 100vh; background: #0b0f19; font-family: 'Inter', sans-serif; display: flex; overflow: hidden; margin: 0; padding: 0;">
         
         <!-- Sidebar -->
-        <div style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
+        <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
           <div style="margin-bottom: 3rem;">
             <span style="font-family: 'Saira Condensed', sans-serif; font-size: 24px; font-weight: 800; font-style: italic; letter-spacing: -1px;">
               <span style="color: #E53935;">R</span><span style="color: #fff;">FIBER</span><span style="color: #E53935;">X</span>
@@ -1649,10 +1651,13 @@ export const clientViews = {
         </div>
 
         <!-- Main Content Area -->
-        <div style="flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; background: #0b0f19;">
+        <div id="client-main-content" style="flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; background: #0b0f19;">
           
           <!-- Topbar (Sticky) -->
-          <div style="height: 70px; min-height: 70px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: flex-end; padding: 0 2rem; background: rgba(11,15,25,0.8); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 10;">
+          <div class="dashboard-topbar" style="height: 70px; min-height: 70px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: flex-end; padding: 0 2rem; background: rgba(11,15,25,0.8); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 10;">
+            <button class="portal-mobile-toggle" onclick="document.getElementById('client-sidebar').classList.toggle('open')" aria-label="Toggle Sidebar" style="margin-right: auto;">
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
             <div style="display: flex; align-items: center; gap: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <div id="ui-topbar-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #E53935; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">
@@ -1816,7 +1821,6 @@ export const clientViews = {
                           <th style="text-align: left; padding: 1rem 0; color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Amount</th>
                           <th style="text-align: left; padding: 1rem 0; color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Due Date</th>
                           <th style="text-align: left; padding: 1rem 0; color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Status</th>
-                          <th style="text-align: left; padding: 1rem 0; color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Action</th>
                           <th style="text-align: left; padding: 1rem 0; color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Receipt</th>
                         </tr>
                       </thead>
