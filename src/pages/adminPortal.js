@@ -27,8 +27,8 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
     return '<div style="min-height: 100vh; background: #0b0f19;"></div>';
   }
 
-  const navItem = (title, route, iconSvg, isActive) => `
-    <a href="#" onclick="event.preventDefault(); window.router.navigate('${route}')" style="display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; border-radius: 8px; color: ${isActive ? '#fff' : '#94a3b8'}; text-decoration: none; font-size: 0.95rem; font-weight: 500; ${isActive ? 'background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2);' : 'background: transparent; border: 1px solid transparent; transition: all 0.2s;'}" onmouseover="${!isActive ? 'this.style.background=\'rgba(255,255,255,0.05)\'; this.style.color=\'#fff\'' : ''}" onmouseout="${!isActive ? 'this.style.background=\'transparent\'; this.style.color=\'#94a3b8\'' : ''}">
+  const navItem = (title, route, iconSvg, isActive, customClick) => `
+    <a href="#" onclick="${customClick ? customClick : `event.preventDefault(); window.router.navigate('${route}')`}" style="display: flex; align-items: center; gap: 1rem; padding: 0.65rem 1rem; border-radius: 8px; color: ${isActive ? '#fff' : '#94a3b8'}; text-decoration: none; font-size: 0.9rem; font-weight: 500; ${isActive ? 'background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2);' : 'background: transparent; border: 1px solid transparent; transition: all 0.2s;'}" onmouseover="${!isActive ? 'this.style.background=\'rgba(255,255,255,0.05)\'; this.style.color=\'#fff\'' : ''}" onmouseout="${!isActive ? 'this.style.background=\'transparent\'; this.style.color=\'#94a3b8\'' : ''}">
       <div style="width: 24px; display: flex; justify-content: center; color: ${isActive ? '#E53935' : '#64748b'};">
         ${iconSvg}
       </div>
@@ -42,6 +42,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
   const iconReports = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`;
   const iconTeam = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
   const iconComms = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+  const iconMap = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>`;
 
   const currDate = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
@@ -53,18 +54,18 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <div style="position: absolute; bottom: -150px; left: 20%; width: 700px; height: 700px; background: rgba(139, 92, 246, 0.05); filter: blur(150px); border-radius: 50%; pointer-events: none; z-index: 0;"></div>
       <!-- Admin Sidebar -->
       <style>#admin-sidebar::-webkit-scrollbar { display: none; } #admin-sidebar { -ms-overflow-style: none; scrollbar-width: none; }</style>
-      <div id="admin-sidebar" style="width: 260px; background: #0f131f; border-right: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; bottom: 0; left: 0; display: flex; flex-direction: column; z-index: 10; overflow-y: auto;">
+      <div id="admin-sidebar" style="width: 260px; background: #0f131f; border-right: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; bottom: 0; left: 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(0);">
         
-        <div style="height: 80px; padding: 0 2rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1.5rem;">
+        <div style="height: 70px; padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #E53935 0%, #ff5252 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(229,57,53,0.3);">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #E53935, #B71C1C); display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(229,57,53,0.3);">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
             </div>
-            <span style="font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.5px;">RFiber<span style="color: #E53935;">X</span><span style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-left: 0.25rem; letter-spacing: 0;">ADMIN</span></span>
+            <span style="font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.5px;">RFiber<span style="color: #E53935;">X</span></span>
           </div>
         </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 2rem;">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
           <div>
             <div style="padding: 0 2rem; font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.75rem; text-transform: uppercase;">Core</div>
             <nav style="display: flex; flex-direction: column; gap: 0.25rem; padding: 0 1rem;">
@@ -83,6 +84,12 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
             <div style="padding: 0 2rem; font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.75rem; text-transform: uppercase;">Communications</div>
             <nav style="display: flex; flex-direction: column; gap: 0.25rem; padding: 0 1rem;">
               ${['Admin', 'Technician'].includes(adminRole) ? navItem('Communications', '/RFiberXAdminportal-communications', iconComms, activeRoute === 'communications') : ''}
+            </nav>
+          </div>
+          <div>
+            <div style="padding: 0 1.5rem; font-size: 0.65rem; color: #64748b; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.5rem; text-transform: uppercase;">Mapping</div>
+            <nav style="display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.75rem;">
+              ${['Admin', 'Technician'].includes(adminRole) ? navItem('Network Mapping', '/RFiberXAdminportal-mapping', iconMap, activeRoute === 'mapping') : ''}
             </nav>
           </div>
         </div>
@@ -104,16 +111,19 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       </div>
 
       <!-- Main Content Area -->
-      <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto;">
+      <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto; transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
         
         <!-- Header -->
-        <header class="dashboard-topbar" style="height: 80px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 5;">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <button class="portal-mobile-toggle" onclick="document.getElementById('admin-sidebar').classList.toggle('open')" aria-label="Toggle Sidebar">
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        <header class="dashboard-topbar" style="height: 70px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 5;">
+          <h2 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+            ${activeRoute === 'mapping' ? `
+            <button onclick="window.history.back()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; padding: 0.5rem 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; transition: all 0.2s; font-size: 0.85rem; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#94a3b8'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Back
             </button>
-            <h1 style="font-size: 1.25rem; font-weight: 600; color: #fff; margin: 0; font-family: 'Outfit', sans-serif;">${pageTitle}</h1>
-          </div>
+            ` : ''}
+            ${pageTitle}
+          </h2>
           <div style="display: flex; align-items: center; gap: 1.5rem;">
             <div style="color: #64748b; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.02); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -792,11 +802,17 @@ export const adminViews = {
               <table style="width: 100%; border-collapse: collapse; font-size: 0.6rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; text-align: left;">
                 <thead style="position: sticky; top: 0; background: #0f131f; z-index: 10;">
                   <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <th style="padding: 1rem;">ACCOUNT #</th><th style="padding: 1rem;">NAME</th><th style="padding: 1rem;">EMAIL</th><th style="padding: 1rem;">PHONE</th><th style="padding: 1rem;">PLAN</th><th style="padding: 1rem;">AMOUNT</th>
+                    <th style="padding: 1rem; vertical-align: middle;">ACCOUNT #</th>
+                    <th style="padding: 1rem; vertical-align: middle;">NAME</th>
+                    <th style="padding: 1rem; vertical-align: middle;">EMAIL</th>
+                    <th style="padding: 1rem; vertical-align: middle;">PHONE</th>
+                    <th style="padding: 1rem; vertical-align: middle;">PLAN</th>
+                    <th style="padding: 1rem; vertical-align: middle;">AMOUNT</th>
+                    <th style="padding: 1rem; vertical-align: middle;">STATUS</th>
                   </tr>
                 </thead>
                 <tbody id="admin-clients-tbody">
-                  <tr><td colspan="5" style="padding: 1rem; color: #fff; text-transform: none;">Loading clients...</td></tr>
+                  <tr><td colspan="7" style="padding: 1rem; color: #fff; text-transform: none; text-align: center;">Loading clients...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1110,7 +1126,7 @@ export const adminViews = {
     window.sendBillingEmailToAll = async function () {
       const statusEl = document.getElementById('comm-all-status');
       const sendBtn = document.getElementById('comm-send-all-btn');
-      
+
       if (!confirm("Are you sure you want to send a billing statement to ALL active users?")) return;
 
       sendBtn.disabled = true;
@@ -1120,10 +1136,10 @@ export const adminViews = {
       try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
         const { getFirestore, collection, getDocs, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
+
         const db = getFirestore();
         const usersSnapshot = await getDocs(collection(db, "users"));
-        
+
         if (usersSnapshot.empty) {
           statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">No users found in database.</div>';
           sendBtn.disabled = false;
@@ -1132,10 +1148,10 @@ export const adminViews = {
         }
 
         let sentCount = 0;
-        
+
         const now = new Date();
         const billingMonth = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7); 
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7);
         const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         const logBody = document.getElementById('comm-log-body');
@@ -1147,7 +1163,7 @@ export const adminViews = {
         for (const docSnap of usersSnapshot.docs) {
           const userId = docSnap.id;
           const userData = docSnap.data();
-          
+
           const userAcct = userData.accountNumber || userData.account || 'TBD';
 
           let newBillId = '';
@@ -1200,32 +1216,38 @@ export const adminViews = {
 
     window.deletePendingBillsAll = async function () {
       const statusEl = document.getElementById('comm-all-status');
-      
+
       if (!confirm("Are you sure you want to delete ALL billing statements for all users, including paid ones?")) return;
 
       statusEl.innerHTML = '<div style="color: #64748b; font-size: 0.9rem;">Deleting all bills...</div>';
 
       try {
-        const { getFirestore, collection, getDocs, deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const db = getFirestore();
-        
-        const usersSnapshot = await getDocs(collection(db, "users"));
+        const { db, firestore } = await window._getAdminDb();
         let deletedCount = 0;
 
+        // Delete all billing_emails for all users
+        const usersSnapshot = await firestore.getDocs(firestore.collection(db, "users"));
         for (const userDoc of usersSnapshot.docs) {
-          const billingRef = collection(db, "users", userDoc.id, "billing_emails");
-          const billingSnap = await getDocs(billingRef);
-          
+          const billingRef = firestore.collection(db, "users", userDoc.id, "billing_emails");
+          const billingSnap = await firestore.getDocs(billingRef);
+
           for (const billDoc of billingSnap.docs) {
-            await deleteDoc(doc(db, "users", userDoc.id, "billing_emails", billDoc.id));
+            await firestore.deleteDoc(firestore.doc(db, "users", userDoc.id, "billing_emails", billDoc.id));
             deletedCount++;
           }
         }
 
-        statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Successfully deleted <strong>' + deletedCount + '</strong> statements.</div>';
-        
+        // Delete all paid bills from the payments collection
+        const paymentsSnap = await firestore.getDocs(firestore.collection(db, "payments"));
+        for (const paymentDoc of paymentsSnap.docs) {
+          await firestore.deleteDoc(firestore.doc(db, "payments", paymentDoc.id));
+          deletedCount++;
+        }
+
+        statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Successfully deleted <strong>' + deletedCount + '</strong> bills (including paid ones).</div>';
+
       } catch (err) {
-        console.error('Error deleting pending bills:', err);
+        console.error('Error deleting bills:', err);
         statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">Error: ' + err.message + '</div>';
       }
     };
@@ -1333,6 +1355,36 @@ export const adminViews = {
       </div>
     `;
     return window.renderAdminLayout('communications', 'Communications', content);
+  },
+
+  '/RFiberXAdminportal-mapping': () => {
+    setTimeout(() => {
+      const sidebar = document.getElementById('admin-sidebar');
+      const main = document.getElementById('admin-main-content');
+      if (sidebar && main) {
+        sidebar.style.transform = 'translateX(-260px)';
+        main.style.marginLeft = '0px';
+      }
+    }, 10);
+
+    const content = `
+      <div style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
+          <div>
+            <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase;">NETWORK INFRASTRUCTURE</div>
+            <h1 style="color: #fff; font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">Mapping</h1>
+            <p style="color: #94a3b8; font-size: 0.9rem;">View and manage the physical fiber-optic network layout.</p>
+          </div>
+        </div>
+        
+        <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 4rem 2rem; text-align: center; color: #94a3b8;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1.5rem; color: #3b82f6;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+          <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">Interactive Map Coming Soon</h2>
+          <p style="font-size: 0.9rem; max-width: 400px; margin: 0 auto; line-height: 1.5;">The live interactive mapping system is currently under development. This section will allow you to visualize your fiber nodes, clients, and line statuses geographically.</p>
+        </div>
+      </div>
+    `;
+    return window.renderAdminLayout('mapping', 'Network Map', content);
   }
 };
 window._getAdminDb = async function () {
@@ -1425,7 +1477,7 @@ window.handleAdminSignup = async function () {
   const email = document.getElementById('signup-email').value.trim();
   const phone = document.getElementById('signup-phone').value.trim();
   let pass = document.getElementById('signup-password').value;
-  
+
   if (!pass) pass = 'Easypass123';
 
   const errEl = document.getElementById('admin-signup-error');
@@ -1449,7 +1501,7 @@ window.handleAdminSignup = async function () {
 
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     // Check if email exists
     const q = firestore.query(firestore.collection(db, "admin"), firestore.where("email", "==", email));
     const snap = await firestore.getDocs(q);
@@ -1471,7 +1523,7 @@ window.handleAdminSignup = async function () {
     errEl.style.borderColor = 'rgba(16,185,129,0.2)';
     errEl.style.color = '#10b981';
     errEl.innerText = 'Account created! Please log in.';
-    
+
     setTimeout(() => {
       window.toggleAdminAuth('login');
       document.getElementById('admin-email').value = email;
@@ -1499,7 +1551,7 @@ window.initDashboard = async function () {
     if (dashClients) dashClients.innerText = '1205';
     if (dashOverdue) dashOverdue.innerText = '15';
     if (dashRevenue) dashRevenue.innerText = '₱50,000';
-    
+
     const actList = document.getElementById('dash-activity-list');
     if (actList) {
       actList.innerHTML = '<div style="padding: 1rem; color: #94a3b8; text-align: center; font-size: 0.85rem;">Recent activity hidden for Minimal role</div>';
@@ -1514,7 +1566,7 @@ window.initDashboard = async function () {
     const dummyRevs = [50000, 48000, 45000, 40000, 42000, 39000];
     const points = [];
     const maxRev = 50000;
-    
+
     for (let bi = 0; bi < 6; bi++) {
       const uiIndex = 5 - bi;
       const labelEl = document.getElementById('rev-label-' + uiIndex);
@@ -1527,12 +1579,12 @@ window.initDashboard = async function () {
       const hPct = mAmt / maxRev;
       const barH = hPct > 0 ? Math.max(2, Math.round(hPct * 100)) : 0;
       if (barEl) barEl.style.height = barH + '%';
-      
+
       const chartHeight = 220;
       const y = hPct > 0 ? chartHeight - (hPct * chartHeight) : chartHeight;
       points.push({ x: uiIndex, y: y });
     }
-    
+
     const svgLine = document.getElementById('rev-line');
     if (svgLine) {
       points.sort((a, b) => a.x - b.x);
@@ -1634,7 +1686,7 @@ window.initDashboard = async function () {
         </div>
         <svg width="160" height="160" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
     `;
-    
+
     let pendingCount = 0;
     billsSnap.docs.forEach(d => {
       const b = d.data();
@@ -1643,7 +1695,7 @@ window.initDashboard = async function () {
         pendingCount++;
       }
     });
-    
+
     let onlineCount = 0;
     let cashCount = 0;
     paymentsSnap.docs.forEach(d => {
@@ -1692,7 +1744,7 @@ window.initDashboard = async function () {
 
     const payContainer = document.getElementById('metric-payment-donut-container');
     if (payContainer) payContainer.innerHTML = payTotal > 0 ? payDonutHtml : '<div style="font-size:0.75rem; color:#64748b;">No data</div>';
-    
+
     const payLegend = document.getElementById('metric-payment-legend');
     if (payLegend) payLegend.innerHTML = payLegendHtml;
 
@@ -1783,14 +1835,14 @@ window.initAdminBanking = async function () {
     document.getElementById('admin-outstanding-amount').innerText = '₱50,000';
     document.getElementById('admin-outstanding-accounts').innerText = 'Across 150 accounts';
     document.getElementById('admin-overdue-accounts').innerText = '15';
-    
+
     const bmTbody = document.getElementById('bm-tbody');
     const phTbody = document.getElementById('ph-tbody');
     if (bmTbody) bmTbody.innerHTML = '';
     if (phTbody) phTbody.innerHTML = '';
     return;
   }
-  
+
   try {
     const { db, firestore } = await window._getAdminDb();
 
@@ -1892,7 +1944,7 @@ window.renderBills = async function () {
           <td style="padding: 1rem;">${b.dueDate || '-'}</td>
           <td style="padding: 1rem;"><span style="color: ${badgeColor}; background: ${badgeColor}22; padding: 0.2rem 0.5rem; border-radius: 4px;">${displayStatus}</span></td>
           <td style="padding: 1rem;">
-            <button onclick="window.markAdminBillPaid(this, '${realBillId}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}')" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>
+            <button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>
           </td>
         </tr>
       `;
@@ -2055,18 +2107,43 @@ window.openAdminReport = async function (id) {
       return;
     }
 
+    let userPhone = r.phone || r.contactNumber || r.contact || '-';
+    let userFb = r.facebook || r.fbLink || '-';
+    let userPlan = r.plan || r.Plan || '-';
+    let userAddress = r.address || r.completeAddress || r.Address || '-';
+
+    if (r.userId) {
+      try {
+        const uDoc = await firestore.getDoc(firestore.doc(db, "users", r.userId));
+        if (uDoc.exists()) {
+          const uData = uDoc.data();
+          userPhone = uData.contactNumber || uData.phone || uData.contact || userPhone;
+          userFb = uData.fbLink || uData.facebook || userFb;
+          userPlan = uData.plan || uData.Plan || userPlan;
+          userAddress = uData.completeAddress || uData.address || uData.Address || userAddress;
+        }
+      } catch (err) {
+        console.warn("Could not fetch latest user details:", err);
+      }
+    }
+
     document.getElementById('modal-ticket-id').innerText = id;
     document.getElementById('modal-ticket-name').innerText = r.name || '-';
     document.getElementById('modal-ticket-account').innerText = r.accountNumber || '-';
-    document.getElementById('modal-ticket-phone').innerText = r.contactNumber || '-';
-    document.getElementById('modal-ticket-fb').innerText = r.fbLink || '-';
-    document.getElementById('modal-ticket-plan').innerText = r.plan || '-';
-    document.getElementById('modal-ticket-address').innerText = r.completeAddress || '-';
+    document.getElementById('modal-ticket-phone').innerText = userPhone;
+    document.getElementById('modal-ticket-fb').innerText = userFb;
+    document.getElementById('modal-ticket-plan').innerText = userPlan;
+    document.getElementById('modal-ticket-address').innerText = userAddress;
     document.getElementById('modal-ticket-category').innerText = r.category || 'General';
     document.getElementById('modal-ticket-subject').innerText = r.subject || 'No Subject';
     document.getElementById('modal-ticket-desc').innerText = r.description || '-';
 
-    const dStr = r.timestamp && r.timestamp.toDate ? r.timestamp.toDate().toLocaleString() : '-';
+    let dStr = '-';
+    if (r.timestamp && r.timestamp.toDate) {
+      dStr = r.timestamp.toDate().toLocaleString();
+    } else if (r.date) {
+      try { dStr = new Date(r.date).toLocaleString(); } catch (e) { }
+    }
     document.getElementById('modal-ticket-date').innerText = dStr;
 
     const status = r.status || 'Pending';
@@ -2118,10 +2195,33 @@ window.renderAdminClientsTable = async function () {
       total++;
     });
 
-    // 2. Sort documents alphabetically by fullName / name
+    // 2. Sort documents by status (active first) then alphabetically by name
     const sortedDocs = snap.docs.sort((a, b) => {
-      const nameA = (a.data().fullName || a.data().name || '').toLowerCase();
-      const nameB = (b.data().fullName || b.data().name || '').toLowerCase();
+      const uA = a.data();
+      const uB = b.data();
+
+      let isOnlineA = false;
+      if (uA.lastActive) {
+        try {
+          const lastA = (typeof uA.lastActive.toMillis === 'function') ? uA.lastActive.toMillis() : (uA.lastActive.toDate ? uA.lastActive.toDate().getTime() : 0);
+          if (Date.now() - lastA < 120000) isOnlineA = true;
+        } catch (e) { }
+      }
+
+      let isOnlineB = false;
+      if (uB.lastActive) {
+        try {
+          const lastB = (typeof uB.lastActive.toMillis === 'function') ? uB.lastActive.toMillis() : (uB.lastActive.toDate ? uB.lastActive.toDate().getTime() : 0);
+          if (Date.now() - lastB < 120000) isOnlineB = true;
+        } catch (e) { }
+      }
+
+      if (isOnlineA !== isOnlineB) {
+        return isOnlineA ? -1 : 1;
+      }
+
+      const nameA = (uA.fullName || uA.name || '').toLowerCase();
+      const nameB = (uB.fullName || uB.name || '').toLowerCase();
       return nameA.localeCompare(nameB);
     });
 
@@ -2137,6 +2237,17 @@ window.renderAdminClientsTable = async function () {
       const phone = u.phone || u.contactNumber || 'TBD';
       const accNum = u.accountNumber || 'TBD';
       const fullName = u.fullName || u.name || 'TBD';
+
+      // Check online status (heartbeat within last 120 seconds)
+      let isOnline = false;
+      if (u.lastActive) {
+        try {
+          const lastActiveTime = (typeof u.lastActive.toMillis === 'function') ? u.lastActive.toMillis() : (u.lastActive.toDate ? u.lastActive.toDate().getTime() : 0);
+          if (Date.now() - lastActiveTime < 120000) {
+            isOnline = true;
+          }
+        } catch (e) { }
+      }
 
       // Apply filters
       if (p !== 'All' && plan !== p) return;
@@ -2154,12 +2265,17 @@ window.renderAdminClientsTable = async function () {
 
       html += `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer;" onclick="window.openAdminClientModal('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'; this.style.boxShadow='none'">
-          <td style="padding: 1rem; font-family: monospace; color: #fff;">${accNum}</td>
-          <td style="padding: 1rem; color: #fff;">${fullName}</td>
-          <td style="padding: 1rem; color: #94a3b8;">${email}</td>
-          <td style="padding: 1rem; color: #94a3b8;">${phone}</td>
-          <td style="padding: 1rem;"><span style="color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${plan}</span></td>
-          <td style="padding: 1rem; color: #fff; font-weight: 600;">${amtStr}</td>
+          <td style="padding: 1rem; vertical-align: middle; font-family: monospace; color: #fff;">${accNum}</td>
+          <td style="padding: 1rem; vertical-align: middle; color: #fff;">${fullName}</td>
+          <td style="padding: 1rem; vertical-align: middle; color: #94a3b8;">${email}</td>
+          <td style="padding: 1rem; vertical-align: middle; color: #94a3b8;">${phone}</td>
+          <td style="padding: 1rem; vertical-align: middle;"><span style="color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${plan}</span></td>
+          <td style="padding: 1rem; vertical-align: middle; color: #fff; font-weight: 600;">${amtStr}</td>
+          <td style="padding: 1rem; vertical-align: middle;">
+            ${isOnline ?
+          '<span style="color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>Active</span>' :
+          '<span style="color: #64748b; background: rgba(100,116,139,0.1); border: 1px solid rgba(100,116,139,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #64748b;"></span>Offline</span>'}
+          </td>
         </tr>
       `;
     });
@@ -2343,7 +2459,7 @@ window.openAdminAccountModal = function (id, name, email, contact, pass, role) {
   document.getElementById('modal-account-header-title').innerText = name || 'Account Details';
   document.getElementById('modal-account-id-hidden').value = id;
   document.getElementById('modal-account-id').innerText = id;
-  
+
   nameEl.value = name;
   emailEl.value = email;
   contactEl.value = contact;
@@ -2477,14 +2593,14 @@ window.requestAdminStaffUpdate = async function () {
       msg.style.color = '#10b981';
       msg.innerText = 'Staff updated successfully!';
 
-    await window.filterAdminAccounts();
-    setTimeout(window.closeAdminAccountModal, 1500);
-  } catch (e) {
-    msg.style.display = 'block';
-    msg.style.background = 'rgba(229,57,53,0.1)';
-    msg.style.color = '#e53935';
-    msg.innerText = e.message;
-  }
+      await window.filterAdminAccounts();
+      setTimeout(window.closeAdminAccountModal, 1500);
+    } catch (e) {
+      msg.style.display = 'block';
+      msg.style.background = 'rgba(229,57,53,0.1)';
+      msg.style.color = '#e53935';
+      msg.innerText = e.message;
+    }
     btn.disabled = false;
     btn.innerText = 'Update Staff';
   });
@@ -2501,7 +2617,7 @@ window.openAdminClientModal = async function (id) {
   try {
     const { db, firestore } = await window._getAdminDb();
     const doc = await firestore.getDoc(firestore.doc(db, "users", id));
-    
+
     document.body.style.cursor = 'default';
 
     const modal = document.getElementById('admin-client-modal');
@@ -2554,7 +2670,7 @@ window.openAdminClientModal = async function (id) {
   } catch (e) {
     document.body.style.cursor = 'default';
     console.error('Error fetching client details:', e);
-    
+
     const modal = document.getElementById('admin-client-modal');
     modal.style.display = 'flex';
     document.getElementById('modal-client-header-title').innerText = 'Error';
@@ -2589,7 +2705,7 @@ window.handleAdminClientPlanChange = function () {
   if (finalAmount) {
     document.getElementById('modal-client-amount-input').value = finalAmount;
   }
-  
+
   if (window.checkAdminClientChanges) window.checkAdminClientChanges();
 };
 
@@ -2604,7 +2720,7 @@ window.checkAdminClientChanges = function () {
 window.requestAdminClientUpdate = async function () {
   const id = document.getElementById('modal-client-id-hidden').value;
   const name = document.getElementById('modal-client-name').innerText;
-  
+
   const planInput = document.getElementById('modal-client-plan-input');
   const amountInput = document.getElementById('modal-client-amount-input');
   const passInput = document.getElementById('modal-client-password-input');
@@ -2654,7 +2770,7 @@ window.requestAdminClientUpdate = async function () {
       msg.style.color = '#e53935';
       msg.innerText = e.message;
     }
-    if(btn) {
+    if (btn) {
       btn.disabled = false;
       btn.innerText = 'Update Client';
     }
@@ -3213,39 +3329,68 @@ window.renderDashActivity = async function () {
 };
 
 window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, billMonth, billPlan, cName, acct, ev) {
-    if (ev) ev.stopPropagation();
-    if (btn.disabled) return;
-    
-    btn.innerHTML = 'Processing...';
-    btn.disabled = true;
+  if (ev) ev.stopPropagation();
+  if (btn.disabled) return;
 
-    try {
-        const { db, firestore } = await window._getAdminDb();
-        const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
-        
-        await firestore.updateDoc(billDocRef, { status: 'paid' });
-        
-        const now = new Date();
-        const payData = {
-            userId: customerId,
-            billId: billId,
-            amount: parseFloat(amountStr) || 0,
-            billingMonth: billMonth || '-',
-            plan: billPlan || '-',
-            method: 'Online payment',
-            datePaid: now.toISOString(),
-            status: 'completed',
-            timestamp: now,
-            customerName: cName,
-            accountNumber: acct
-        };
-        
-        await firestore.addDoc(firestore.collection(db, "payments"), payData);
-        
-        if (window.renderBills) await window.renderBills();
-        if (window.renderPayments) await window.renderPayments();
-    } catch(e) {
-        console.error("Error marking bill paid:", e);
-        btn.innerHTML = 'Failed';
+  btn.innerHTML = 'Processing...';
+  btn.disabled = true;
+
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
+
+    await firestore.updateDoc(billDocRef, { status: 'paid' });
+
+    const now = new Date();
+    const payData = {
+      userId: customerId,
+      billId: billId,
+      amount: parseFloat(String(amountStr).replace(/,/g, '')) || 0,
+      billingMonth: billMonth || '-',
+      plan: billPlan || '-',
+      method: 'Online payment',
+      datePaid: now.toISOString(),
+      status: 'completed',
+      timestamp: firestore.serverTimestamp(),
+      customerName: cName,
+      accountNumber: acct
+    };
+
+    await firestore.addDoc(firestore.collection(db, "payments"), payData);
+
+    if (window.renderBills) await window.renderBills();
+    if (window.renderPayments) await window.renderPayments();
+  } catch (e) {
+    console.error("Error marking bill paid:", e);
+    btn.innerHTML = 'Err: ' + (e.message ? e.message.substring(0, 15) : 'Unknown');
+    btn.title = e.message || e.toString();
+  }
+};
+
+window.goToMapping = function() {
+  const sidebar = document.getElementById('admin-sidebar');
+  const main = document.getElementById('admin-main-content');
+  if (sidebar && main) {
+    sidebar.style.transform = 'translateX(-260px)';
+    main.style.marginLeft = '0px';
+    setTimeout(() => {
+      window.router.navigate('/RFiberXAdminportal-mapping');
+    }, 400);
+  } else {
+    window.router.navigate('/RFiberXAdminportal-mapping');
+  }
+};
+
+window.toggleAdminSidebar = function() {
+  const sidebar = document.getElementById('admin-sidebar');
+  const main = document.getElementById('admin-main-content');
+  if (sidebar && main) {
+    if (sidebar.style.transform === 'translateX(-260px)') {
+      sidebar.style.transform = 'translateX(0)';
+      main.style.marginLeft = '260px';
+    } else {
+      sidebar.style.transform = 'translateX(-260px)';
+      main.style.marginLeft = '0px';
     }
+  }
 };

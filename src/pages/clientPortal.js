@@ -162,7 +162,7 @@ export const clientViews = {
     }
 
     const user = JSON.parse(userStr);
-    const outstandingBalance = user.ammount || user.amount || '0.00';
+    const basePlanAmount = user.ammount || user.amount || '0.00';
     const plan = user.Plan || user.plan || 'Please add plan';
     const acctNum = user.accountNumber || user.account || 'Please add account number';
     const email = user.email || 'Please add email address';
@@ -183,15 +183,15 @@ export const clientViews = {
         });
       }
     };
-    
+
     window.clientReportsData = {};
-    
-    window.renderClientReportsTable = function() {
+
+    window.renderClientReportsTable = function () {
       const tbody = document.querySelector('#content-support table tbody');
       if (!tbody) return;
-      
+
       let reports = Object.values(window.clientReportsData);
-      
+
       if (reports.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem 0; color: #94a3b8; font-size: 0.85rem;">You have not created any service requests.</td></tr>';
       } else {
@@ -199,13 +199,13 @@ export const clientViews = {
         reports.sort((a, b) => {
           if (a.status !== 'Fixed' && b.status === 'Fixed') return -1;
           if (a.status === 'Fixed' && b.status !== 'Fixed') return 1;
-          
+
           if (a.status === 'Fixed' && b.status === 'Fixed') {
             return new Date(b.processedDate || b.date) - new Date(a.processedDate || a.date);
           }
           return new Date(b.date) - new Date(a.date);
         });
-        
+
         let html = '';
         reports.forEach(r => {
           let badge = '';
@@ -216,12 +216,12 @@ export const clientViews = {
           } else {
             badge = '<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Pending</span>';
           }
-          
+
           let doneBtn = '';
           if (r.status === 'Read') {
             doneBtn = '<button onclick="window.markReportFixed(event, \'' + r.id + '\')" style="background: #3b82f6; color: #fff; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">Done</button>';
           }
-          
+
           html += '<tr onclick="window.viewClientReport(\'' + r.id + '\')" style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseout="this.style.background=\'transparent\'">';
           html += '<td style="padding: 1rem 0; color: #fff; font-size: 0.8rem; font-weight: 500;">' + (r.reportId || '-') + '</td>';
           html += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (r.subject || '-') + '</td>';
@@ -233,45 +233,45 @@ export const clientViews = {
         });
         tbody.innerHTML = html;
       }
-      
+
       // Update Dashboard Overview dynamically
       const recBox = document.getElementById('recent-updates-box');
       const recCount = document.getElementById('recent-updates-count');
       const annBox = document.getElementById('announcements-box');
       const annCount = document.getElementById('announcements-count');
-      
+
       if (recBox && annBox) {
         let recentItems = [];
         let annItems = [];
-        
+
         reports.forEach(t => {
           let tTime = new Date(t.processedDate || t.date).getTime();
           let dateStr = new Date(t.processedDate || t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           if (t.status === 'Fixed' || t.status === 'Read') {
-             let html = `<div class="client-ticket-update" onclick="window.viewClientReport('${t.id}')" style="background: rgba(59,130,246,0.03); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='rgba(59,130,246,0.03)'">`;
-             html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">';
-             html += '<div style="display: flex; align-items: center; gap: 0.5rem;">';
-             html += '<div style="width: 28px; height: 28px; background: rgba(59,130,246,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 0.75rem;">🎫</div>';
-             html += '<span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Ticket ' + t.status + '</span>';
-             html += '</div>';
-             html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
-             html += '</div>';
-             html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">Your report "<strong>' + (t.subject || 'Ticket') + '</strong>" has been marked as ' + t.status + '.</div>';
-             html += '</div>';
-             recentItems.push({ time: tTime, html: html });
+            let html = `<div class="client-ticket-update" onclick="window.viewClientReport('${t.id}')" style="background: rgba(59,130,246,0.03); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='rgba(59,130,246,0.03)'">`;
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">';
+            html += '<div style="display: flex; align-items: center; gap: 0.5rem;">';
+            html += '<div style="width: 28px; height: 28px; background: rgba(59,130,246,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 0.75rem;">🎫</div>';
+            html += '<span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Ticket ' + t.status + '</span>';
+            html += '</div>';
+            html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
+            html += '</div>';
+            html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">Your report "<strong>' + (t.subject || 'Ticket') + '</strong>" has been marked as ' + t.status + '.</div>';
+            html += '</div>';
+            recentItems.push({ time: tTime, html: html });
           }
           if (t.status === 'Read') {
-             let html = `<div class="client-ticket-announcement" onclick="window.viewClientReport('${t.id}')" style="background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.08)'" onmouseout="this.style.background='rgba(16,185,129,0.03)'">`;
-             html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">';
-             html += '<div style="display: flex; align-items: flex-start; gap: 0.75rem;">';
-             html += '<div style="width: 28px; height: 28px; background: rgba(16,185,129,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 0.75rem; flex-shrink: 0;">📣</div>';
-             html += '<div>';
-             html += '<div style="color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Admin has read your ticket</div>';
-             html += '<div style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">The admin has viewed your report "' + (t.subject||'Ticket') + '".</div>';
-             html += '</div></div>';
-             html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
-             html += '</div></div>';
-             annItems.push({ time: tTime, html: html });
+            let html = `<div class="client-ticket-announcement" onclick="window.viewClientReport('${t.id}')" style="background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.08)'" onmouseout="this.style.background='rgba(16,185,129,0.03)'">`;
+            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">';
+            html += '<div style="display: flex; align-items: flex-start; gap: 0.75rem;">';
+            html += '<div style="width: 28px; height: 28px; background: rgba(16,185,129,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 0.75rem; flex-shrink: 0;">📣</div>';
+            html += '<div>';
+            html += '<div style="color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Admin has read your ticket</div>';
+            html += '<div style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">The admin has viewed your report "' + (t.subject || 'Ticket') + '".</div>';
+            html += '</div></div>';
+            html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
+            html += '</div></div>';
+            annItems.push({ time: tTime, html: html });
           }
         });
 
@@ -329,15 +329,15 @@ export const clientViews = {
             html += '</div>';
             html += '<span style="color: #64748b; font-size: 0.75rem;">' + pDate + '</span>';
             html += '</div>';
-            html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">You paid <strong style="color:#fff;">₱' + (p.amount || '0') + '</strong> for ' + (p.period || '-') + '. <span style="color: #3b82f6; font-size: 0.75rem;">View receipt →</span></div>';
+            html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">You paid <strong style="color:#fff;">₱' + (p.amount || '0') + '</strong> for ' + (p.period || p.billingMonth || '-') + '. <span style="color: #3b82f6; font-size: 0.75rem;">View receipt →</span></div>';
             html += '</div>';
-            
+
             recentItems.push({ time: tTime, html: html });
           });
         }
-        
-        recentItems.sort((a,b) => b.time - a.time);
-        annItems.sort((a,b) => b.time - a.time);
+
+        recentItems.sort((a, b) => b.time - a.time);
+        annItems.sort((a, b) => b.time - a.time);
 
         if (recentItems.length > 0) {
           recBox.innerHTML = recentItems.slice(0, 15).map(i => i.html).join('');
@@ -356,11 +356,11 @@ export const clientViews = {
         }
       }
     };
-    
-    window.viewClientReport = function(id) {
+
+    window.viewClientReport = function (id) {
       const r = window.clientReportsData[id];
-      if(!r) return;
-      
+      if (!r) return;
+
       document.getElementById('client-modal-ticket-id').textContent = r.reportId || '-';
       document.getElementById('client-modal-name').textContent = r.name || '-';
       document.getElementById('client-modal-account').textContent = r.accountNumber || '-';
@@ -372,7 +372,7 @@ export const clientViews = {
       document.getElementById('client-modal-subject').textContent = r.subject || '-';
       document.getElementById('client-modal-desc').textContent = r.description || '-';
       document.getElementById('client-modal-date').textContent = new Date(r.date).toLocaleString();
-      
+
       const badgeEl = document.getElementById('client-modal-status-badge');
       if (r.status === 'Read') {
         badgeEl.innerHTML = '<span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Read</span>';
@@ -381,21 +381,21 @@ export const clientViews = {
       } else {
         badgeEl.innerHTML = '<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Pending</span>';
       }
-      
+
       document.getElementById('client-ticket-modal').style.display = 'flex';
     };
-    
-    window.closeClientReport = function() {
+
+    window.closeClientReport = function () {
       document.getElementById('client-ticket-modal').style.display = 'none';
     };
-    
-    window.markReportFixed = async function(e, id) {
+
+    window.markReportFixed = async function (e, id) {
       e.stopPropagation();
       try {
         const btn = e.target;
         btn.innerHTML = '...';
         btn.disabled = true;
-        
+
         const firebaseConfig = {
           apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
           authDomain: "portal-c293a.firebaseapp.com",
@@ -405,23 +405,23 @@ export const clientViews = {
           appId: "1:159583415029:web:bb5221ff531fa1005a33bc"
         };
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        try { initializeApp(firebaseConfig); } catch(err) {}
-        
+        try { initializeApp(firebaseConfig); } catch (err) { }
+
         const { getFirestore, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const db = getFirestore();
-        
+
         const processedDate = new Date().toISOString();
         await updateDoc(doc(db, "reports", id), { status: 'Fixed', processedDate: processedDate });
-        
+
         // Update local cache and re-render table
         if (window.clientReportsData[id]) {
           window.clientReportsData[id].status = 'Fixed';
           window.clientReportsData[id].processedDate = processedDate;
           window.renderClientReportsTable();
         }
-        
+
         window.openRatingModal(id);
-      } catch(err) {
+      } catch (err) {
         console.error('Error marking report fixed:', err);
         alert('Failed to mark report as Done.');
         e.target.innerHTML = 'Done';
@@ -432,7 +432,7 @@ export const clientViews = {
     window.currentRatingScore = 0;
     window.currentRatingReportId = null;
 
-    window.setRating = function(score) {
+    window.setRating = function (score) {
       window.currentRatingScore = score;
       const stars = document.querySelectorAll('#rating-stars span');
       stars.forEach((s, i) => {
@@ -442,7 +442,7 @@ export const clientViews = {
           s.style.color = '#334155';
         }
       });
-      
+
       const btn = document.getElementById('btn-submit-rating');
       if (btn) {
         if (score > 0) {
@@ -456,8 +456,8 @@ export const clientViews = {
         }
       }
     };
-    
-    window.openRatingModal = function(reportId) {
+
+    window.openRatingModal = function (reportId) {
       window.currentRatingReportId = reportId;
       window.setRating(0); // reset
       const fb = document.getElementById('rating-feedback');
@@ -466,22 +466,22 @@ export const clientViews = {
       if (modal) modal.style.display = 'flex';
     };
 
-    window.closeRatingModal = function() {
+    window.closeRatingModal = function () {
       const modal = document.getElementById('rating-modal');
       if (modal) modal.style.display = 'none';
       window.currentRatingReportId = null;
     };
 
-    window.skipRating = function() {
+    window.skipRating = function () {
       window.closeRatingModal();
     };
 
-    window.submitRating = async function() {
+    window.submitRating = async function () {
       if (window.currentRatingScore < 1) return;
       const btn = document.getElementById('btn-submit-rating');
       btn.innerHTML = '...';
       btn.disabled = true;
-      
+
       try {
         const firebaseConfig = {
           apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
@@ -492,22 +492,22 @@ export const clientViews = {
           appId: "1:159583415029:web:bb5221ff531fa1005a33bc"
         };
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        try { initializeApp(firebaseConfig); } catch(err) {}
+        try { initializeApp(firebaseConfig); } catch (err) { }
         const { getFirestore, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const db = getFirestore();
-        
+
         const feedback = document.getElementById('rating-feedback').value || '';
-        
+
         await updateDoc(doc(db, "reports", window.currentRatingReportId), {
           rating: window.currentRatingScore,
           feedback: feedback
         });
-        
+
         if (window.clientReportsData[window.currentRatingReportId]) {
           window.clientReportsData[window.currentRatingReportId].rating = window.currentRatingScore;
           window.clientReportsData[window.currentRatingReportId].feedback = feedback;
         }
-        
+
         window.closeRatingModal();
         btn.innerHTML = 'Rate';
       } catch (err) {
@@ -880,46 +880,64 @@ export const clientViews = {
         let paymentMethod = pay.method || (isPaid ? 'Online payment' : 'N/A');
         if (paymentMethod === 'Instant Payment' || paymentMethod === 'Digital Payment') paymentMethod = 'Online payment';
 
-        // Fetch previous month's payment for same account
+        let baseAmount = 0;
+        if (userObj.amount) {
+          baseAmount = parseFloat(String(userObj.amount).replace(/[^0-9.]/g, '')) || 0;
+        }
+
+        if (baseAmount === 0 && amount > 0) {
+          const pStr = pay.plan || '';
+          if (pStr.includes('200Mbps')) baseAmount = 2000;
+          else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
+          else if (pStr.includes('50Mbps')) baseAmount = 1000;
+          else if (pStr.includes('30Mbps')) baseAmount = 800;
+          else {
+            if (amount % 2000 === 0) baseAmount = 2000;
+            else if (amount % 1500 === 0) baseAmount = 1500;
+            else if (amount % 1000 === 0) baseAmount = 1000;
+            else baseAmount = amount;
+          }
+        }
+
         let prevCharges = 0;
         let prevPaid = true;
         try {
-          const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
-          const allPaySnap = await getDocs(paymentsQ);
-          const allPays = [];
-          allPaySnap.forEach(d => {
-            const pd = d.data();
-            allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: pd.datePaid || pd.dateSent || '' });
-          });
-
-          // Fetch billing emails for this user
-          const userStr = localStorage.getItem('clientUser');
-          const userObj = userStr ? JSON.parse(userStr) : {};
-          const userId = userObj.id || userObj.uid;
-          if (userId) {
-            const billsSnap = await getDocs(collection(db, "users", userId, "billing_emails"));
-            billsSnap.forEach(d => {
-              const bd = d.data();
-              if (bd.status !== 'paid') {
-                allPays.push({ id: d.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || '' });
-              }
+          if (accountNumber && accountNumber !== 'N/A') {
+            const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
+            const allPaySnap = await getDocs(paymentsQ);
+            const allPays = [];
+            allPaySnap.forEach(d => {
+              const pd = d.data();
+              allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: pd.datePaid || pd.dateSent || '' });
             });
-          }
 
-          allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+            const userId = userObj.id || userObj.uid;
+            if (userId) {
+              const billsSnap = await getDocs(collection(db, "users", userId, "billing_emails"));
+              billsSnap.forEach(d => {
+                const bd = d.data();
+                if (bd.status !== 'paid') {
+                  allPays.push({ id: d.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || '' });
+                }
+              });
+            }
 
-          const currentIdx = allPays.findIndex(p => p.id === paymentDocId);
-          if (currentIdx > 0) {
-            prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/,/g, '')) || 0;
-            prevPaid = allPays[currentIdx - 1].isPaidRec;
+            allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+
+            const currentIdx = allPays.findIndex(p => p.id === paymentDocId || p.billId === paymentDocId);
+            if (currentIdx > 0) {
+              prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
+              prevPaid = allPays[currentIdx - 1].isPaidRec;
+            }
           }
         } catch (e) { console.warn('Could not fetch previous charges:', e); }
 
-        const currentCharges = isPaid ? 0 : amount;
-        const remainingBalance = prevPaid ? 0 : prevCharges;
-        const totalAmountDue = currentCharges + remainingBalance;
+        let currentCharges = !isPaid ? amount : baseAmount;
+        let remainingBalance = prevPaid ? 0 : prevCharges;
+        let totalAmountDue = !isPaid ? (currentCharges + remainingBalance) : 0;
+        let previousCharges = prevCharges;
 
-        const prevPaymentText = prevPaid && prevCharges > 0 ? '\u20b1' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' CR' : '\u20b10.00';
+        let prevPaymentText = prevPaid && prevCharges > 0 ? '\u20b1' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '\u20b10.00';
 
         const receiptHtml = `
           <div style="padding: 2rem; max-width: 800px; margin: 0 auto;">
@@ -968,9 +986,9 @@ export const clientViews = {
                 <div style="border: 2px solid #1a1a1a; min-width: 280px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; font-size: 0.7rem; font-weight: 700;">
                     <div style="background: #1a1a1a; color: #fff; padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Statement Date</div>
-                    <div style="background: #1a1a1a; color: #fff; padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Account No.</div>
+                    <div style="background: #1a1a1a; color: #fff; padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">${isPaid ? 'PAYMENT ID' : 'BILL ID'}</div>
                     <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid #ddd; color: #333;">${statementDateStr}</div>
-                    <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid #ddd; color: #333;">${accountNumber}</div>
+                    <div style="padding: 0.5rem 0.75rem; border-bottom: 1px solid #ddd; color: #333; font-size: 0.6rem; word-break: break-all;">${paymentDocId}</div>
                     <div style="background: #1a1a1a; color: #fff; padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Total Amount Due</div>
                     <div style="background: #1a1a1a; color: #fff; padding: 0.5rem 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">Due Date</div>
                     <div style="padding: 0.5rem 0.75rem; color: #E53935; font-weight: 700; font-size: 0.9rem;">\u20b1${totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -995,10 +1013,10 @@ export const clientViews = {
                   <div style="font-size: 0.85rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.75rem;">A. Previous Charges</div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #444; margin-bottom: 0.25rem; padding-left: 1rem;">
                     <span>Balance from Previous Bill</span>
-                    <span>\u20b1${prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>\u20b1${previousCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #444; margin-bottom: 0.25rem; padding-left: 1rem;">
-                    <span><em>Less:</em> Payments Received — ${prevPaid && prevCharges > 0 ? 'Thank You!' : 'Unpaid'}</span>
+                    <span><em>Less:</em> Payments Received — Thank You!</span>
                     <span>${prevPaymentText}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #1a1a1a; padding-left: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; margin-top: 0.5rem;">
@@ -1012,7 +1030,7 @@ export const clientViews = {
                   <div style="font-size: 0.85rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.75rem;">B. Current Charges</div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #444; margin-bottom: 0.25rem; padding-left: 1rem;">
                     <span>Monthly Service Fee (${plan})</span>
-                    <span>\u20b1${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>\u20b1${currentCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #1a1a1a; padding-left: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; margin-top: 0.5rem;">
                     <span><strong>Total Current Charges</strong> — <em style="font-weight: 400; color: #888;">Please pay on or before the due date</em></span>
@@ -1065,7 +1083,7 @@ export const clientViews = {
                 <div style="min-width: 220px; border-left: 2px solid #E53935; padding-left: 1.5rem;">
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem;">
                     <span style="font-weight: 700; color: #1a1a1a;">Previous Charges</span>
-                    <span style="color: #444;">: \u20b1${prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span style="color: #444;">: \u20b1${previousCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem;">
                     <span style="font-weight: 700; color: #1a1a1a;">Current Charges</span>
@@ -1278,6 +1296,32 @@ export const clientViews = {
             // Update local storage so data persists on reload
             localStorage.setItem('clientUser', JSON.stringify({ id: user.id, ...data }));
 
+            // --- PRESENCE HEARTBEAT SYSTEM ---
+            const { serverTimestamp, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const userRef = doc(db, "users", user.id);
+            
+            const sendHeartbeat = async () => {
+              if (document.visibilityState === 'visible') {
+                try { await updateDoc(userRef, { lastActive: serverTimestamp() }); } 
+                catch (e) { console.warn('Heartbeat failed:', e); }
+              }
+            };
+            
+            sendHeartbeat();
+            if (window._clientHeartbeatInterval) clearInterval(window._clientHeartbeatInterval);
+            window._clientHeartbeatInterval = setInterval(sendHeartbeat, 90000);
+            
+            const onVisibilityChange = () => { if (document.visibilityState === 'visible') sendHeartbeat(); };
+            document.removeEventListener('visibilitychange', window._clientHeartbeatVisListener);
+            window._clientHeartbeatVisListener = onVisibilityChange;
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            
+            const onUnload = () => { updateDoc(userRef, { lastActive: 0 }).catch(()=>{}); };
+            window.removeEventListener('beforeunload', window._clientHeartbeatUnloadListener);
+            window._clientHeartbeatUnloadListener = onUnload;
+            window.addEventListener('beforeunload', onUnload);
+            // ---------------------------------
+
             // Extract the fields handling undefined or empty strings
             const currentPlan = data.Plan || data.plan || 'Please add plan';
             const currentAmount = data.ammount || data.amount || '0.00';
@@ -1292,7 +1336,16 @@ export const clientViews = {
             // Parse speed for upgrade/downgrade logic
             let currentSpeed = 0;
             const match = currentPlan.match(/(\d+)\s*Mbps/i);
-            if (match) currentSpeed = parseInt(match[1]);
+            if (match) {
+              currentSpeed = parseInt(match[1]);
+            } else {
+              const normPlan = currentPlan.toLowerCase().trim();
+              if (normPlan.includes('starter') || normPlan.includes('800') || normPlan.includes('1500')) currentSpeed = 30;
+              else if (normPlan.includes('value') || normPlan.includes('1000') || normPlan.includes('2000')) currentSpeed = 50;
+              else if (normPlan.includes('family') || normPlan.includes('1300') || normPlan.includes('2500')) currentSpeed = 70;
+              else if (normPlan.includes('pro') || normPlan.includes('1500') || normPlan.includes('3500')) currentSpeed = 100;
+              else if (normPlan.includes('extreme') || normPlan.includes('2000') || normPlan.includes('7499')) currentSpeed = 200;
+            }
 
             // Update DOM Elements
             const setText = (id, text) => {
@@ -1319,13 +1372,13 @@ export const clientViews = {
 
             const missing = [];
             if (!currentEmail || currentEmail.trim() === '') {
-               missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">email address</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">email address</a>');
             }
             if (!currentPhone || currentPhone.trim() === '') {
-               missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">phone number</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">phone number</a>');
             }
             if (!currentAddress || currentAddress.trim() === '') {
-               missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">home address</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">home address</a>');
             }
 
             const alertBox = document.getElementById('ui-missing-details-alert');
@@ -1336,7 +1389,7 @@ export const clientViews = {
                 if (missing.length === 1) missingText = missing[0];
                 else if (missing.length === 2) missingText = missing.join(' and ');
                 else missingText = missing.slice(0, -1).join(', ') + ', and ' + missing[missing.length - 1];
-                
+
                 alertLinks.innerHTML = missingText;
                 alertBox.style.display = 'flex';
               } else {
@@ -1374,6 +1427,7 @@ export const clientViews = {
               avatarEl.textContent = currentName.charAt(0).toUpperCase();
             }
 
+            // Update plan buttons and current plan badge
             // Update plan buttons and current plan badge
             const planCards = [
               { id: 'btn-plan-30', speed: 30, badgeId: 'badge-plan-30' },
@@ -1436,128 +1490,136 @@ export const clientViews = {
 
             // ===== FETCH BILLING EMAILS FROM SUB-COLLECTION =====
             try {
-              const { collection: coll, getDocs: gd } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+              const { collection: coll, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
               const billingRef = coll(db, "users", user.id, "billing_emails");
-              const billingSnap = await gd(billingRef);
-
-              if (!billingSnap.empty) {
-                const billingEmails = [];
-                billingSnap.forEach(d => {
-                  billingEmails.push({ id: d.id, ...d.data() });
-                });
-                billingEmails.sort((a, b) => new Date(b.dateSent || 0) - new Date(a.dateSent || 0));
-
-                // Evaluate dynamic overdue status (8 days)
-                billingEmails.forEach(be => {
-                  if (be.status !== 'paid' && be.status !== 'overdue') {
-                    if (Date.now() - new Date(be.dateSent).getTime() > 8 * 24 * 60 * 60 * 1000) {
-                      be.status = 'overdue';
-                    }
-                  }
-                });
-
-                // Filter out paid bills from active lists
-                const activeBills = billingEmails.filter(b => b.status !== 'paid');
-
-                // ---- STORE BILLS FOR DASHBOARD FEED ----
-                window.clientActiveBills = activeBills;
-
-                // ---- UPDATE MY STATEMENTS TABLE ----
-                const statementsBody = document.getElementById('statements-tbody');
-                if (statementsBody) {
-                  let tHtml = '';
-                  if (activeBills.length === 0) {
-                    tHtml = '<tr><td colspan="7" style="text-align: center; padding: 3rem 0; color: #94a3b8; font-size: 0.85rem;">No active billing statements found.</td></tr>';
-                  }
-                  activeBills.slice(0, 6).forEach((be, idx) => {
-                    tHtml += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
-                    tHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 500;">' + (be.billId || 'BILL-PENDING') + '</td>';
-                    tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.billingMonth || '-') + '</td>';
-                    tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.plan || '-') + '</td>';
-                    tHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 600;">₱' + (be.amount || '0') + '</td>';
-                    tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.dueDate || '-') + '</td>';
-
-                    var isOverdue = (be.status === 'overdue');
-                    var badgeColor = isOverdue ? '#ef4444' : '#f59e0b';
-                    var badgeBg = isOverdue ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
-                    var statusText = isOverdue ? 'Overdue' : 'Pending';
-
-                    tHtml += '<td style="padding: 1rem 0;"><span style="background: ' + badgeBg + '; color: ' + badgeColor + '; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + statusText + '</span></td>';
-                    tHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + be.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
-
-                    tHtml += '</tr>';
+              onSnapshot(billingRef, (billingSnap) => {
+                if (!billingSnap.empty) {
+                  const billingEmails = [];
+                  billingSnap.forEach(d => {
+                    billingEmails.push({ id: d.id, ...d.data() });
                   });
-                  statementsBody.innerHTML = tHtml;
+                  billingEmails.sort((a, b) => new Date(b.dateSent || 0) - new Date(a.dateSent || 0));
+
+                  // Evaluate dynamic overdue status (8 days)
+                  billingEmails.forEach(be => {
+                    if (be.status !== 'paid' && be.status !== 'overdue') {
+                      if (Date.now() - new Date(be.dateSent).getTime() > 8 * 24 * 60 * 60 * 1000) {
+                        be.status = 'overdue';
+                      }
+                    }
+                  });
+
+                  // Filter out paid bills from active lists
+                  const activeBills = billingEmails.filter(b => b.status !== 'paid');
+
+                  // Calculate total outstanding balance
+                  let totalUnpaid = 0;
+                  activeBills.forEach(ab => {
+                    totalUnpaid += parseFloat(String(ab.amount).replace(/[^0-9.]/g, '')) || 0;
+                  });
+                  const balEl = document.getElementById('ui-billing-balance');
+                  if (balEl) balEl.innerText = '₱' + totalUnpaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                  // ---- STORE BILLS FOR DASHBOARD FEED ----
+                  window.clientActiveBills = activeBills;
+
+                  // ---- UPDATE MY STATEMENTS TABLE ----
+                  const statementsBody = document.getElementById('statements-tbody');
+                  if (statementsBody) {
+                    let tHtml = '';
+                    if (activeBills.length === 0) {
+                      tHtml = '<tr><td colspan="7" style="text-align: center; padding: 3rem 0; color: #94a3b8; font-size: 0.85rem;">No active billing statements found.</td></tr>';
+                    }
+                    activeBills.slice(0, 6).forEach((be, idx) => {
+                      tHtml += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
+                      tHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 500;">' + (be.billId || 'BILL-PENDING') + '</td>';
+                      tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.billingMonth || '-') + '</td>';
+                      tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.plan || '-') + '</td>';
+                      tHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 600;">₱' + (be.amount || '0') + '</td>';
+                      tHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (be.dueDate || '-') + '</td>';
+
+                      var isOverdue = (be.status === 'overdue');
+                      var badgeColor = isOverdue ? '#ef4444' : '#f59e0b';
+                      var badgeBg = isOverdue ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+                      var statusText = isOverdue ? 'Overdue' : 'Pending';
+
+                      tHtml += '<td style="padding: 1rem 0;"><span style="background: ' + badgeBg + '; color: ' + badgeColor + '; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + statusText + '</span></td>';
+                      tHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + be.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
+
+                      tHtml += '</tr>';
+                    });
+                    statementsBody.innerHTML = tHtml;
+                  }
                 }
-              }
+              });
             } catch (billingErr) {
               console.error('Error fetching billing emails:', billingErr);
             }
 
             // ===== FETCH PAYMENT HISTORY =====
             try {
-              const { collection: coll, getDocs: gd, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+              const { collection: coll, onSnapshot, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
               const q = query(coll(db, "payments"), where("userId", "==", user.id));
-              const paySnap = await gd(q);
-              
-              if (!paySnap.empty) {
-                const payments = [];
-                paySnap.forEach(d => payments.push({ id: d.id, ...d.data() }));
-                payments.sort((a, b) => {
-                  let da = a.datePaid || a.date || 0;
-                  let db = b.datePaid || b.date || 0;
-                  if (a.timestamp && a.timestamp.toDate) da = a.timestamp.toDate();
-                  if (b.timestamp && b.timestamp.toDate) db = b.timestamp.toDate();
-                  return new Date(db) - new Date(da);
-                });
-
-                window.clientPayments = payments;
-
-                const paymentsBody = document.getElementById('payments-tbody');
-                if (paymentsBody) {
-                  let pHtml = '';
-                  const uiRecorded = document.getElementById('ui-recorded-payments');
-                  if (uiRecorded) uiRecorded.innerText = payments.length;
-
-                  payments.forEach((p, idx) => {
-                    const pDate = new Date(p.datePaid).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-                    if (idx < 6) {
-                      pHtml += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
-                      pHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 500;">' + p.id + '</td>';
-                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.period || '-') + '</td>';
-                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.plan || '-') + '</td>';
-                      pHtml += '<td style="padding: 1rem 0; color: #10b981; font-size: 0.85rem; font-weight: 600;">+₱' + (p.amount || '0') + '</td>';
-                      let displayMethod = p.method || 'Online payment';
-                      if (displayMethod === 'Instant Payment' || displayMethod === 'Digital Payment') displayMethod = 'Online payment';
-                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + displayMethod + '</td>';
-                      pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + pDate + '</td>';
-                      pHtml += '<td style="padding: 1rem 0;"><span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + (p.status || 'Paid') + '</span></td>';
-                      pHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + p.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
-                      pHtml += '</tr>';
-                    }
+              onSnapshot(q, (paySnap) => {
+                if (!paySnap.empty) {
+                  const payments = [];
+                  paySnap.forEach(d => payments.push({ id: d.id, ...d.data() }));
+                  payments.sort((a, b) => {
+                    let da = a.datePaid || a.date || 0;
+                    let db = b.datePaid || b.date || 0;
+                    if (a.timestamp && a.timestamp.toDate) da = a.timestamp.toDate();
+                    if (b.timestamp && b.timestamp.toDate) db = b.timestamp.toDate();
+                    return new Date(db) - new Date(da);
                   });
-                  paymentsBody.innerHTML = pHtml;
+
+                  window.clientPayments = payments;
+
+                  const paymentsBody = document.getElementById('payments-tbody');
+                  if (paymentsBody) {
+                    let pHtml = '';
+                    const uiRecorded = document.getElementById('ui-recorded-payments');
+                    if (uiRecorded) uiRecorded.innerText = payments.length;
+
+                    payments.forEach((p, idx) => {
+                      const pDate = new Date(p.datePaid).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                      if (idx < 6) {
+                        pHtml += '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">';
+                        pHtml += '<td style="padding: 1rem 0; color: #fff; font-size: 0.85rem; font-weight: 500;">' + p.id + '</td>';
+                        pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.period || p.billingMonth || '-') + '</td>';
+                        pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + (p.plan || '-') + '</td>';
+                        pHtml += '<td style="padding: 1rem 0; color: #10b981; font-size: 0.85rem; font-weight: 600;">+₱' + (p.amount || '0') + '</td>';
+                        let displayMethod = p.method || 'Online payment';
+                        if (displayMethod === 'Instant Payment' || displayMethod === 'Digital Payment') displayMethod = 'Online payment';
+                        pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + displayMethod + '</td>';
+                        pHtml += '<td style="padding: 1rem 0; color: #94a3b8; font-size: 0.85rem;">' + pDate + '</td>';
+                        pHtml += '<td style="padding: 1rem 0;"><span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">' + (p.status || 'Paid') + '</span></td>';
+                        pHtml += '<td style="padding: 1rem 0;"><span onclick="window.viewReceipt(\'' + p.id + '\')" style="color: #3b82f6; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">View</span></td>';
+                        pHtml += '</tr>';
+                      }
+                    });
+                    paymentsBody.innerHTML = pHtml;
+                  }
                 }
-              }
+              });
             } catch (e) { console.error('Error fetching payments:', e); }
 
             // Fetch Reports / Tickets
             try {
-              const { collection: coll, getDocs: gd, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+              const { collection: coll, onSnapshot, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
               const q = query(coll(db, "reports"), where("userId", "==", user.id));
-              const repSnap = await gd(q);
-              
-              window.clientReportsData = {};
-              
-              if (repSnap.empty) {
-                window.renderClientReportsTable();
-              } else {
-                repSnap.forEach(d => {
-                  window.clientReportsData[d.id] = { id: d.id, ...d.data() };
-                });
-                window.renderClientReportsTable();
-              }
+              onSnapshot(q, (repSnap) => {
+                window.clientReportsData = {};
+
+                if (repSnap.empty) {
+                  window.renderClientReportsTable();
+                } else {
+                  repSnap.forEach(d => {
+                    window.clientReportsData[d.id] = { id: d.id, ...d.data() };
+                  });
+                  window.renderClientReportsTable();
+                }
+              });
             } catch (e) { console.error('Error fetching reports:', e); }
 
             // Handle auto-scroll to billing section if returning from payment
@@ -1759,14 +1821,18 @@ export const clientViews = {
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
                   <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
                     <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Current plan</div>
                     <div id="ui-billing-plan" style="color: #fff; font-size: 1.5rem; font-weight: 600;">${plan}</div>
                   </div>
                   <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
+                    <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Amount</div>
+                    <div id="ui-billing-amount" style="color: #fff; font-size: 1.5rem; font-weight: 600;">₱${basePlanAmount}</div>
+                  </div>
+                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
                     <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Outstanding balance</div>
-                    <div id="ui-billing-balance" style="color: #fff; font-size: 1.5rem; font-weight: 600;">₱${outstandingBalance}</div>
+                    <div id="ui-billing-balance" style="color: #fff; font-size: 1.5rem; font-weight: 600;">₱0.00</div>
                   </div>
                   <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
                     <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Recorded payments</div>
@@ -2102,10 +2168,6 @@ export const clientViews = {
                     <div style="color: #E53935; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.5rem; text-transform: uppercase;">Account Details</div>
                     <h1 style="color: #fff; font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">My profile</h1>
                     <p style="color: #94a3b8; font-size: 0.9rem;">Keep your contact and installation details up to date.</p>
-                  </div>
-                  <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
-                    <span style="color: #10b981; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Active</span>
                   </div>
                 </div>
 
