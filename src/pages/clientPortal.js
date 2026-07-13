@@ -168,6 +168,43 @@ export const clientViews = {
     const email = user.email || 'Please add email address';
     const name = user.name || 'Please add name';
 
+    const isLight = localStorage.getItem('clientPortalTheme') === 'light';
+    const themeIcon = isLight ? '🌙' : '☀️';
+    const themeText = isLight ? 'Dark Mode' : 'Light Mode';
+
+    if (!document.getElementById('theme-toggle-style')) {
+      const style = document.createElement('style');
+      style.id = 'theme-toggle-style';
+      style.textContent = `
+        html.light-mode {
+          filter: invert(1) hue-rotate(180deg);
+        }
+        html.light-mode img,
+        html.light-mode video,
+        html.light-mode svg {
+          filter: invert(1) hue-rotate(-180deg);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    if (isLight) {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+
+    window.toggleThemeMode = function() {
+      const isCurrentlyLight = document.documentElement.classList.toggle('light-mode');
+      localStorage.setItem('clientPortalTheme', isCurrentlyLight ? 'light' : 'dark');
+      const iconEl = document.getElementById('theme-icon');
+      const textEl = document.getElementById('theme-text');
+      if (iconEl && textEl) {
+        iconEl.textContent = isCurrentlyLight ? '🌙' : '☀️';
+        textEl.textContent = isCurrentlyLight ? 'Dark Mode' : 'Light Mode';
+      }
+    };
+
     window.logoutClient = function () {
       localStorage.removeItem('clientUser');
       window.router.navigate('/clientlogin');
@@ -237,41 +274,44 @@ export const clientViews = {
       // Update Dashboard Overview dynamically
       const recBox = document.getElementById('recent-updates-box');
       const recCount = document.getElementById('recent-updates-count');
-      const annBox = document.getElementById('announcements-box');
-      const annCount = document.getElementById('announcements-count');
 
-      if (recBox && annBox) {
+      if (recBox) {
         let recentItems = [];
-        let annItems = [];
 
         reports.forEach(t => {
           let tTime = new Date(t.processedDate || t.date).getTime();
           let dateStr = new Date(t.processedDate || t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          if (t.status === 'Fixed' || t.status === 'Read') {
+          if (t.status === 'Fixed' || t.status === 'Read' || t.status === 'Pending') {
+            let statusColor = t.status === 'Fixed' ? '#6366f1' : (t.status === 'Read' ? '#10b981' : '#f59e0b');
+            let statusIcon = t.status === 'Fixed' ? '🔧' : (t.status === 'Read' ? '👁️' : '⏳');
+            let statusText = t.status === 'Fixed' ? 'Ticket Fixed' : (t.status === 'Read' ? 'Ticket Read' : 'Ticket Pending');
+            let message = t.status === 'Fixed' ? 'Your report has been resolved.' : (t.status === 'Read' ? 'The admin has viewed your report.' : 'Your report is waiting to be processed.');
+
             let html = `<div class="client-ticket-update" onclick="window.viewClientReport('${t.id}')" style="background: rgba(59,130,246,0.03); border: 1px solid rgba(59,130,246,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='rgba(59,130,246,0.03)'">`;
             html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">';
             html += '<div style="display: flex; align-items: center; gap: 0.5rem;">';
-            html += '<div style="width: 28px; height: 28px; background: rgba(59,130,246,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #3b82f6; font-size: 0.75rem;">🎫</div>';
-            html += '<span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Ticket ' + t.status + '</span>';
+            html += `<div style="width: 28px; height: 28px; background: ${statusColor}22; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">${statusIcon}</div>`;
+            html += `<span style="color: #fff; font-size: 0.9rem; font-weight: 600;">${statusText}</span>`;
             html += '</div>';
-            html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
+            html += `<span style="color: #64748b; font-size: 0.75rem;">${dateStr}</span>`;
             html += '</div>';
-            html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">Your report "<strong>' + (t.subject || 'Ticket') + '</strong>" has been marked as ' + t.status + '.</div>';
+            html += `<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">${message} <span style="color: #3b82f6; font-size: 0.75rem;">View details →</span></div>`;
+            
+            // Ticket Mini-Preview
+            html += '<div style="margin-top: 1rem; padding-left: 2.25rem; display: flex; justify-content: center;">';
+            html += `<div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: stretch; position: relative; overflow: hidden;">`;
+            html += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: ${statusColor};"></div>`;
+            html += '<div style="flex: 1; padding-left: 6px;">';
+            html += `<div style="color: #94a3b8; font-size: 0.55rem; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Ticket ID: ${t.reportId || '---'}</div>`;
+            html += `<div style="color: #fff; font-size: 0.7rem; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${t.subject || 'Ticket'}</div>`;
+            html += '<div style="background: rgba(255,255,255,0.05); height: 4px; width: 100%; margin-bottom: 4px; border-radius: 2px;"></div>';
+            html += '<div style="background: rgba(255,255,255,0.05); height: 4px; width: 70%; border-radius: 2px;"></div>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+
             html += '</div>';
             recentItems.push({ time: tTime, html: html });
-          }
-          if (t.status === 'Read') {
-            let html = `<div class="client-ticket-announcement" onclick="window.viewClientReport('${t.id}')" style="background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.08)'" onmouseout="this.style.background='rgba(16,185,129,0.03)'">`;
-            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">';
-            html += '<div style="display: flex; align-items: flex-start; gap: 0.75rem;">';
-            html += '<div style="width: 28px; height: 28px; background: rgba(16,185,129,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 0.75rem; flex-shrink: 0;">📣</div>';
-            html += '<div>';
-            html += '<div style="color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Admin has read your ticket</div>';
-            html += '<div style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">The admin has viewed your report "' + (t.subject || 'Ticket') + '".</div>';
-            html += '</div></div>';
-            html += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
-            html += '</div></div>';
-            annItems.push({ time: tTime, html: html });
           }
         });
 
@@ -310,7 +350,7 @@ export const clientViews = {
             aHtml += '<div style="color: #E53935; font-size: 0.85rem; font-weight: 600;">' + (be.dueDate || '-') + '</div></div>';
             aHtml += '</div></div>';
 
-            annItems.push({ time: tTime, html: aHtml });
+            recentItems.push({ time: tTime, html: aHtml });
           });
         }
 
@@ -330,29 +370,39 @@ export const clientViews = {
             html += '<span style="color: #64748b; font-size: 0.75rem;">' + pDate + '</span>';
             html += '</div>';
             html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">You paid <strong style="color:#fff;">₱' + (p.amount || '0') + '</strong> for ' + (p.period || p.billingMonth || '-') + '. <span style="color: #3b82f6; font-size: 0.75rem;">View receipt →</span></div>';
+            
+            // Payment Receipt Mini-Preview
+            html += '<div style="margin-top: 1rem; padding-left: 2.25rem; display: flex; justify-content: center;">';
+            html += '<div style="background: #f8fafc; border-radius: 6px; padding: 0.75rem; width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative;">';
+            html += '<div style="border-bottom: 1px dashed #94a3b8; margin-bottom: 0.5rem; padding-bottom: 0.4rem; text-align: center;">';
+            html += '<div style="color: #E53935; font-size: 0.7rem; font-weight: 800; letter-spacing: 1px;">RFIBERX</div>';
+            html += '<div style="color: #475569; font-size: 0.45rem; text-transform: uppercase;">Official Receipt</div>';
+            html += '</div>';
+            html += '<div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 0.5rem;">';
+            html += '<div style="background: #cbd5e1; height: 4px; width: 100%; border-radius: 2px;"></div>';
+            html += '<div style="background: #cbd5e1; height: 4px; width: 60%; border-radius: 2px;"></div>';
+            html += '<div style="background: #cbd5e1; height: 4px; width: 80%; border-radius: 2px;"></div>';
+            html += '</div>';
+            html += '<div style="border-top: 1px solid #cbd5e1; padding-top: 0.4rem; text-align: center;">';
+            html += '<div style="color: #0f172a; font-size: 0.9rem; font-weight: 700;">₱' + (p.amount || '0') + '</div>';
+            html += '<div style="color: #64748b; font-size: 0.5rem;">' + (p.period || p.billingMonth || 'Paid') + '</div>';
+            html += '</div>';
+            html += '</div>';
             html += '</div>';
 
+            html += '</div>';
             recentItems.push({ time: tTime, html: html });
           });
         }
 
         recentItems.sort((a, b) => b.time - a.time);
-        annItems.sort((a, b) => b.time - a.time);
 
         if (recentItems.length > 0) {
-          recBox.innerHTML = recentItems.slice(0, 15).map(i => i.html).join('');
-          if (recCount) recCount.textContent = Math.min(recentItems.length, 15);
+          recBox.innerHTML = recentItems.slice(0, 30).map(i => i.html).join('');
+          if (recCount) recCount.textContent = Math.min(recentItems.length, 30);
         } else {
           recBox.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-top: 3rem;">You\'re all caught up. New service updates will appear here.</div>';
           if (recCount) recCount.textContent = '0';
-        }
-
-        if (annItems.length > 0) {
-          annBox.innerHTML = annItems.slice(0, 15).map(i => i.html).join('');
-          if (annCount) annCount.textContent = Math.min(annItems.length, 15);
-        } else {
-          annBox.innerHTML = '<div style="text-align: center;"><div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">There are no announcements right now.</div><button style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 2rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">Need help? Contact support</button></div>';
-          if (annCount) annCount.textContent = '0';
         }
       }
     };
@@ -1149,23 +1199,105 @@ export const clientViews = {
         activeBtn.style.background = 'rgba(229,57,53,0.05)';
       }
 
+      if (!window.showAIAnalysisPopup) {
+        window.showAIAnalysisPopup = function() {
+          const modalHtml = `
+            <div id="ai-analysis-modal" style="position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
+              <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 400px; max-width: 90%; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: aiPopupIn 0.3s ease-out forwards;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%);">
+                  <h2 style="color: #fff; font-size: 1.2rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: #10b981;">✨</span> AI Analysis Result
+                  </h2>
+                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+                </div>
+                <div style="padding: 2rem 1.5rem;">
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Reference Number</div>
+                      <div style="color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;">0001 2345 6789</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Amount Paid</div>
+                      <div style="color: #10b981; font-size: 1.5rem; font-weight: 700;">₱2,000.00</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                      <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer Name</div>
+                        <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">John Doe</div>
+                      </div>
+                      
+                      <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Date Paid</div>
+                        <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">Jul 10, 2026</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: right; display: flex; justify-content: flex-end; gap: 1rem;">
+                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">Cancel</button>
+                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: #3b82f6; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Confirm Details</button>
+                </div>
+              </div>
+              <style>
+                @keyframes aiPopupIn {
+                  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                  to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+              </style>
+            </div>
+          `;
+          document.body.insertAdjacentHTML('beforeend', modalHtml);
+        };
+
+        window.simulateAIAnalysis = function(input) {
+          if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              let thumbContainer = document.getElementById('receipt-thumbnail-container');
+              if (!thumbContainer) {
+                 thumbContainer = document.createElement('div');
+                 thumbContainer.id = 'receipt-thumbnail-container';
+                 thumbContainer.style.marginTop = '1rem';
+                 thumbContainer.style.display = 'flex';
+                 thumbContainer.style.justifyContent = 'center';
+                 input.parentElement.parentElement.appendChild(thumbContainer);
+              }
+              thumbContainer.innerHTML = `<img src="${e.target.result}" style="max-width: 120px; max-height: 120px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" />`;
+            };
+            reader.readAsDataURL(file);
+
+            setTimeout(() => {
+              window.showAIAnalysisPopup();
+            }, 800);
+          }
+        };
+      }
+
       let html = '';
       if (method === 'gcash') {
         html = `
-          <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
-            <div style="width: 140px; height: 140px; background: #fff; padding: 0.75rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-               <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
-                 <rect width="100" height="100" fill="#fff"/>
-                 <rect x="10" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                 <rect x="68" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                 <rect x="10" y="68" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                 <rect x="15" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
-                 <rect x="73" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
-                 <rect x="15" y="73" width="12" height="12" fill="#007DFE" rx="1"/>
-                 <path d="M45 10h15v10H45zM10 45h20v10H10zM70 45h20v10H70zM40 40h20v20H40zM40 70h30v10H40zM80 70h10v20H80zM60 85h10v10H60zM45 25h10v10H45zM80 40h10v10H80z" fill="#000"/>
-               </svg>
+          <div style="display: flex; gap: 2rem; align-items: stretch; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; flex-shrink: 0;">
+              <div style="width: 140px; height: 140px; background: #fff; padding: 0.75rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                 <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+                   <rect width="100" height="100" fill="#fff"/>
+                   <rect x="10" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
+                   <rect x="68" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
+                   <rect x="10" y="68" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
+                   <rect x="15" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
+                   <rect x="73" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
+                   <rect x="15" y="73" width="12" height="12" fill="#007DFE" rx="1"/>
+                   <path d="M45 10h15v10H45zM10 45h20v10H10zM70 45h20v10H70zM40 40h20v20H40zM40 70h30v10H40zM80 70h10v20H80zM60 85h10v10H60zM45 25h10v10H45zM80 40h10v10H80z" fill="#000"/>
+                 </svg>
+              </div>
+              <button onclick="window.showAIAnalysisPopup()" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#cbd5e1'">
+                View AI Analysis Preview
+              </button>
             </div>
-            <div>
+            <div style="flex: 1; min-width: 250px;">
               <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                 <span style="color: #007DFE;">GCash</span> Transfer
               </div>
@@ -1174,6 +1306,16 @@ export const clientViews = {
               <div style="margin-top: 1.25rem; padding: 0.6rem 1rem; background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); border-radius: 8px; display: inline-block; color: #E53935; font-size: 0.8rem; font-weight: 600;">
                 <i style="margin-right:0.25rem">⚠️</i> Please include your Account Number in the message!
               </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 1.5rem; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; min-width: 250px;">
+              <div style="color: #fff; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">Upload Receipt</div>
+              <div style="color: #94a3b8; font-size: 0.8rem; text-align: center; margin-bottom: 1rem; max-width: 200px;">Upload a screenshot of your GCash receipt for verification.</div>
+              
+              <label style="background: #10b981; color: #fff; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                <span>📸</span> Add Image
+                <input type="file" accept="image/*" style="display: none;" onchange="window.simulateAIAnalysis(this)">
+              </label>
             </div>
           </div>
         `;
@@ -1750,62 +1892,33 @@ export const clientViews = {
 
               <!-- OVERVIEW SECTION -->
               <div id="content-overview" class="dashboard-content">
-                <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2rem; position: relative; overflow: hidden; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2rem; position: relative; overflow: hidden; margin-bottom: 1.5rem; display: flex; justify-content: space-between;">
                   <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 250px; background: #E53935; border-radius: 200px 0 0 200px; transform: translateX(120px);"></div>
                   <div style="position: relative; z-index: 1;">
                     <div style="color: #E53935; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.5rem; text-transform: uppercase;">Welcome Back</div>
-                    <h1 id="ui-overview-welcome" style="color: #fff; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.5px;">${name}</h1>
-                    <p style="color: #94a3b8; font-size: 0.9rem;">Your connection, account, and support - right where you need them.</p>
+                    <h1 id="ui-overview-welcome" style="color: #fff; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">${name}</h1>
+                    <div id="ui-overview-acct" style="color: #94a3b8; font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: 1px;">${acctNum}</div>
+                    <p style="color: #94a3b8; font-size: 0.95rem;">Your connection, account, and support - right where you need them.</p>
                   </div>
-                  <div style="position: relative; z-index: 1;">
-                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem;">
+                  <div style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
                       <div style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
                       <span style="color: #10b981; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Active</span>
                     </div>
-                  </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
-                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
-                    <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Account number</div>
-                    <div id="ui-overview-acct" style="color: #fff; font-size: 1.25rem; font-weight: 600;">${acctNum}</div>
-                  </div>
-                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
-                    <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Current fiber plan</div>
-                    <div id="ui-overview-plan" style="color: #fff; font-size: 1.25rem; font-weight: 600;">${plan}</div>
-                  </div>
-                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
-                    <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Account email</div>
-                    <div id="ui-overview-email" style="color: #fff; font-size: 1.25rem; font-weight: 600; min-height: 1.5rem;">
+                    <div id="ui-overview-email" style="color: #fff; font-size: 1.1rem; font-weight: 600; text-align: right;">
                       <!-- Populated by JS. Might be an "Add email" link. -->
                     </div>
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; min-height: 200px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                      <h3 style="color: #fff; font-size: 1rem; font-weight: 600; margin: 0;">Recent updates</h3>
-                      <div id="recent-updates-count" style="width: 24px; height: 24px; border-radius: 50%; background: rgba(16,185,129,0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600;">0</div>
-                    </div>
-                    <div id="recent-updates-box" style="margin-top: 2rem; max-height: 480px; overflow-y: auto; padding-right: 0.5rem;">
-                      <div style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-top: 3rem;">
-                        You're all caught up. New service updates will appear here.
-                      </div>
-                    </div>
+                <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; min-height: 200px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h3 style="color: #fff; font-size: 1rem; font-weight: 600; margin: 0;">Recent updates</h3>
+                    <div id="recent-updates-count" style="width: 24px; height: 24px; border-radius: 50%; background: rgba(16,185,129,0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600;">0</div>
                   </div>
-                  <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; min-height: 200px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                      <h3 style="color: #fff; font-size: 1rem; font-weight: 600; margin: 0;">Announcements</h3>
-                      <div id="announcements-count" style="width: 24px; height: 24px; border-radius: 50%; background: rgba(16,185,129,0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600;">0</div>
-                    </div>
-                    <div id="announcements-box" style="margin-top: 2rem; max-height: 480px; overflow-y: auto; padding-right: 0.5rem;">
-                      <div style="text-align: center;">
-                        <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">There are no announcements right now.</div>
-                        <button style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 2rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=\'transparent\'">
-                          Need help? Contact support
-                        </button>
-                      </div>
+                  <div id="recent-updates-box" style="margin-top: 2rem; max-height: 480px; overflow-y: auto; padding-right: 0.5rem;">
+                    <div style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-top: 3rem;">
+                      You're all caught up. New service updates will appear here.
                     </div>
                   </div>
                 </div>
@@ -2048,7 +2161,10 @@ export const clientViews = {
                     <div id="support-address" style="color: #fff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">None</div>
                   </div>
 
-                  <div style="display: flex; justify-content: flex-end;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 0.85rem;">
+                      Or contact our tech-support on our page <a href="https://www.facebook.com/RFiber1" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline; font-weight: 600;">here</a>
+                    </div>
                     <button onclick="window.submitReport()" style="background: #E53935; color: #fff; border: none; padding: 0.75rem 2.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f44336'" onmouseout="this.style.background='#e53935'">Submit report</button>
                   </div>
                 </div>
@@ -2168,6 +2284,11 @@ export const clientViews = {
                     <div style="color: #E53935; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.5rem; text-transform: uppercase;">Account Details</div>
                     <h1 style="color: #fff; font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">My profile</h1>
                     <p style="color: #94a3b8; font-size: 0.9rem;">Keep your contact and installation details up to date.</p>
+                  </div>
+                  <div>
+                    <button id="theme-toggle-btn" onclick="window.toggleThemeMode()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                      <span id="theme-icon">${themeIcon}</span> <span id="theme-text">${themeText}</span>
+                    </button>
                   </div>
                 </div>
 
