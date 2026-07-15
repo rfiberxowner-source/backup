@@ -3,12 +3,15 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, AppState } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { SairaCondensed_800ExtraBold, SairaCondensed_800ExtraBold_Italic } from '@expo-google-fonts/saira-condensed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './src/config/firebase';
 
 import Colors from './src/constants/Colors';
 import LoginScreen from './src/screens/LoginScreen';
@@ -18,24 +21,28 @@ import PlansScreen from './src/screens/PlansScreen';
 import SupportScreen from './src/screens/SupportScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs({ route }) {
   const { user, setUser } = route.params;
+  const { colors } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.background,
-          borderTopColor: Colors.border,
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           height: 60,
           paddingBottom: 10,
           paddingTop: 5,
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarIcon: ({ color, size }) => {
           let iconName;
           if (route.name === 'Overview') iconName = 'view-dashboard';
@@ -66,7 +73,8 @@ function MainTabs({ route }) {
   );
 }
 
-export default function App() {
+function RootNavigator() {
+  const { isDarkMode, colors } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -95,19 +103,41 @@ export default function App() {
     checkUser();
   }, []);
 
+  useEffect(() => {
+    let interval = null;
+    const updatePresence = async () => {
+      if (user && AppState.currentState === 'active') {
+        try {
+          const userRef = doc(db, "users", user.id);
+          await updateDoc(userRef, { lastActive: serverTimestamp() });
+        } catch (e) {
+          console.error("Presence update failed", e);
+        }
+      }
+    };
+
+    if (user) {
+      updatePresence();
+      interval = setInterval(updatePresence, 30000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [user]);
+
   if ((!fontsLoaded && !fontError) || isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-
   return (
     <NavigationContainer>
-      <StatusBar style="light" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         {user ? (
           <Stack.Screen 
             name="Main" 
@@ -126,3 +156,13 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
+  );
+}
+
+

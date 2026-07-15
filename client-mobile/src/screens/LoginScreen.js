@@ -3,9 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Colors from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LoginScreen({ onLogin }) {
+  const { colors, isDarkMode } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -80,7 +82,7 @@ export default function LoginScreen({ onLogin }) {
           <TextInput 
             style={styles.input}
             placeholder="you@example.com"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={identifier}
             onChangeText={setIdentifier}
             autoCapitalize="none"
@@ -90,7 +92,7 @@ export default function LoginScreen({ onLogin }) {
           <TextInput 
             style={styles.input}
             placeholder="At least 6 characters"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -111,10 +113,10 @@ export default function LoginScreen({ onLogin }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: colors.border,
     padding: 10,
     borderRadius: 12,
     alignSelf: 'flex-start',
@@ -133,35 +135,35 @@ const styles = StyleSheet.create({
   logoText: {
     fontFamily: 'SairaCondensed_800ExtraBold_Italic',
     fontSize: 28,
-    color: '#fff',
+    color: colors.text,
     letterSpacing: -1,
   },
   logoRed: {
-    color: Colors.primary,
+    color: colors.primary,
   },
   logoSub: {
     fontSize: 10,
-    color: '#fff',
+    color: colors.text,
     letterSpacing: 2,
     fontFamily: 'Inter_500Medium',
     marginTop: -5,
   },
   joinText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.5,
     marginBottom: 15,
   },
   title: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 40,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -1.5,
     lineHeight: 44,
   },
   subtitle: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
     marginTop: 15,
@@ -172,7 +174,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   label: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     marginBottom: 8,
@@ -180,10 +182,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: Colors.border,
-    color: '#fff',
+    borderColor: colors.border,
+    color: colors.text,
     padding: 15,
     borderRadius: 6,
     fontSize: 16,
@@ -191,7 +193,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorBox: {
-    backgroundColor: Colors.errorBg,
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
     borderColor: 'rgba(229,57,53,0.2)',
     padding: 12,
@@ -199,23 +201,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 6,
     alignItems: 'center',
-    shadowColor: Colors.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
   }

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions, Image, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, doc, updateDoc, addDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import Colors from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function BillingScreen({ user, route, navigation }) {
+  const { colors, isDarkMode } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
   const { width } = Dimensions.get('window');
   const [refreshing, setRefreshing] = useState(false);
   const [bills, setBills] = useState([]);
@@ -16,9 +19,28 @@ export default function BillingScreen({ user, route, navigation }) {
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [showGcashDropdown, setShowGcashDropdown] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const scrollRef = React.useRef(null);
   const mainScrollRef = React.useRef(null);
+
+  const handleUploadImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission required", "You've refused to allow this app to access your photos!");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['image'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setUploadedImage(result.assets[0].uri);
+    }
+  };
 
   useEffect(() => {
     if (route?.params?.showReceiptId && bills.length > 0) {
@@ -118,16 +140,20 @@ export default function BillingScreen({ user, route, navigation }) {
           <Text style={styles.greeting}>Billing & Payment</Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.avatarSmall}>
-            <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
-          </View>
+          {user.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+          ) : (
+            <View style={styles.avatarSmall}>
+              <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
       <ScrollView 
         ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
         {/* 3-Column Hero Grid */}
@@ -145,6 +171,27 @@ export default function BillingScreen({ user, route, navigation }) {
              <Text style={styles.heroGridValue}>{payments.length}</Text>
           </View>
         </View>
+
+        {/* Current Plan Amount Box */}
+        {(() => {
+          const userPlan = user.Plan || user.plan || '';
+          const userAmountStr = user.ammount || user.amount || '0';
+          let baseAmount = parseFloat(String(userAmountStr).replace(/[^0-9.]/g, '')) || 0;
+          
+          if (baseAmount === 0 && userPlan) {
+            const pStr = userPlan;
+            if (pStr.includes('200Mbps')) baseAmount = 2000;
+            else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
+            else if (pStr.includes('50Mbps')) baseAmount = 1000;
+            else if (pStr.includes('30Mbps')) baseAmount = 800;
+          }
+          return (
+            <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border, marginBottom: 20, alignItems: 'center' }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 5 }}>Current Plan Amount</Text>
+              <Text style={{ color: '#10b981', fontSize: 24, fontFamily: 'Inter_700Bold' }}>₱{baseAmount.toFixed(2)}</Text>
+            </View>
+          );
+        })()}
 
         <TouchableOpacity 
           style={[styles.payButton, parseFloat(totalBalance) <= 0 && styles.payButtonDisabled]} 
@@ -193,7 +240,7 @@ export default function BillingScreen({ user, route, navigation }) {
                       <View key={b.id} style={styles.billCard}>
                         <View style={styles.billHeader}>
                           <View style={styles.billIconBox}>
-                            <MaterialCommunityIcons name="receipt" size={24} color={Colors.primary} />
+                            <MaterialCommunityIcons name="receipt" size={24} color={colors.primary} />
                           </View>
                           <View style={styles.billInfo}>
                             <Text style={styles.billMonth}>{new Date(b.dateSent).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -273,15 +320,56 @@ export default function BillingScreen({ user, route, navigation }) {
           <Text style={styles.paymentSectionTitle}>Preferred payment method</Text>
           <Text style={styles.paymentSectionDesc}>Choose how you would like to pay your monthly bill.</Text>
           
-          <TouchableOpacity style={styles.methodCard} onPress={() => markAsPaid('dummy-id', totalBalance)}>
+          <TouchableOpacity style={[styles.methodCard, showGcashDropdown && { borderBottomWidth: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }]} onPress={() => {
+            if (showGcashDropdown) {
+              setUploadedImage(null);
+            }
+            setShowGcashDropdown(!showGcashDropdown);
+          }}>
             <MaterialCommunityIcons name="cellphone" size={30} color="#005EEA" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>GCash</Text>
               <Text style={styles.methodDetails}>0912 345 6789 (Fiber X)</Text>
             </View>
+            <MaterialCommunityIcons name={showGcashDropdown ? "chevron-up" : "chevron-down"} size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.methodCard} onPress={() => markAsPaid('dummy-id', totalBalance)}>
+          {showGcashDropdown && (
+            <View style={{ backgroundColor: colors.card, padding: 20, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: colors.border, alignItems: 'center' }}>
+               <MaterialCommunityIcons name="qrcode-scan" size={100} color={colors.text} style={{ marginBottom: 15 }} />
+               <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 5 }}>Scan to Pay</Text>
+               <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>0912 345 6789</Text>
+               
+               {uploadedImage && (
+                 <View style={{ marginBottom: 15, width: '100%', alignItems: 'center' }}>
+                   <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 5 }}>Screenshot Preview</Text>
+                   <Image source={{ uri: uploadedImage }} style={{ width: 140, height: 200, borderRadius: 12, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" />
+                 </View>
+               )}
+               
+               <TouchableOpacity 
+                 style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border }}
+                 onPress={handleUploadImage}
+               >
+                  <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
+               </TouchableOpacity>
+               
+               <TouchableOpacity 
+                 style={{ backgroundColor: 'rgba(16,185,129,0.1)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}
+                 onPress={() => {
+                   if (!uploadedImage) {
+                     Alert.alert("No image", "Please upload a payment screenshot first before running AI analysis.");
+                     return;
+                   }
+                   setShowAIModal(true);
+                 }}
+               >
+                  <Text style={{ color: '#10b981', fontFamily: 'Inter_500Medium' }}>View AI Analysis</Text>
+               </TouchableOpacity>
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.methodCard} onPress={() => {}}>
             <MaterialCommunityIcons name="bank" size={30} color="#F37021" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>BDO Bank Transfer</Text>
@@ -289,7 +377,7 @@ export default function BillingScreen({ user, route, navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.methodCard} onPress={() => markAsPaid('dummy-id', totalBalance)}>
+          <TouchableOpacity style={styles.methodCard} onPress={() => {}}>
             <MaterialCommunityIcons name="bank-transfer" size={30} color="#D7141A" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>BPI Online</Text>
@@ -306,22 +394,57 @@ export default function BillingScreen({ user, route, navigation }) {
           <View style={styles.receiptPaper}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
               {selectedReceipt && (() => {
-                const isPaidReceipt = selectedReceipt.status === 'paid';
-                const receiptDate = new Date(selectedReceipt.dateSent || selectedReceipt.datePaid || selectedReceipt.date || 0);
+                const isPaidReceipt = selectedReceipt.status === 'paid' || selectedReceipt.collection === 'payments';
                 
-                let previousCharges = 0;
+                const statementDateObj = isPaidReceipt 
+                  ? new Date(selectedReceipt.datePaid || selectedReceipt.date || selectedReceipt.dateSent || 0)
+                  : new Date(selectedReceipt.dateSent || selectedReceipt.date || 0);
+                const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                const allPays = [];
+                payments.forEach(p => {
+                  allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
+                });
                 bills.forEach(b => {
-                  const bDate = new Date(b.dateSent || 0);
-                  if (b.id !== selectedReceipt.id && bDate < receiptDate && b.status !== 'paid') {
-                    previousCharges += parseFloat(b.amount || 0);
+                  if (b.status !== 'paid') {
+                    allPays.push({ ...b, isPaidRec: false, sortDate: b.dateSent || b.datePaid || b.date || '' });
                   }
                 });
-
-                const currentCharges = isPaidReceipt ? 0 : parseFloat(selectedReceipt.amount || 0);
-                const paymentsReceived = isPaidReceipt ? parseFloat(selectedReceipt.amount || 0) : 0;
                 
-                const remainingBalance = previousCharges;
-                const totalAmountDue = isPaidReceipt ? 0 : (currentCharges + remainingBalance);
+                allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+                
+                let prevCharges = 0;
+                let prevPaid = true;
+                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
+                if (currentIdx > 0) {
+                  prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
+                  prevPaid = allPays[currentIdx - 1].isPaidRec;
+                }
+                
+                const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                const actualCurrentCharges = amount;
+                
+                let baseAmount = parseFloat(String(user.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                if (baseAmount === 0 && amount > 0) {
+                  const pStr = selectedReceipt.plan || '';
+                  if (pStr.includes('200Mbps')) baseAmount = 2000;
+                  else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
+                  else if (pStr.includes('50Mbps')) baseAmount = 1000;
+                  else if (pStr.includes('30Mbps')) baseAmount = 800;
+                  else {
+                    if (amount % 2000 === 0) baseAmount = 2000;
+                    else if (amount % 1500 === 0) baseAmount = 1500;
+                    else if (amount % 1000 === 0) baseAmount = 1000;
+                    else baseAmount = amount;
+                  }
+                }
+                
+                let currentCharges = !isPaidReceipt ? amount : baseAmount;
+                let remainingBalance = prevPaid ? 0 : prevCharges;
+                let totalAmountDue = !isPaidReceipt ? (currentCharges + remainingBalance) : 0;
+                let previousCharges = prevCharges;
+                
+                let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
                 
                 return (
                 <>
@@ -353,7 +476,7 @@ export default function BillingScreen({ user, route, navigation }) {
                         <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
                       </View>
                       <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{receiptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text></View>
+                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
                         <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {fontSize: 8}]}>{selectedReceipt.id}</Text></View>
                       </View>
                       <View style={styles.rGridRow}>
@@ -381,22 +504,24 @@ export default function BillingScreen({ user, route, navigation }) {
                     </View>
                     <View style={styles.rCalcRow}>
                       <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
-                      <Text style={styles.rCalcValue}>₱{paymentsReceived.toFixed(2)}</Text>
+                      <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
                     </View>
                     <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance</Text>
+                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance from Previous Bill</Text>
                       <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{remainingBalance.toFixed(2)}</Text>
                     </View>
                     
                     <Text style={[styles.rCalcSectionTitle, {marginTop: 20}]}>B. Current Charges</Text>
                     <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth})</Text>
+                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
                       <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
                     </View>
-                    <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Total Current Charges</Text>
-                      <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{currentCharges.toFixed(2)}</Text>
-                    </View>
+                    {isPaidReceipt && (
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
+                        <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                      </View>
+                    )}
                     
                     <View style={styles.rTotalBox}>
                       <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
@@ -405,18 +530,6 @@ export default function BillingScreen({ user, route, navigation }) {
                   </View>
                   
                   <Text style={styles.rThankYou}>Please pay on or before the due date to avoid service interruption.</Text>
-                  
-                  {selectedReceipt.status !== 'paid' && (
-                    <TouchableOpacity 
-                      style={[styles.payButton, { marginBottom: 15, justifyContent: 'center' }]}
-                      onPress={() => {
-                        setReceiptVisible(false);
-                        markAsPaid(selectedReceipt.id, selectedReceipt.amount);
-                      }}
-                    >
-                      <Text style={styles.payButtonText}>Pay Now ₱{selectedReceipt.amount}</Text>
-                    </TouchableOpacity>
-                  )}
                   
                   <TouchableOpacity style={styles.rCloseBtn} onPress={() => setReceiptVisible(false)}>
                     <Text style={styles.rCloseBtnText}>Close Receipt</Text>
@@ -428,12 +541,55 @@ export default function BillingScreen({ user, route, navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* AI Analysis Dummy Modal */}
+      <Modal visible={showAIModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.receiptPaper, { padding: 30, alignItems: 'center' }]}>
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(16,185,129,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
+              <MaterialCommunityIcons name="robot-outline" size={45} color="#10b981" />
+            </View>
+            <Text style={{ color: '#111', fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 10 }}>AI Receipt Analysis</Text>
+            <Text style={{ color: '#666', fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 20 }}>
+              The uploaded screenshot has been processed by our AI vision model.
+            </Text>
+            
+            <View style={{ backgroundColor: '#f8fafc', padding: 20, borderRadius: 12, width: '100%', marginBottom: 25, borderWidth: 1, borderColor: '#e2e8f0' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <MaterialCommunityIcons name="check-circle" size={18} color="#10b981" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#334155', fontSize: 15, fontFamily: 'Inter_500Medium' }}>Payment Detected</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <MaterialCommunityIcons name="cash" size={18} color="#10b981" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#334155', fontSize: 15, fontFamily: 'Inter_500Medium' }}>Amount: <Text style={{ fontFamily: 'Inter_700Bold' }}>₱{parseFloat(totalBalance).toFixed(2)}</Text></Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <MaterialCommunityIcons name="file-document-outline" size={18} color="#10b981" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#334155', fontSize: 15, fontFamily: 'Inter_500Medium' }}>GCash Ref: <Text style={{ fontFamily: 'Inter_700Bold' }}>843920194</Text></Text>
+              </View>
+              
+              <View style={{ marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#e2e8f0', flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: '#64748b', fontSize: 12, fontFamily: 'Inter_500Medium' }}>Analysis Result</Text>
+                <Text style={{ color: '#10b981', fontSize: 12, fontFamily: 'Inter_700Bold' }}>98% Confidence</Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={{ backgroundColor: '#111', paddingVertical: 14, paddingHorizontal: 30, borderRadius: 12, width: '100%', alignItems: 'center' }}
+              onPress={() => setShowAIModal(false)}
+            >
+              <Text style={{ color: colors.text, fontSize: 15, fontFamily: 'Inter_600SemiBold' }}>Close Analysis</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -442,7 +598,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   headerTextContainer: { flex: 1 },
-  greeting: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold' },
+  greeting: { color: colors.text, fontSize: 24, fontFamily: 'Inter_700Bold' },
   avatarSmall: {
     width: 40,
     height: 40,
@@ -453,16 +609,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(229,57,53,0.3)',
   },
-  avatarSmallText: { color: Colors.primary, fontSize: 16, fontFamily: 'Inter_700Bold' },
+  avatarSmallText: { color: colors.primary, fontSize: 16, fontFamily: 'Inter_700Bold' },
   scrollContent: { padding: 20, paddingBottom: 40 },
   heroGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     marginBottom: 20,
     marginTop: 10,
   },
@@ -473,13 +629,13 @@ const styles = StyleSheet.create({
   heroGridItemCenter: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     paddingHorizontal: 2,
   },
-  heroGridLabel: { color: Colors.textMuted, fontSize: 9, fontFamily: 'Inter_500Medium', marginBottom: 6, textAlign: 'center' },
-  heroGridValue: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  heroGridLabel: { color: colors.textMuted, fontSize: 9, fontFamily: 'Inter_500Medium', marginBottom: 6, textAlign: 'center' },
+  heroGridValue: { color: colors.text, fontSize: 16, fontFamily: 'Inter_700Bold', textAlign: 'center' },
   payButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -491,23 +647,23 @@ const styles = StyleSheet.create({
   payButtonText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold', marginLeft: 8 },
   paymentSection: {
     marginTop: 20,
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
-  paymentSectionTitle: { color: '#fff', fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 5 },
-  paymentSectionDesc: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 20 },
-  sectionTitle: { color: '#fff', fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 15 },
+  paymentSectionTitle: { color: colors.text, fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 5 },
+  paymentSectionDesc: { color: colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 20 },
+  sectionTitle: { color: colors.text, fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 15 },
   billsContainer: { marginBottom: 20 },
   billCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   billHeader: { flexDirection: 'row', alignItems: 'center' },
   billIconBox: {
@@ -520,10 +676,10 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   billInfo: { flex: 1 },
-  billMonth: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
-  billDesc: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium' },
+  billMonth: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+  billDesc: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium' },
   billRight: { alignItems: 'flex-end' },
-  billAmount: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold', marginBottom: 6 },
+  billAmount: { color: colors.text, fontSize: 16, fontFamily: 'Inter_700Bold', marginBottom: 6 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   statusPaid: { backgroundColor: 'rgba(16,185,129,0.1)' },
   statusUnpaid: { backgroundColor: 'rgba(245,158,11,0.1)' },
@@ -532,62 +688,62 @@ const styles = StyleSheet.create({
   statusTextUnpaid: { color: '#f59e0b' },
   markPaidBtn: {
     marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   markPaidBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  emptyText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 20 },
+  emptyText: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 20 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   bottomSheet: {
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: '80%',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   sheetHandle: {
     width: 40,
     height: 4,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 20,
   },
-  sheetTitle: { color: '#fff', fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 5 },
-  sheetDesc: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  sheetTitle: { color: colors.text, fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 5 },
+  sheetDesc: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular' },
   methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   methodInfo: { marginLeft: 15 },
-  methodName: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
-  methodDetails: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  methodName: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 4 },
+  methodDetails: { color: colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium' },
   closeSheetBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 20,
   },
-  closeSheetBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  receiptPaper: { backgroundColor: '#fff', borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
+  closeSheetBtnText: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  receiptPaper: { backgroundColor: colors.card, borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
   rHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 3, borderBottomColor: '#E53935', paddingBottom: 15, marginBottom: 20 },
   rLogoRow: { flexDirection: 'row', alignItems: 'center' },
   rLogoBox: { backgroundColor: '#E53935', width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -601,26 +757,26 @@ const styles = StyleSheet.create({
   rClientAddress: { fontSize: 11, color: '#555', fontFamily: 'Inter_400Regular' },
   rSummaryGrid: { borderWidth: 1, borderColor: '#1a1a1a', width: 150 },
   rGridRow: { flexDirection: 'row' },
-  rGridHeader: { flex: 1, backgroundColor: '#1a1a1a', padding: 4, alignItems: 'center', justifyContent: 'center' },
-  rGridHeaderText: { color: '#fff', fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
-  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  rGridHeader: { flex: 1, backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 4, alignItems: 'center', justifyContent: 'center' },
+  rGridHeaderText: { color: colors.text, fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   rGridCellText: { color: '#333', fontSize: 9, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   rAcctLine: { fontSize: 11, color: '#333', marginBottom: 20 },
-  rBillSummaryBadge: { backgroundColor: '#1a1a1a', color: '#fff', paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  rBillSummaryBadge: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', color: colors.text, paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   rCalculationsBox: { borderWidth: 1, borderColor: '#ddd', padding: 15, marginBottom: 20 },
   rCalcSectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#1a1a1a', marginBottom: 10 },
   rCalcRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 10 },
   rCalcLabel: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
   rCalcValue: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
-  rTotalBox: { backgroundColor: '#1a1a1a', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-  rTotalText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  rTotalValue: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  rTotalBox: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
+  rTotalText: { color: colors.text, fontSize: 11, fontFamily: 'Inter_700Bold' },
+  rTotalValue: { color: colors.text, fontSize: 13, fontFamily: 'Inter_700Bold' },
   rThankYou: { textAlign: 'center', color: '#E53935', fontSize: 10, marginBottom: 20, fontStyle: 'italic', fontFamily: 'Inter_600SemiBold' },
-  rCloseBtn: { backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, alignItems: 'center' },
-  rCloseBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  rCloseBtn: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 12, borderRadius: 8, alignItems: 'center' },
+  rCloseBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     borderRadius: 14,
     padding: 5,
     marginBottom: 5,
@@ -632,7 +788,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tabBtnActive: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -643,11 +799,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabBtnText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
   },
   tabBtnTextActive: {
-    color: '#fff',
+    color: colors.text,
   },
 });

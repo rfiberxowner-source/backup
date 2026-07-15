@@ -1,25 +1,56 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import Colors from '../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../context/ThemeContext';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen({ user, onLogout }) {
+  const { isDarkMode, toggleTheme, colors } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
+
   const [userData, setUserData] = useState({
     name: user.name || '',
     email: user.email || '',
     phone: user.phone || '',
     address: user.address || '',
     facebook: user.facebook || '',
-    password: user.password || ''
+    password: user.password || '',
+    profilePicture: user.profilePicture || null
   });
   
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handlePickImage = async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setUserData(prev => ({ ...prev, profilePicture: base64Img }));
+        
+        const userRef = doc(db, "users", user.id);
+        await updateDoc(userRef, { profilePicture: base64Img });
+        const updatedUser = { ...user, profilePicture: base64Img };
+        await AsyncStorage.setItem('clientUser', JSON.stringify(updatedUser));
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Failed to pick image.');
+    }
+  };
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -59,7 +90,7 @@ export default function ProfileScreen({ user, onLogout }) {
     return (
       <View style={styles.fieldRow}>
         <View style={styles.fieldIconBox}>
-          <MaterialCommunityIcons name={icon} size={20} color={Colors.textSecondary} />
+          <MaterialCommunityIcons name={icon} size={20} color={colors.textSecondary} />
         </View>
         <View style={styles.fieldContent}>
           <Text style={styles.fieldLabel}>{label}</Text>
@@ -71,6 +102,7 @@ export default function ProfileScreen({ user, onLogout }) {
               keyboardType={keyboardType}
               autoCapitalize={autoCapitalize}
               secureTextEntry={isPassword && !showPassword}
+              placeholderTextColor={colors.textMuted}
             />
           ) : (
             <Text style={styles.fieldValue} numberOfLines={1}>{isPassword ? '••••••••' : (userData[key] || 'Not set')}</Text>
@@ -78,7 +110,7 @@ export default function ProfileScreen({ user, onLogout }) {
         </View>
         {isPassword && isEditing && (
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-            <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={Colors.textMuted} />
+            <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -98,11 +130,37 @@ export default function ProfileScreen({ user, onLogout }) {
         
         {/* Profile Avatar Header */}
         <View style={styles.profileHero}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarLargeText}>{getInitials(userData.name)}</Text>
-          </View>
+          <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+            {userData.profilePicture ? (
+              <Image source={{ uri: userData.profilePicture }} style={{ width: 90, height: 90, borderRadius: 45, marginBottom: 15, borderWidth: 3, borderColor: colors.primary }} />
+            ) : (
+              <View style={styles.avatarLarge}>
+                <Text style={styles.avatarLargeText}>{getInitials(userData.name)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.heroName}>{userData.name || 'User'}</Text>
           <Text style={styles.heroEmail}>{userData.email || 'No email'}</Text>
+        </View>
+
+        {/* App Preferences */}
+        <Text style={styles.groupTitle}>Preferences</Text>
+        <View style={styles.insetGroup}>
+          <View style={styles.fieldRow}>
+            <View style={styles.fieldIconBox}>
+              <MaterialCommunityIcons name={isDarkMode ? "moon-waning-crescent" : "white-balance-sunny"} size={20} color={colors.textSecondary} />
+            </View>
+            <View style={styles.fieldContent}>
+              <Text style={styles.fieldLabel}>App Theme</Text>
+              <Text style={styles.fieldValue}>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</Text>
+            </View>
+            <Switch 
+              value={isDarkMode} 
+              onValueChange={toggleTheme}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.text}
+            />
+          </View>
         </View>
 
         {/* Personal Details Group */}
@@ -131,7 +189,7 @@ export default function ProfileScreen({ user, onLogout }) {
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-          <MaterialCommunityIcons name="logout" size={20} color={Colors.error} />
+          <MaterialCommunityIcons name="logout" size={20} color={colors.error} />
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
         
@@ -142,11 +200,11 @@ export default function ProfileScreen({ user, onLogout }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 10 },
-  headerTitle: { color: '#fff', fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  headerAction: { color: Colors.primary, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  headerTitle: { color: colors.text, fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  headerAction: { color: colors.primary, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   scrollContent: { padding: 20, paddingBottom: 40 },
   profileHero: { alignItems: 'center', marginBottom: 40, marginTop: 10 },
   avatarLarge: {
@@ -160,31 +218,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  avatarLargeText: { color: Colors.primary, fontSize: 32, fontFamily: 'Inter_700Bold' },
-  heroName: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 4 },
-  heroEmail: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_500Medium' },
-  groupTitle: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_600SemiBold', textTransform: 'uppercase', marginLeft: 15, marginBottom: 8 },
+  avatarLargeText: { color: colors.primary, fontSize: 32, fontFamily: 'Inter_700Bold' },
+  heroName: { color: colors.text, fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 4 },
+  heroEmail: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  groupTitle: { color: colors.textMuted, fontSize: 13, fontFamily: 'Inter_600SemiBold', textTransform: 'uppercase', marginLeft: 15, marginBottom: 8 },
   insetGroup: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 25,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
-  divider: { height: 1, backgroundColor: Colors.border, marginLeft: 50 },
+  divider: { height: 1, backgroundColor: colors.border, marginLeft: 50 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', padding: 15, minHeight: 70 },
   fieldIconBox: { width: 30, alignItems: 'center' },
   fieldContent: { flex: 1, marginLeft: 10 },
-  fieldLabel: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 4 },
-  fieldValue: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  fieldInput: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold', padding: 0, margin: 0, borderBottomWidth: 1, borderBottomColor: Colors.primary },
+  fieldLabel: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 4 },
+  fieldValue: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  fieldInput: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', padding: 0, margin: 0, borderBottomWidth: 1, borderBottomColor: colors.primary },
   eyeBtn: { padding: 10 },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: colors.errorBg,
     borderWidth: 1,
     borderColor: 'rgba(239,68,68,0.2)',
     paddingVertical: 16,
@@ -192,6 +250,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
   },
-  logoutText: { color: Colors.error, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginLeft: 8 },
-  versionText: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center' },
+  logoutText: { color: colors.error, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginLeft: 8 },
+  versionText: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center' },
 });

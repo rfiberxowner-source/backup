@@ -162,6 +162,18 @@ export const clientViews = {
     }
 
     const user = JSON.parse(userStr);
+    
+    // Online Presence Heartbeat
+    if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
+    const updatePresence = async () => {
+      try {
+        const { db, firestore } = await window._getDb();
+        const userRef = firestore.doc(db, "users", user.id);
+        await firestore.updateDoc(userRef, { lastActive: firestore.serverTimestamp() });
+      } catch (e) { console.error("Presence update failed:", e); }
+    };
+    updatePresence(); // Initial ping
+    window.clientPortalHeartbeat = setInterval(updatePresence, 30000);
     const basePlanAmount = user.ammount || user.amount || '0.00';
     const plan = user.Plan || user.plan || 'Please add plan';
     const acctNum = user.accountNumber || user.account || 'Please add account number';
@@ -206,6 +218,10 @@ export const clientViews = {
     };
 
     window.logoutClient = function () {
+      if (window.clientPortalHeartbeat) {
+        clearInterval(window.clientPortalHeartbeat);
+        window.clientPortalHeartbeat = null;
+      }
       localStorage.removeItem('clientUser');
       window.router.navigate('/clientlogin');
     };
@@ -1864,9 +1880,6 @@ export const clientViews = {
             </button>
             <div style="display: flex; align-items: center; gap: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div id="ui-topbar-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #E53935; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">
-                  ${name.charAt(0).toUpperCase()}
-                </div>
                 <div>
                   <div id="ui-topbar-name" style="color: #fff; font-size: 0.85rem; font-weight: 600;">${name}</div>
                   <div style="color: #64748b; font-size: 0.7rem;">Customer</div>

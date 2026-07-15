@@ -2204,7 +2204,7 @@ window.renderAdminClientsTable = async function () {
       if (uA.lastActive) {
         try {
           const lastA = (typeof uA.lastActive.toMillis === 'function') ? uA.lastActive.toMillis() : (uA.lastActive.toDate ? uA.lastActive.toDate().getTime() : 0);
-          if (Date.now() - lastA < 120000) isOnlineA = true;
+          if (Date.now() - lastA < 60000) isOnlineA = true;
         } catch (e) { }
       }
 
@@ -2212,7 +2212,7 @@ window.renderAdminClientsTable = async function () {
       if (uB.lastActive) {
         try {
           const lastB = (typeof uB.lastActive.toMillis === 'function') ? uB.lastActive.toMillis() : (uB.lastActive.toDate ? uB.lastActive.toDate().getTime() : 0);
-          if (Date.now() - lastB < 120000) isOnlineB = true;
+          if (Date.now() - lastB < 60000) isOnlineB = true;
         } catch (e) { }
       }
 
@@ -2238,12 +2238,12 @@ window.renderAdminClientsTable = async function () {
       const accNum = u.accountNumber || 'TBD';
       const fullName = u.fullName || u.name || 'TBD';
 
-      // Check online status (heartbeat within last 120 seconds)
+      // Check online status (heartbeat within last 60 seconds)
       let isOnline = false;
       if (u.lastActive) {
         try {
           const lastActiveTime = (typeof u.lastActive.toMillis === 'function') ? u.lastActive.toMillis() : (u.lastActive.toDate ? u.lastActive.toDate().getTime() : 0);
-          if (Date.now() - lastActiveTime < 120000) {
+          if (Date.now() - lastActiveTime < 60000) {
             isOnline = true;
           }
         } catch (e) { }

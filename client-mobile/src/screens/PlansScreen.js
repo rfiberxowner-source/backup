@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Colors from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -15,6 +15,8 @@ const PLANS = [
 ];
 
 export default function PlansScreen({ user, navigation }) {
+  const { colors, isDarkMode } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef(null);
 
@@ -66,9 +68,13 @@ export default function PlansScreen({ user, navigation }) {
           <Text style={styles.greeting}>Plans</Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.avatarSmall}>
-            <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
-          </View>
+          {user.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+          ) : (
+            <View style={styles.avatarSmall}>
+              <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -123,8 +129,8 @@ export default function PlansScreen({ user, navigation }) {
                         </Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: Colors.border }]}>
-                        <Text style={[styles.actionBtnText, { color: '#fff' }]}>Current Plan</Text>
+                      <View style={[styles.actionBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
+                        <Text style={[styles.actionBtnText, { color: colors.text }]}>Current Plan</Text>
                       </View>
                     )}
                   </View>
@@ -145,8 +151,8 @@ export default function PlansScreen({ user, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   headerTextContainer: { flex: 1 },
-  greeting: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold' },
+  greeting: { color: colors.text, fontSize: 24, fontFamily: 'Inter_700Bold' },
   avatarSmall: {
     width: 40,
     height: 40,
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(229,57,53,0.3)',
   },
-  avatarSmallText: { color: Colors.primary, fontSize: 16, fontFamily: 'Inter_700Bold' },
+  avatarSmallText: { color: colors.primary, fontSize: 16, fontFamily: 'Inter_700Bold' },
   policyBox: {
     marginHorizontal: 20,
     backgroundColor: 'rgba(245,158,11,0.05)',
@@ -178,37 +184,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   policyTitle: { color: '#f59e0b', fontSize: 12, fontFamily: 'Inter_700Bold', width: 60, marginRight: 10 },
-  policyText: { color: Colors.textSecondary, fontSize: 11, fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 16 },
+  policyText: { color: colors.textSecondary, fontSize: 11, fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 16 },
   content: { flex: 1 },
   carouselContainer: { flex: 1, justifyContent: 'center' },
   slide: { width: width, paddingHorizontal: 20, justifyContent: 'center', paddingBottom: 40 },
   planCard: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 24,
     padding: 30,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     minHeight: 400,
   },
-  planCardCurrent: { borderColor: Colors.primary, borderWidth: 2 },
+  planCardCurrent: { borderColor: colors.primary, borderWidth: 2 },
   currentBadge: {
     position: 'absolute',
     top: -12,
     alignSelf: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 15,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  currentBadgeText: { color: '#fff', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
-  planHeader: { borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: 20, marginBottom: 20, alignItems: 'center' },
-  planName: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 10 },
-  planPrice: { color: Colors.primary, fontSize: 32, fontFamily: 'Inter_700Bold' },
-  planPeriod: { color: Colors.textMuted, fontSize: 16, fontFamily: 'Inter_500Medium' },
+  currentBadgeText: { color: colors.text, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  planHeader: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 20, marginBottom: 20, alignItems: 'center' },
+  planName: { color: colors.text, fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 10 },
+  planPrice: { color: colors.primary, fontSize: 32, fontFamily: 'Inter_700Bold' },
+  planPeriod: { color: colors.textMuted, fontSize: 16, fontFamily: 'Inter_500Medium' },
   featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   planDetails: { flex: 1, justifyContent: 'center' },
-  planSpeed: { color: '#fff', fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 5, textAlign: 'center' },
-  planDesc: { color: Colors.textSecondary, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  planSpeed: { color: colors.text, fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 5, textAlign: 'center' },
+  planDesc: { color: colors.textSecondary, fontSize: 14, fontFamily: 'Inter_400Regular' },
   actionBtn: {
     backgroundColor: 'transparent',
     flexDirection: 'row',
@@ -217,11 +223,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
     marginTop: 20,
   },
-  actionBtnText: { color: Colors.primary, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  actionBtnText: { color: colors.primary, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   pagination: { flexDirection: 'row', justifyContent: 'center', position: 'absolute', bottom: 20, width: '100%' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border, marginHorizontal: 4 },
-  dotActive: { width: 24, backgroundColor: Colors.primary }
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.border, marginHorizontal: 4 },
+  dotActive: { width: 24, backgroundColor: colors.primary }
 });

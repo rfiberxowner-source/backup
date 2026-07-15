@@ -1,4 +1,4 @@
-export default {
+const dark = {
   background: '#0b0f19',
   card: '#1a202c',
   primary: '#E53935',
@@ -14,3 +14,22 @@ export default {
   error: '#ef4444',
   errorBg: 'rgba(239,68,68,0.1)'
 };
+
+const light = {
+  background: '#f8fafc',
+  card: '#ffffff',
+  primary: '#E53935',
+  primaryHover: '#f44336',
+  text: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#64748b',
+  border: 'rgba(0,0,0,0.08)',
+  success: '#10b981',
+  successBg: 'rgba(16,185,129,0.1)',
+  warning: '#f59e0b',
+  warningBg: 'rgba(245,158,11,0.1)',
+  error: '#ef4444',
+  errorBg: 'rgba(239,68,68,0.1)'
+};
+
+export default { light, dark };

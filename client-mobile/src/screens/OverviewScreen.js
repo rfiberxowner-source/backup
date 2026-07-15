@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import Colors from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
 export default function OverviewScreen({ user, navigation }) {
+  const { colors, isDarkMode } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(user);
   
@@ -79,7 +81,6 @@ export default function OverviewScreen({ user, navigation }) {
 
   useEffect(() => {
     let recentList = [];
-    let annList = [];
 
     reportsData.forEach(r => {
       const isFixed = r.status === 'Fixed' || r.status === 'Done';
@@ -92,11 +93,7 @@ export default function OverviewScreen({ user, navigation }) {
         isRead: r.isRead || false,
         originalData: r
       };
-      if (isFixed) {
-        recentList.push(item);
-      } else {
-        annList.push(item);
-      }
+      recentList.push(item);
     });
 
     billsData.forEach(b => {
@@ -105,12 +102,12 @@ export default function OverviewScreen({ user, navigation }) {
           id: b.id, type: 'bill', collection: 'billing_emails',
           title: 'Billing Statement',
           desc: `Amount due ₱${b.amount}, Due Date ${b.dueDate || '-'}`,
-          icon: 'file-document-outline', color: Colors.primary,
+          icon: 'file-document-outline', color: colors.primary,
           date: new Date(b.dateSent),
           isRead: b.isRead || false,
           originalData: b
         };
-        annList.push(item);
+        recentList.push(item);
       }
     });
 
@@ -119,7 +116,7 @@ export default function OverviewScreen({ user, navigation }) {
         id: p.id, type: 'bill', collection: 'payments',
         title: 'Payment successful',
         desc: `You Pay ₱${p.amount} for ${p.period || p.billingMonth || '-'}. View receipt`,
-        icon: 'file-document-outline', color: Colors.primary,
+        icon: 'file-document-outline', color: colors.primary,
         date: new Date(p.datePaid || p.date || 0),
         isRead: p.isRead || false,
         originalData: { ...p, status: 'paid' }
@@ -129,7 +126,7 @@ export default function OverviewScreen({ user, navigation }) {
 
     globalAnnData.forEach(a => {
       const isRead = a.readBy && a.readBy.includes(user.id);
-      annList.push({
+      recentList.push({
         id: a.id, type: 'announcement', collection: 'announcements',
         title: a.title || 'Announcement',
         desc: a.message || a.description || '',
@@ -141,10 +138,8 @@ export default function OverviewScreen({ user, navigation }) {
     });
 
     recentList.sort((a, b) => b.date - a.date);
-    annList.sort((a, b) => b.date - a.date);
 
     setRecentUpdates(recentList);
-    setAnnouncements(annList);
   }, [reportsData, billsData, paymentsData, globalAnnData]);
 
   const onRefresh = () => {
@@ -202,178 +197,148 @@ export default function OverviewScreen({ user, navigation }) {
     return name[0].toUpperCase();
   };
 
-  const switchTab = (index) => {
-    setActiveTab(index);
-    scrollRef.current?.scrollTo({ x: index * width, animated: true });
-  };
-
-  const handleScrollEnd = (e) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    setActiveTab(index);
+  const markAllAsRead = async () => {
+    const unreadItems = recentUpdates.filter(i => !i.isRead);
+    if (unreadItems.length === 0) return;
+    
+    for (const item of unreadItems) {
+      try {
+        if (item.type === 'announcement') {
+          await updateDoc(doc(db, "announcements", item.id), {
+            readBy: arrayUnion(userData.id)
+          });
+        } else if (item.type === 'ticket') {
+          await updateDoc(doc(db, "reports", item.id), { isRead: true });
+        } else if (item.type === 'bill') {
+          if (item.collection === 'billing_emails') {
+            await updateDoc(doc(db, "users", userData.id, "billing_emails", item.id), { isRead: true });
+          } else if (item.collection === 'payments') {
+            await updateDoc(doc(db, "payments", item.id), { isRead: true });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to mark as read", item.id, err);
+      }
+    }
   };
 
   const currentPlan = userData.Plan || userData.plan || 'No Plan';
   const currentAcct = userData.accountNumber || userData.account || '-';
+  const currentEmail = userData.email || '-';
   const fullName = userData.name || 'User';
 
   const unreadRecentCount = recentUpdates.filter(i => !i.isRead).length;
-  const unreadAnnCount = announcements.filter(i => !i.isRead).length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.greeting}>Overview</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <View style={styles.avatarSmall}>
-            <Text style={styles.avatarSmallText}>{getInitials(userData.name)}</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={[styles.statusBadge, {paddingVertical: 4, paddingHorizontal: 8}]}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>Active Account</Text>
+        </View>
       </View>
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Box 1: Full Name and Active Status */}
+        {/* Box 1: Profile Hero Card */}
         <View style={styles.profileCard}>
-          {/* Subtle background decoration */}
           <View style={styles.cardDecoration1} />
           <View style={styles.cardDecoration2} />
           
           <View style={styles.profileHeroRow}>
-            <View style={styles.avatarLarge}>
-              <Text style={styles.avatarLargeText}>{getInitials(fullName)}</Text>
-            </View>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroName} numberOfLines={2}>{fullName}</Text>
-              <View style={styles.statusBadge}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>Active Account</Text>
+            {userData.profilePicture ? (
+              <Image source={{ uri: userData.profilePicture }} style={{ width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#fff' }} />
+            ) : (
+              <View style={styles.avatarLarge}>
+                <Text style={styles.avatarLargeText}>{getInitials(fullName)}</Text>
               </View>
+            )}
+            <View style={styles.heroInfo}>
+              <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2}}>
+                <Text style={[styles.heroName, {flex: 1}]} numberOfLines={1} adjustsFontSizeToFit>{fullName}</Text>
+              </View>
+              <Text style={{color: '#94a3b8', fontSize: 13, fontFamily: 'Inter_500Medium'}}>{currentAcct}</Text>
             </View>
           </View>
           
           <View style={styles.mottoContainer}>
             <Text style={styles.mottoText}>Your connection, account, and support - right where you need them.</Text>
-          </View>
-        </View>
-
-        {/* Box 2: Account Number & Current Tier Plan */}
-        <View style={styles.accountGridCard}>
-          <View style={styles.gridBox}>
-            <MaterialCommunityIcons name="identifier" size={18} color={Colors.textMuted} style={styles.gridIcon} />
-            <Text style={styles.gridLabel}>Account Number</Text>
-            <Text style={styles.gridValue} numberOfLines={1} adjustsFontSizeToFit>{currentAcct}</Text>
-          </View>
-          
-          <View style={styles.gridDivider} />
-          
-          <View style={styles.gridBox}>
-            <MaterialCommunityIcons name="wifi" size={18} color={Colors.textMuted} style={styles.gridIcon} />
-            <Text style={styles.gridLabel}>Current Plan</Text>
-            <Text style={styles.gridValue} numberOfLines={1} adjustsFontSizeToFit>{currentPlan}</Text>
-          </View>
-        </View>
-
-        {/* Tab Buttons */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 0 && styles.tabBtnActive]} 
-            onPress={() => switchTab(0)}
-          >
-            <View style={styles.tabContentRow}>
-              <Text style={[styles.tabBtnText, activeTab === 0 && styles.tabBtnTextActive]}>Recent</Text>
-              {unreadRecentCount > 0 && (
-                <View style={styles.notificationCircle}>
-                  <Text style={styles.notificationCount}>{unreadRecentCount > 99 ? '99+' : unreadRecentCount}</Text>
-                </View>
-              )}
+            <View style={{alignItems: 'flex-end', marginTop: 10}}>
+              <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium'}} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 1 && styles.tabBtnActive]} 
-            onPress={() => switchTab(1)}
-          >
-            <View style={styles.tabContentRow}>
-              <Text style={[styles.tabBtnText, activeTab === 1 && styles.tabBtnTextActive]}>Announcements</Text>
-              {unreadAnnCount > 0 && (
-                <View style={styles.notificationCircle}>
-                  <Text style={styles.notificationCount}>{unreadAnnCount > 99 ? '99+' : unreadAnnCount}</Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Horizontal Paging Area inside the main ScrollView to eliminate gaps */}
-        <View style={{ width: width, marginLeft: -20, marginTop: 15 }}>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleScrollEnd}
-          >
-            {/* Recent Slide */}
-            <View style={{ width: width, paddingHorizontal: 20 }}>
-              <View style={styles.feedContainer}>
-                {recentUpdates.length === 0 ? (
-                  <View style={styles.emptyFeed}>
-                    <MaterialCommunityIcons name="check-all" size={40} color={Colors.border} />
-                    <Text style={styles.emptyText}>Nothing recent to show.</Text>
-                  </View>
-                ) : (
-                  <ScrollView style={{ maxHeight: 260 }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                    {recentUpdates.map((item, index) => (
-                      <TouchableOpacity key={item.id + index} style={[styles.feedItem, !item.isRead && styles.feedItemUnread]} onPress={() => handlePressItem(item)}>
-                        <View style={[styles.feedIconBox, { backgroundColor: item.color + '20' }]}>
-                          <MaterialCommunityIcons name={item.icon} size={20} color={item.color} />
-                        </View>
-                        <View style={styles.feedContent}>
-                          <Text style={[styles.feedTitle, !item.isRead && styles.feedTitleUnread]}>{item.title}</Text>
-                          <Text style={styles.feedDesc} numberOfLines={1}>{item.desc}</Text>
-                        </View>
-                        {!item.isRead && <View style={styles.unreadDot} />}
-                        <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.border} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
+        {/* Header for Recent Updates */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <Text style={{color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold'}}>Recent Updates</Text>
+            {unreadRecentCount > 0 && (
+              <View style={styles.notificationCircle}>
+                <Text style={styles.notificationCount}>{unreadRecentCount > 99 ? '99+' : unreadRecentCount}</Text>
               </View>
-            </View>
+            )}
+          </View>
+          {unreadRecentCount > 0 && (
+            <TouchableOpacity onPress={markAllAsRead} style={{paddingHorizontal: 10, paddingVertical: 5, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 6, borderWidth: 1, borderColor: colors.border}}>
+              <Text style={{color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium'}}>Mark all as read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-            {/* Announcements Slide */}
-            <View style={{ width: width, paddingHorizontal: 20 }}>
-              <View style={styles.feedContainer}>
-                {announcements.length === 0 ? (
-                  <View style={styles.emptyFeed}>
-                    <MaterialCommunityIcons name="bullhorn-outline" size={40} color={Colors.border} />
-                    <Text style={styles.emptyText}>No pending actions or announcements.</Text>
-                  </View>
-                ) : (
-                  <ScrollView style={{ maxHeight: 260 }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                    {announcements.map((item, index) => (
-                      <TouchableOpacity key={item.id || index} style={[styles.feedItem, !item.isRead && styles.feedItemUnread]} onPress={() => handlePressItem(item)}>
-                        <View style={[styles.feedIconBox, { backgroundColor: item.color + '20' }]}>
-                          <MaterialCommunityIcons name={item.icon} size={20} color={item.color} />
-                        </View>
-                        <View style={styles.feedContent}>
-                          <Text style={[styles.feedTitle, !item.isRead && styles.feedTitleUnread]}>{item.title}</Text>
-                          <Text style={styles.feedDesc} numberOfLines={2}>{item.desc}</Text>
-                        </View>
-                        {!item.isRead && <View style={styles.unreadDot} />}
-                        <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.border} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
+        {/* Recent Updates Feed */}
+        <View style={styles.feedContainer}>
+          {recentUpdates.length === 0 ? (
+            <View style={styles.emptyFeed}>
+              <MaterialCommunityIcons name="check-all" size={40} color={colors.border} />
+              <Text style={styles.emptyText}>Nothing recent to show.</Text>
             </View>
-          </ScrollView>
+          ) : (
+            <ScrollView style={{ maxHeight: 350 }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+              {recentUpdates.map((item, index) => (
+                <TouchableOpacity key={item.id + index} style={[styles.feedItem, !item.isRead && styles.feedItemUnread]} onPress={() => handlePressItem(item)}>
+                  <View style={[styles.feedIconBox, { backgroundColor: item.color + '20' }]}>
+                    <MaterialCommunityIcons name={item.icon} size={20} color={item.color} />
+                  </View>
+                  <View style={styles.feedContent}>
+                    <Text style={[styles.feedTitle, !item.isRead && styles.feedTitleUnread]}>{item.title}</Text>
+                    <Text style={styles.feedDesc} numberOfLines={2}>{item.desc}</Text>
+                  </View>
+                  
+                  {/* Miniature Thumbnail Preview for Bills and Tickets */}
+                  {(item.type === 'ticket' || item.type === 'bill') && (
+                    <View style={{
+                      width: 34, height: 44, 
+                      backgroundColor: item.type === 'bill' ? '#f8fafc' : item.color + '15', 
+                      borderRadius: 4, 
+                      marginRight: 10,
+                      padding: 4,
+                      justifyContent: 'space-between',
+                      borderWidth: 1,
+                      borderColor: item.type === 'bill' ? '#e2e8f0' : item.color + '40',
+                    }}>
+                      <View style={{height: 2, width: '100%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
+                      <View style={{height: 2, width: '70%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
+                      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                         <MaterialCommunityIcons name={item.type === 'bill' ? 'check-decagram' : 'ticket-confirmation'} size={14} color={item.type === 'bill' ? '#10b981' : item.color} />
+                      </View>
+                      <View style={{height: 2, width: '50%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
+                    </View>
+                  )}
+
+                  {!item.isRead && <View style={styles.unreadDot} />}
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={colors.border} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
       </ScrollView>
@@ -384,24 +349,57 @@ export default function OverviewScreen({ user, navigation }) {
           <View style={styles.receiptPaper}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
               {selectedReceipt && (() => {
-                const isPaidReceipt = selectedReceipt.status === 'paid';
-                const receiptDate = new Date(selectedReceipt.dateSent || selectedReceipt.datePaid || selectedReceipt.date || 0);
+                const isPaidReceipt = selectedReceipt.status === 'paid' || selectedReceipt.collection === 'payments';
                 
-                let previousCharges = 0;
-                billsData.forEach(b => {
-                  const bDate = new Date(b.dateSent || 0);
-                  if (b.id !== selectedReceipt.id && bDate < receiptDate && b.status !== 'paid') {
-                    previousCharges += parseFloat(b.amount || 0);
+                const statementDateObj = isPaidReceipt 
+                  ? new Date(selectedReceipt.datePaid || selectedReceipt.date || selectedReceipt.dateSent || 0)
+                  : new Date(selectedReceipt.dateSent || selectedReceipt.date || 0);
+                const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                const allPays = [];
+                (typeof paymentsData !== 'undefined' ? paymentsData : []).forEach(p => {
+                  allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
+                });
+                (typeof billsData !== 'undefined' ? billsData : []).forEach(b => {
+                  if (b.status !== 'paid') {
+                    allPays.push({ ...b, isPaidRec: false, sortDate: b.dateSent || b.datePaid || b.date || '' });
                   }
                 });
-
-                const currentCharges = isPaidReceipt ? 0 : parseFloat(selectedReceipt.amount || 0);
-                const paymentsReceived = isPaidReceipt ? parseFloat(selectedReceipt.amount || 0) : 0;
                 
-                // If it's a paid receipt, they paid the total amount due at that time.
-                // But for simplicity in this view, a paid receipt shows 0 total due.
-                const remainingBalance = previousCharges;
-                const totalAmountDue = isPaidReceipt ? 0 : (currentCharges + remainingBalance);
+                allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+                
+                let prevCharges = 0;
+                let prevPaid = true;
+                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
+                if (currentIdx > 0) {
+                  prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
+                  prevPaid = allPays[currentIdx - 1].isPaidRec;
+                }
+                
+                const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                const actualCurrentCharges = amount;
+                
+                let baseAmount = parseFloat(String(userData.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                if (baseAmount === 0 && amount > 0) {
+                  const pStr = selectedReceipt.plan || '';
+                  if (pStr.includes('200Mbps')) baseAmount = 2000;
+                  else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
+                  else if (pStr.includes('50Mbps')) baseAmount = 1000;
+                  else if (pStr.includes('30Mbps')) baseAmount = 800;
+                  else {
+                    if (amount % 2000 === 0) baseAmount = 2000;
+                    else if (amount % 1500 === 0) baseAmount = 1500;
+                    else if (amount % 1000 === 0) baseAmount = 1000;
+                    else baseAmount = amount;
+                  }
+                }
+                
+                let currentCharges = !isPaidReceipt ? amount : baseAmount;
+                let remainingBalance = prevPaid ? 0 : prevCharges;
+                let totalAmountDue = !isPaidReceipt ? (currentCharges + remainingBalance) : 0;
+                let previousCharges = prevCharges;
+                
+                let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
                 
                 return (
                 <>
@@ -433,7 +431,7 @@ export default function OverviewScreen({ user, navigation }) {
                         <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
                       </View>
                       <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{receiptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text></View>
+                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
                         <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {fontSize: 8}]}>{selectedReceipt.id}</Text></View>
                       </View>
                       <View style={styles.rGridRow}>
@@ -460,23 +458,25 @@ export default function OverviewScreen({ user, navigation }) {
                       <Text style={styles.rCalcValue}>₱{previousCharges.toFixed(2)}</Text>
                     </View>
                     <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Less: Payments Received - Thank You!</Text>
-                      <Text style={styles.rCalcValue}>₱{paymentsReceived.toFixed(2)}</Text>
+                      <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
+                      <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
                     </View>
                     <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance</Text>
+                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance from Previous Bill</Text>
                       <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{remainingBalance.toFixed(2)}</Text>
                     </View>
                     
                     <Text style={[styles.rCalcSectionTitle, {marginTop: 20}]}>B. Current Charges</Text>
                     <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth})</Text>
+                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
                       <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
                     </View>
-                    <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Total Current Charges</Text>
-                      <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{currentCharges.toFixed(2)}</Text>
-                    </View>
+                    {isPaidReceipt && (
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
+                        <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                      </View>
+                    )}
                     
                     <View style={styles.rTotalBox}>
                       <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
@@ -501,10 +501,10 @@ export default function OverviewScreen({ user, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.5,
@@ -539,19 +539,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarSmallText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
   },
   
   /* Box 1: Profile Card */
   profileCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.card,
     borderRadius: 24,
     padding: 24,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   cardDecoration1: {
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatarLargeText: {
-    color: Colors.primary,
+    color: colors.primary,
     fontSize: 26,
     fontFamily: 'Inter_700Bold',
   },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 22,
     fontFamily: 'Inter_700Bold',
     marginBottom: 6,
@@ -628,11 +628,11 @@ const styles = StyleSheet.create({
   },
   mottoContainer: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: colors.border,
     paddingTop: 15,
   },
   mottoText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
     lineHeight: 20,
@@ -641,12 +641,12 @@ const styles = StyleSheet.create({
   /* Box 2: Account Details Card */
   accountGridCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
     borderRadius: 20,
     padding: 20,
     marginBottom: 25,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   gridBox: {
     flex: 1,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   },
   gridDivider: {
     width: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
     marginHorizontal: 20,
   },
   gridIcon: {
@@ -662,13 +662,13 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   gridLabel: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
     marginBottom: 6,
   },
   gridValue: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
     letterSpacing: -0.5,
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   /* Tabs */
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     borderRadius: 14,
     padding: 5,
   },
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tabBtnActive: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -699,12 +699,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabBtnText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
   },
   tabBtnTextActive: {
-    color: '#fff',
+    color: colors.text,
   },
   notificationCircle: {
     backgroundColor: '#EF4444',
@@ -717,17 +717,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   notificationCount: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
   },
 
   /* Feeds */
   feedContainer: {
-    backgroundColor: Colors.card,
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   emptyFeed: {
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
     marginTop: 15,
@@ -745,10 +745,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   feedItemUnread: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
   },
   feedIconBox: {
     width: 44,
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feedTitle: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
     marginBottom: 4,
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   feedDesc: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
   },
@@ -788,7 +788,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  receiptPaper: { backgroundColor: '#fff', borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
+  receiptPaper: { backgroundColor: colors.card, borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
   rHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 3, borderBottomColor: '#E53935', paddingBottom: 15, marginBottom: 20 },
   rLogoRow: { flexDirection: 'row', alignItems: 'center' },
   rLogoBox: { backgroundColor: '#E53935', width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -802,21 +802,21 @@ const styles = StyleSheet.create({
   rClientAddress: { fontSize: 11, color: '#555', fontFamily: 'Inter_400Regular' },
   rSummaryGrid: { borderWidth: 1, borderColor: '#1a1a1a', width: 150 },
   rGridRow: { flexDirection: 'row' },
-  rGridHeader: { flex: 1, backgroundColor: '#1a1a1a', padding: 4, alignItems: 'center', justifyContent: 'center' },
-  rGridHeaderText: { color: '#fff', fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
-  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  rGridHeader: { flex: 1, backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 4, alignItems: 'center', justifyContent: 'center' },
+  rGridHeaderText: { color: colors.text, fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
   rGridCellText: { color: '#333', fontSize: 9, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   rAcctLine: { fontSize: 11, color: '#333', marginBottom: 20 },
-  rBillSummaryBadge: { backgroundColor: '#1a1a1a', color: '#fff', paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  rBillSummaryBadge: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', color: colors.text, paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   rCalculationsBox: { borderWidth: 1, borderColor: '#ddd', padding: 15, marginBottom: 20 },
   rCalcSectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#1a1a1a', marginBottom: 10 },
   rCalcRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 10 },
   rCalcLabel: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
   rCalcValue: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
-  rTotalBox: { backgroundColor: '#1a1a1a', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-  rTotalText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  rTotalValue: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  rTotalBox: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
+  rTotalText: { color: colors.text, fontSize: 11, fontFamily: 'Inter_700Bold' },
+  rTotalValue: { color: colors.text, fontSize: 13, fontFamily: 'Inter_700Bold' },
   rThankYou: { textAlign: 'center', color: '#555', fontSize: 10, marginBottom: 20, fontStyle: 'italic' },
-  rCloseBtn: { backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, alignItems: 'center' },
-  rCloseBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  rCloseBtn: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 12, borderRadius: 8, alignItems: 'center' },
+  rCloseBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 });

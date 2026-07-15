@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, RefreshControl, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TextInput, TouchableOpacity, Alert, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import Colors from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function SupportScreen({ user, route, navigation }) {
+  const { colors, isDarkMode } = useTheme();
+  const styles = createStyles(colors, isDarkMode);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' or 'new'
   
@@ -145,7 +147,7 @@ export default function SupportScreen({ user, route, navigation }) {
     if (tickets.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="ticket-confirmation-outline" size={60} color={Colors.border} />
+          <MaterialCommunityIcons name="ticket-confirmation-outline" size={60} color={colors.border} />
           <Text style={styles.emptyTitle}>No support tickets</Text>
           <Text style={styles.emptyDesc}>You haven't created any service requests yet.</Text>
           <TouchableOpacity style={styles.emptyBtn} onPress={() => setActiveTab('new')}>
@@ -172,9 +174,9 @@ export default function SupportScreen({ user, route, navigation }) {
         </View>
         <Text style={styles.ticketSubject}>{t.subject || 'No Subject'}</Text>
         <View style={styles.ticketMetaRow}>
-          <MaterialCommunityIcons name="folder-outline" size={14} color={Colors.textMuted} />
+          <MaterialCommunityIcons name="folder-outline" size={14} color={colors.textMuted} />
           <Text style={styles.ticketCat}>{t.category || '-'}</Text>
-          <MaterialCommunityIcons name="clock-outline" size={14} color={Colors.textMuted} style={{marginLeft: 15}} />
+          <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textMuted} style={{marginLeft: 15}} />
           <Text style={styles.ticketDate}>{new Date(t.date).toLocaleDateString()}</Text>
         </View>
         
@@ -197,7 +199,7 @@ export default function SupportScreen({ user, route, navigation }) {
       <TextInput 
         style={styles.input} 
         placeholder="E.g., Internet is slow" 
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         value={subject}
         onChangeText={setSubject}
       />
@@ -222,7 +224,7 @@ export default function SupportScreen({ user, route, navigation }) {
       <TextInput 
         style={[styles.input, { height: 120, textAlignVertical: 'top' }]} 
         placeholder="Please provide as much detail as possible..." 
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.textMuted}
         multiline
         value={desc}
         onChangeText={setDesc}
@@ -259,7 +261,7 @@ export default function SupportScreen({ user, route, navigation }) {
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
         {activeTab === 'tickets' ? renderTickets() : renderNewRequest()}
@@ -287,7 +289,7 @@ export default function SupportScreen({ user, route, navigation }) {
             <TextInput 
               style={[styles.input, { height: 100, textAlignVertical: 'top', width: '100%' }]} 
               placeholder="Any additional feedback? (Optional)" 
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               multiline
               value={feedback}
               onChangeText={setFeedback}
@@ -354,64 +356,64 @@ export default function SupportScreen({ user, route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors, isDarkMode) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 20, paddingBottom: 10 },
-  title: { color: '#fff', fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  title: { color: colors.text, fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   tabsContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     borderRadius: 12,
     padding: 4,
     marginBottom: 10,
   },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
-  tabActive: { backgroundColor: Colors.card, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 5, elevation: 3 },
-  tabText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  tabActive: { backgroundColor: colors.card, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 5, elevation: 3 },
+  tabText: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   tabTextActive: { color: '#fff' },
   scrollContent: { padding: 20, paddingBottom: 40 },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyTitle: { color: '#fff', fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 20, marginBottom: 5 },
-  emptyDesc: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 30 },
-  emptyBtn: { backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30 },
-  emptyBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  ticketCard: { backgroundColor: Colors.card, borderRadius: 16, padding: 20, marginBottom: 15, borderWidth: 1, borderColor: Colors.border },
+  emptyTitle: { color: colors.text, fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 20, marginBottom: 5 },
+  emptyDesc: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 30 },
+  emptyBtn: { backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 30 },
+  emptyBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  ticketCard: { backgroundColor: colors.card, borderRadius: 16, padding: 20, marginBottom: 15, borderWidth: 1, borderColor: colors.border },
   ticketTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  ticketId: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  ticketId: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   badge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   badgeText: { fontSize: 10, fontFamily: 'Inter_700Bold', textTransform: 'uppercase' },
-  ticketSubject: { color: '#fff', fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 12 },
+  ticketSubject: { color: colors.text, fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 12 },
   ticketMetaRow: { flexDirection: 'row', alignItems: 'center' },
-  ticketCat: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium', marginLeft: 4 },
-  ticketDate: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium', marginLeft: 4 },
-  btnAction: { backgroundColor: Colors.primary, flexDirection: 'row', padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
+  ticketCat: { color: colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium', marginLeft: 4 },
+  ticketDate: { color: colors.textMuted, fontSize: 13, fontFamily: 'Inter_500Medium', marginLeft: 4 },
+  btnAction: { backgroundColor: colors.primary, flexDirection: 'row', padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   btnActionText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold', marginLeft: 6 },
-  formContainer: { backgroundColor: Colors.card, padding: 25, borderRadius: 16, borderWidth: 1, borderColor: Colors.border },
-  formTitle: { color: '#fff', fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 5 },
-  formDesc: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 25 },
-  label: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
-  input: { backgroundColor: Colors.background, borderColor: Colors.border, borderWidth: 1, borderRadius: 10, color: '#fff', padding: 15, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 },
-  pickerContainer: { backgroundColor: Colors.background, borderColor: Colors.border, borderWidth: 1, borderRadius: 10, marginBottom: 20, overflow: 'hidden' },
-  picker: { color: '#fff', height: 50 },
-  btnPrimary: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 10 },
+  formContainer: { backgroundColor: colors.card, padding: 25, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  formTitle: { color: colors.text, fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 5 },
+  formDesc: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 25 },
+  label: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
+  input: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 10, color: colors.text, padding: 15, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 },
+  pickerContainer: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 10, marginBottom: 20, overflow: 'hidden' },
+  picker: { color: colors.text, height: 50 },
+  btnPrimary: { backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 10 },
   btnPrimaryText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: Colors.card, borderRadius: 24, padding: 30, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
-  modalTitle: { color: '#fff', fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 8 },
-  modalDesc: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 25, textAlign: 'center' },
+  modalContent: { backgroundColor: colors.card, borderRadius: 24, padding: 30, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  modalTitle: { color: colors.text, fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 8 },
+  modalDesc: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 25, textAlign: 'center' },
   starsContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: 25, gap: 5 },
   modalActions: { flexDirection: 'row', width: '100%', marginTop: 10 },
-  btnOutline: { backgroundColor: 'transparent', borderColor: Colors.border, borderWidth: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
+  btnOutline: { backgroundColor: 'transparent', borderColor: colors.border, borderWidth: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
   btnOutlineText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  detailLabel: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 2 },
-  detailValue: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  detailLabel: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 2 },
+  detailValue: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  detailHeaderId: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  detailStatusBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
+  detailHeaderId: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  detailStatusBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginBottom: 20, borderWidth: 1, borderColor: colors.border },
   detailStatusText: { fontSize: 12, fontFamily: 'Inter_700Bold', textTransform: 'uppercase' },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  detailDescBox: { backgroundColor: 'rgba(255,255,255,0.03)', padding: 15, borderRadius: 12, marginTop: 5, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  detailValueText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22 },
-  detailDateText: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center', marginTop: 10 },
+  detailDescBox: { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', padding: 15, borderRadius: 12, marginTop: 5, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
+  detailValueText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22 },
+  detailDateText: { color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center', marginTop: 10 },
 });
