@@ -114,7 +114,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto; transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
         
         <!-- Header -->
-        <header class="dashboard-topbar" style="height: 70px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 5;">
+        <header class="dashboard-topbar" style="height: 70px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;">
           <h2 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.75rem;">
             ${activeRoute === 'mapping' ? `
             <button onclick="window.history.back()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; padding: 0.5rem 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; transition: all 0.2s; font-size: 0.85rem; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#94a3b8'">
@@ -1365,24 +1365,15 @@ export const adminViews = {
         sidebar.style.transform = 'translateX(-260px)';
         main.style.marginLeft = '0px';
       }
-    }, 10);
+      
+      // Mount the React component
+      if (window.mountNetworkMap) {
+        window.mountNetworkMap('network-map-root');
+      }
+    }, 100);
 
     const content = `
-      <div style="padding: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
-          <div>
-            <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase;">NETWORK INFRASTRUCTURE</div>
-            <h1 style="color: #fff; font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">Mapping</h1>
-            <p style="color: #94a3b8; font-size: 0.9rem;">View and manage the physical fiber-optic network layout.</p>
-          </div>
-        </div>
-        
-        <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 4rem 2rem; text-align: center; color: #94a3b8;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1.5rem; color: #3b82f6;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-          <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">Interactive Map Coming Soon</h2>
-          <p style="font-size: 0.9rem; max-width: 400px; margin: 0 auto; line-height: 1.5;">The live interactive mapping system is currently under development. This section will allow you to visualize your fiber nodes, clients, and line statuses geographically.</p>
-        </div>
-      </div>
+      <div id="network-map-root" style="width: 100%; min-height: 100vh;"></div>
     `;
     return window.renderAdminLayout('mapping', 'Network Map', content);
   }
@@ -3367,7 +3358,7 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
   }
 };
 
-window.goToMapping = function() {
+window.goToMapping = function () {
   const sidebar = document.getElementById('admin-sidebar');
   const main = document.getElementById('admin-main-content');
   if (sidebar && main) {
@@ -3381,7 +3372,7 @@ window.goToMapping = function() {
   }
 };
 
-window.toggleAdminSidebar = function() {
+window.toggleAdminSidebar = function () {
   const sidebar = document.getElementById('admin-sidebar');
   const main = document.getElementById('admin-main-content');
   if (sidebar && main) {

@@ -5,6 +5,7 @@ import { adminViews } from './pages/adminPortal.js';
 import { clientViews } from './pages/clientPortal.js';
 import { mainViews } from './pages/mainPortal.js';
 import { Router } from './router.js';
+import './components/mountNetworkMap.jsx';
 
 window.views = {
   ...mainViews,

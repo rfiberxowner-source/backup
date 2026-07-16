@@ -13,6 +13,11 @@ export class Router {
   route() {
     let path = window.location.pathname;
     let hash = window.location.hash;
+    
+    if (window.unmountNetworkMap && path !== '/RFiberXAdminportal-mapping') {
+      window.unmountNetworkMap();
+    }
+
     if (!window.views[path]) {
       path = '/';
       window.history.replaceState(null, null, '/');
