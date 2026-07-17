@@ -1211,49 +1211,90 @@ export const clientViews = {
       });
       const activeBtn = document.getElementById('payment-btn-' + method);
       if (activeBtn) {
-        activeBtn.style.borderColor = '#E53935';
         activeBtn.style.background = 'rgba(229,57,53,0.05)';
       }
 
       if (!window.showAIAnalysisPopup) {
-        window.showAIAnalysisPopup = function() {
+        window.showAIAnalysisPopup = function(data, previewHtml) {
+          const refNumber = data.referenceNumber || 'TBD';
+          const amount = data.amount || 'TBD';
+          const payerName = data.payerName || 'TBD';
+          const receiverName = data.receiverName || 'TBD';
+          const phoneNumber = data.phoneNumber || 'TBD';
+          const expressNotif = data.expressNotif || 'No';
+          const datePaid = data.datePaid || 'TBD';
+          const timePaid = data.timePaid || 'TBD';
+          
           const modalHtml = `
             <div id="ai-analysis-modal" style="position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
-              <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 400px; max-width: 90%; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: aiPopupIn 0.3s ease-out forwards;">
+              <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 750px; max-width: 95%; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: aiPopupIn 0.3s ease-out forwards; display: flex; flex-direction: column;">
                 <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%);">
                   <h2 style="color: #fff; font-size: 1.2rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                     <span style="color: #10b981;">✨</span> AI Analysis Result
                   </h2>
-                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
-                </div>
-                <div style="padding: 2rem 1.5rem;">
-                  <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
-                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Reference Number</div>
-                      <div style="color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;">0001 2345 6789</div>
-                    </div>
-                    
-                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Amount Paid</div>
-                      <div style="color: #10b981; font-size: 1.5rem; font-weight: 700;">₱2,000.00</div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                      <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer Name</div>
-                        <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">John Doe</div>
-                      </div>
-                      
-                      <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Date Paid</div>
-                        <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">Jul 10, 2026</div>
-                      </div>
+                  <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="position: relative; width: 30px; height: 30px;">
+                      <svg width="30" height="30" viewBox="0 0 36 36">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
+                        <path class="circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="100, 100" style="animation: countdown 10s linear forwards;" />
+                      </svg>
+                      <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #10b981;" id="popup-timer-text">10</div>
                     </div>
                   </div>
                 </div>
+                
+                <div style="padding: 1.5rem; display: flex; gap: 2rem;">
+                  <!-- Left Side: Image with Bounding Boxes -->
+                  <div style="flex-shrink: 0; width: 250px; display: flex; justify-content: center; align-items: flex-start;">
+                    ${previewHtml}
+                  </div>
+                  
+                  <!-- Right Side: Extracted Data -->
+                  <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-content: flex-start;">
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); grid-column: span 2;">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Amount Paid</div>
+                      <div style="color: #10b981; font-size: 1.5rem; font-weight: 700;">${amount}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); grid-column: span 2;">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Reference Number</div>
+                      <div style="color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;">${refNumber}</div>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer (MSG Name)</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${payerName}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Receiver Name</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${receiverName}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${phoneNumber}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Express Notif</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${expressNotif}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Date Paid</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${datePaid}</div>
+                    </div>
+                    
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Time Paid</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${timePaid}</div>
+                    </div>
+                  </div>
+                </div>
+
                 <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: right; display: flex; justify-content: flex-end; gap: 1rem;">
-                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">Cancel</button>
-                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: #3b82f6; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Confirm Details</button>
+                  <button onclick="document.getElementById('ai-analysis-modal').remove()" style="background: #3b82f6; color: #fff; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Continue</button>
                 </div>
               </div>
               <style>
@@ -1261,33 +1302,638 @@ export const clientViews = {
                   from { opacity: 0; transform: scale(0.95) translateY(10px); }
                   to { opacity: 1; transform: scale(1) translateY(0); }
                 }
+                @keyframes countdown {
+                  from { stroke-dasharray: 100, 100; }
+                  to { stroke-dasharray: 0, 100; }
+                }
+                .bbox-rect {
+                  position: absolute;
+                  border: 2px solid;
+                  background: rgba(0,0,0,0.1);
+                  animation: bboxFadeIn 0.5s ease-out forwards;
+                  box-sizing: border-box;
+                }
+                @keyframes bboxFadeIn {
+                  from { opacity: 0; transform: scale(0.9); }
+                  to { opacity: 1; transform: scale(1); }
+                }
               </style>
             </div>
           `;
           document.body.insertAdjacentHTML('beforeend', modalHtml);
+          
+          let timerSecs = 10;
+          const timerEl = document.getElementById('popup-timer-text');
+          const modalEl = document.getElementById('ai-analysis-modal');
+          const interval = setInterval(() => {
+            if (!document.body.contains(modalEl)) {
+              clearInterval(interval);
+              return;
+            }
+            timerSecs--;
+            if (timerEl) timerEl.innerText = timerSecs;
+            if (timerSecs <= 0) {
+              clearInterval(interval);
+              modalEl.remove();
+            }
+          }, 1000);
         };
 
-        window.simulateAIAnalysis = function(input) {
+        window.getBoundingBoxForText = function(fullTextSnippet, ocrWords, width, height) {
+          if (!fullTextSnippet) return null;
+          const snippetWords = fullTextSnippet.split(/\s+/).map(w => w.replace(/[^\w\*\:\.\+\-\,]/g, '').toLowerCase()).filter(Boolean);
+          if (snippetWords.length === 0) return null;
+          const cleanedOcrWords = ocrWords.map(w => ({ text: w.text.replace(/[^\w\*\:\.\+\-\,]/g, '').toLowerCase(), bbox: w.bbox }));
+          
+          for (let i = 0; i <= cleanedOcrWords.length - snippetWords.length; i++) {
+            let match = true;
+            for (let j = 0; j < snippetWords.length; j++) {
+              const ocrW = cleanedOcrWords[i + j];
+              const snipW = snippetWords[j];
+              if (!ocrW || (!ocrW.text.includes(snipW) && !snipW.includes(ocrW.text))) { match = false; break; }
+            }
+            if (match) {
+              let y0 = Infinity, x0 = Infinity, y1 = -Infinity, x1 = -Infinity;
+              for (let j = 0; j < snippetWords.length; j++) {
+                const bbox = ocrWords[i + j].bbox;
+                if (bbox.y0 < y0) y0 = bbox.y0;
+                if (bbox.x0 < x0) x0 = bbox.x0;
+                if (bbox.y1 > y1) y1 = bbox.y1;
+                if (bbox.x1 > x1) x1 = bbox.x1;
+              }
+              return [
+                Math.max(0, Math.min(1000, Math.round((y0 / height) * 1000))),
+                Math.max(0, Math.min(1000, Math.round((x0 / width) * 1000))),
+                Math.max(0, Math.min(1000, Math.round((y1 / height) * 1000))),
+                Math.max(0, Math.min(1000, Math.round((x1 / width) * 1000)))
+              ];
+            }
+          }
+          const firstWord = snippetWords[0];
+          const foundWord = ocrWords.find(w => w.text.replace(/[^\w\*\:\.\+\-\,]/g, '').toLowerCase().includes(firstWord));
+          if (foundWord) {
+            const bbox = foundWord.bbox;
+            return [
+              Math.max(0, Math.min(1000, Math.round((bbox.y0 / height) * 1000))),
+              Math.max(0, Math.min(1000, Math.round((bbox.x0 / width) * 1000))),
+              Math.max(0, Math.min(1000, Math.round((bbox.y1 / height) * 1000))),
+              Math.max(0, Math.min(1000, Math.round((bbox.x1 / width) * 1000)))
+            ];
+          }
+          return null;
+        };
+
+        window.simulateAIAnalysis = async function(input) {
           if (input.files && input.files[0]) {
             const file = input.files[0];
+            
+            // --- Aspect Ratio & Dimension Check ---
+            const checkDimensions = (imgFile) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const ratio = img.width / img.height;
+                        
+                        // Standard modern phone portrait screenshot ratio falls between 0.42 and 0.57
+                        if (ratio < 0.40 || ratio > 0.60) {
+                            reject(`Invalid dimensions (${img.width}x${img.height}). Aspect ratio: ${ratio.toFixed(2)}`);
+                        } else {
+                            resolve(true);
+                        }
+                    };
+                    img.onerror = () => reject('Invalid image');
+                    const r = new FileReader();
+                    r.onload = (e) => { img.src = e.target.result; };
+                    r.readAsDataURL(imgFile);
+                });
+            };
+            
+            try {
+                await checkDimensions(file);
+            } catch (err) {
+                alert(`🚨 FRAUD DETECTED 🚨\\n\\nImage format rejected. The uploaded receipt does not match the standard dimensions of a mobile phone screenshot.\\n\\nOnly raw, uncropped 1-to-1 screenshots are allowed.`);
+                input.value = ''; // Clear input
+                return;
+            }
+            
+            // --- Error Level Analysis (ELA) ---
+            const runErrorLevelAnalysis = (imageFile) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Scale down to max 600px to keep it fast
+                        const scale = Math.min(1, 600 / Math.max(img.width, img.height));
+                        const w = Math.floor(img.width * scale);
+                        const h = Math.floor(img.height * scale);
+                        
+                        const canvas1 = document.createElement('canvas');
+                        canvas1.width = w; canvas1.height = h;
+                        const ctx1 = canvas1.getContext('2d', { willReadFrequently: true });
+                        ctx1.drawImage(img, 0, 0, w, h);
+                        const origData = ctx1.getImageData(0, 0, w, h).data;
+                        
+                        // Compress to 90% JPEG to introduce compression artifacts
+                        const compressedUrl = canvas1.toDataURL('image/jpeg', 0.90);
+                        const compImg = new Image();
+                        compImg.onload = () => {
+                            const canvas2 = document.createElement('canvas');
+                            canvas2.width = w; canvas2.height = h;
+                            const ctx2 = canvas2.getContext('2d', { willReadFrequently: true });
+                            ctx2.drawImage(compImg, 0, 0, w, h);
+                            const compData = ctx2.getImageData(0, 0, w, h).data;
+                            
+                            let diffSum = 0;
+                            const diffs = [];
+                            
+                            for (let i = 0; i < origData.length; i += 4) {
+                                // Calculate RGB difference per pixel
+                                const dr = Math.abs(origData[i] - compData[i]);
+                                const dg = Math.abs(origData[i+1] - compData[i+1]);
+                                const db = Math.abs(origData[i+2] - compData[i+2]);
+                                const diff = dr + dg + db;
+                                diffs.push(diff);
+                                diffSum += diff;
+                            }
+                            
+                            const mean = diffSum / diffs.length;
+                            let varianceSum = 0;
+                            for (let i = 0; i < diffs.length; i++) {
+                                varianceSum += Math.pow(diffs[i] - mean, 2);
+                            }
+                            const variance = varianceSum / diffs.length;
+                            const stdDev = Math.sqrt(variance);
+                            
+                            // GCash receipts are very flat/uniform, meaning low natural variance (< 5).
+                            // Spliced text forces massive local compression spikes, driving stdDev > 12.
+                            if (stdDev > 12) {
+                                reject(`ELA Variance too high: ${stdDev.toFixed(2)}`);
+                            } else {
+                                resolve(true);
+                            }
+                        };
+                        compImg.src = compressedUrl;
+                    };
+                    img.onerror = () => reject('Invalid image for ELA');
+                    const r = new FileReader();
+                    r.onload = (e) => { img.src = e.target.result; };
+                    r.readAsDataURL(imageFile);
+                });
+            };
+            
+            try {
+                await runErrorLevelAnalysis(file);
+            } catch (err) {
+                alert(`🚨 FRAUD DETECTED 🚨\\n\\nError Level Analysis (ELA) indicates this image has been digitally altered or spliced.\\n\\nThe compression artifacts on the text do not match the background, proving this receipt was manually edited.`);
+                input.value = ''; // Clear input
+                return;
+            }
+            
+            // --- pHash Image Fingerprinting ---
+            const generateDHash = (imageFile) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                        canvas.width = 9;
+                        canvas.height = 8;
+                        ctx.drawImage(img, 0, 0, 9, 8);
+                        const imgData = ctx.getImageData(0, 0, 9, 8).data;
+                        const grays = [];
+                        for (let i = 0; i < imgData.length; i += 4) {
+                            grays.push((imgData[i] + imgData[i+1] + imgData[i+2]) / 3);
+                        }
+                        let hash = '';
+                        for (let y = 0; y < 8; y++) {
+                            for (let x = 0; x < 8; x++) {
+                                const left = grays[y * 9 + x];
+                                const right = grays[y * 9 + x + 1];
+                                hash += (left > right) ? '1' : '0';
+                            }
+                        }
+                        let hexHash = '';
+                        for (let i = 0; i < 64; i += 4) {
+                            hexHash += parseInt(hash.substring(i, i+4), 2).toString(16);
+                        }
+                        resolve(hexHash);
+                    };
+                    const r = new FileReader();
+                    r.onload = (e) => { img.src = e.target.result; };
+                    r.readAsDataURL(imageFile);
+                });
+            };
+
+            const getHammingDistance = (hex1, hex2) => {
+                if (!hex1 || !hex2 || hex1.length !== 16 || hex2.length !== 16) return 64;
+                let dist = 0;
+                for (let i = 0; i < 16; i++) {
+                    const val1 = parseInt(hex1[i], 16);
+                    const val2 = parseInt(hex2[i], 16);
+                    const diff = val1 ^ val2;
+                    dist += (diff & 1) + ((diff >> 1) & 1) + ((diff >> 2) & 1) + ((diff >> 3) & 1);
+                }
+                return dist;
+            };
+            
+            const uploadedHashPromise = generateDHash(file);
+            
+            // --- Metadata Forensics (EXIF & XMP) ---
+            const analyzeMetadata = async (imageFile) => {
+                try {
+                    const exifr = await import('https://cdn.jsdelivr.net/npm/exifr/dist/full.esm.js');
+                    // Parse both EXIF and XMP (AI generators often use XMP for watermarks)
+                    const exifData = await exifr.parse(imageFile, { xmp: true, tiff: true, exif: true });
+                    if (!exifData) return null;
+                    
+                    const blacklist = [
+                        // Professional Editors
+                        'photoshop', 'illustrator', 'lightroom', 'coreldraw', 'gimp', 'affinity', 'capture one',
+                        // Web/Online Editors
+                        'canva', 'photopea', 'figma', 'pixlr', 'fotor', 'befunky',
+                        // Mobile Editing Apps
+                        'snapseed', 'picsart', 'vsco', 'facetune', 'b612', 'remini', 'lightleap', 'photodirector', 'polarr',
+                        // AI Generators
+                        'gemini', 'midjourney', 'dall-e', 'openai', 'google', 'imagen', 'ai-generated', 'stable diffusion', 'runway', 'leonardo', 'firefly', 'bing',
+                        // Rendering Engines & Fake Receipt Script Libraries
+                        'skia', 'cairo', 'puppeteer', 'phantomjs', 'html2canvas', 'dom-to-image', 'selenium', 'fakereceipt', 'receiptmaker', 'express-expense'
+                    ];
+                    
+                    // Check standard tags and XMP Creator/Software tags
+                    const softwareUsed = (
+                        exifData.Software || 
+                        exifData.ProcessingSoftware || 
+                        exifData.CreatorTool || 
+                        exifData.HistorySoftwareAgent || 
+                        exifData.Producer || 
+                        ''
+                    ).toLowerCase();
+                    
+                    if (softwareUsed && blacklist.some(app => softwareUsed.includes(app))) {
+                        return softwareUsed;
+                    }
+                    return null;
+                } catch (e) {
+                    return null;
+                }
+            };
+            const metadataFraudPromise = analyzeMetadata(file);
+            
             const reader = new FileReader();
-            reader.onload = function(e) {
-              let thumbContainer = document.getElementById('receipt-thumbnail-container');
-              if (!thumbContainer) {
-                 thumbContainer = document.createElement('div');
-                 thumbContainer.id = 'receipt-thumbnail-container';
-                 thumbContainer.style.marginTop = '1rem';
-                 thumbContainer.style.display = 'flex';
-                 thumbContainer.style.justifyContent = 'center';
-                 input.parentElement.parentElement.appendChild(thumbContainer);
+            
+            const useGemini = false;
+            const loadingMsg = useGemini ? 'Extracting details using Gemini AI' : 'Extracting details using Local OCR';
+            
+            // Show scanning overlay centered in the screen with the image
+            const scanningHtml = `
+              <div id="ai-scanning-overlay" style="position: fixed; inset: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
+                <div id="receipt-bbox-container" style="position: relative; display: inline-block; margin-bottom: 1.5rem;">
+                  <img id="receipt-preview-img" style="max-height: 400px; max-width: 90vw; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); display: block;" />
+                  <div id="bbox-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; overflow: hidden;"></div>
+                  <div id="laser-line" style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: rgba(16, 185, 129, 0.8); box-shadow: 0 0 10px #10b981; display: none; z-index: 10;"></div>
+                </div>
+                <div style="text-align: center; color: #fff;">
+                  <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1s infinite;">🤖</div>
+                  <div id="scanning-title" style="font-size: 1.2rem; font-weight: 600; color: #10b981;">Analyzing Receipt...</div>
+                  <div id="scanning-subtitle" style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">${loadingMsg}</div>
+                </div>
+                <style>
+                  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; transform: scale(1.1); } 100% { opacity: 1; } }
+                  @keyframes laserScan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+                  .scanning-laser { display: block !important; animation: laserScan 2s ease-in-out infinite; }
+                </style>
+              </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', scanningHtml);
+
+            reader.onload = async function(e) {
+              const imgPreviewSrc = e.target.result;
+              const img = document.getElementById('receipt-preview-img');
+              img.src = imgPreviewSrc;
+              await new Promise(resolve => img.onload = resolve);
+              
+              const imgWidth = img.naturalWidth;
+              const imgHeight = img.naturalHeight;
+              
+              document.getElementById('laser-line').classList.add('scanning-laser');
+              const base64Content = imgPreviewSrc.split(';base64,').pop();
+              
+              try {
+                let extractedData = {};
+                let detections = [];
+                
+                if (useGemini) {
+                  // GEMINI API IMPLEMENTATION
+                  const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                  const db = getFirestore();
+                  let apiKey = window._GEMINI_TEMP_KEY || '';
+                  if (!apiKey) {
+                      try {
+                          const apiKeyDoc = await getDoc(doc(db, 'settings', 'apiKeys'));
+                          if (apiKeyDoc.exists() && apiKeyDoc.data().gemini) apiKey = apiKeyDoc.data().gemini;
+                      } catch (dbErr) { console.warn("Could not fetch API key", dbErr); }
+                  }
+                  if (!apiKey) throw new Error('Gemini API Key missing');
+
+                  const prompt = `You are an expert computer vision and OCR data extraction model.
+I need you to scan this GCash receipt image and extract text for these specific classes:
+1. "REF NO." (Reference number digits)
+2. "AMOUNT" (Transacted amount)
+3. "NAME" (Recipient or sender name)
+4. "FIRST DATE AND TIME" (Full timestamp)
+5. "NUMBER" (Mobile number)
+
+Return a JSON with exactly this structure and no markdown formatting:
+{
+  "referenceNumber": "...",
+  "amount": "...",
+  "payerName": "...",
+  "datePaid": "...",
+  "phoneNumber": "..."
+}
+If a field is not found, return "TBD".`;
+
+                  const payload = {
+                    contents: [{ parts: [{ inlineData: { mimeType: file.type, data: base64Content } }, { text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                  };
+                  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                  });
+                  if (!res.ok) throw new Error(await res.text());
+                  const jsonRes = await res.json();
+                  extractedData = JSON.parse(jsonRes.candidates[0].content.parts[0].text);
+                  
+                } else {
+                  // TESSERACT LOCAL OCR IMPLEMENTATION
+                  document.getElementById('scanning-subtitle').innerText = "Downloading Local OCR Engine (once)...";
+                  
+                  if (!window.Tesseract) {
+                    await new Promise((resolve, reject) => {
+                      const script = document.createElement('script');
+                      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                      script.onload = resolve;
+                      script.onerror = reject;
+                      document.head.appendChild(script);
+                    });
+                  }
+                  
+                  document.getElementById('scanning-subtitle').innerText = "Scanning text from image...";
+                  const worker = await window.Tesseract.createWorker('eng');
+                  const { data } = await worker.recognize(imgPreviewSrc);
+                  await worker.terminate();
+                  
+                  const ocrWords = [];
+                  if (data.words) {
+                    data.words.forEach(word => ocrWords.push({ text: word.text, bbox: word.bbox }));
+                  }
+                  
+                  const singleLineText = (data.text || '').replace(/\s+/g, ' ');
+                  
+                  // Helper
+                  const addDetection = (label, textSnippet, color) => {
+                    const box = window.getBoundingBoxForText(textSnippet, ocrWords, imgWidth, imgHeight);
+                    if (box) {
+                        detections.push({ label, box, color });
+                    }
+                  };
+                  
+                  // Regex Extractions
+                  const refFullMatch = singleLineText.match(/Ref\.\s*No\.\s*\d+/i) || singleLineText.match(/Ref\s+No\s+\d+/i) || singleLineText.match(/RefNo\s+\d+/i);
+                  extractedData.referenceNumber = 'TBD';
+                  if (refFullMatch) {
+                    addDetection('REF NO. FULL', refFullMatch[0], '#ef4444');
+                    const refNoMatch = refFullMatch[0].match(/\d+/);
+                    if (refNoMatch) extractedData.referenceNumber = refNoMatch[0];
+                  }
+                  
+                  const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
+                  extractedData.amount = 'TBD';
+                  if (amountMatch) {
+                    addDetection('AMOUNT', amountMatch[0], '#22c55e');
+                    extractedData.amount = amountMatch[0];
+                  }
+                  
+                  const numberMatch = singleLineText.match(/\+639\d{9}/) || singleLineText.match(/09\d{9}/) || singleLineText.match(/\d{4}\*\*\*\d{4}/) || singleLineText.match(/\+?639[0-9\*]{9,11}/);
+                  extractedData.phoneNumber = 'TBD';
+                  if (numberMatch) {
+                    addDetection('NUMBER', numberMatch[0], '#f97316');
+                    extractedData.phoneNumber = numberMatch[0];
+                  }
+                  
+                  // EXPRESS NOTIF
+                  const expressMatch = singleLineText.match(/Express\s+Send\s+Notification/i) || singleLineText.match(/Express\s+Send/i) || singleLineText.match(/Notification/i);
+                  extractedData.expressNotif = 'No';
+                  if (expressMatch) {
+                    addDetection('XPRESS NOTIF', expressMatch[0], '#06b6d4');
+                    extractedData.expressNotif = 'Yes';
+                  }
+
+                  // DATE AND TIME
+                  const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
+                  extractedData.datePaid = 'TBD';
+                  extractedData.timePaid = 'TBD';
+                  if (secondDateTimeMatch) {
+                    const fullSnippet = secondDateTimeMatch[0];
+                    addDetection('SECOND DATE AND TIME', fullSnippet, '#3b82f6');
+                    
+                    const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
+                    if (secondDateMatch) extractedData.datePaid = secondDateMatch[0];
+                    
+                    const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
+                    if (secondTimeMatch) extractedData.timePaid = secondTimeMatch[0];
+                  } else {
+                    // Fallback to "Today..." if absolute date not found
+                    const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                    if (todayMatch) {
+                      addDetection('FIRST DATE AND TIME', todayMatch[0], '#3b82f6');
+                      extractedData.datePaid = "Today";
+                      const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                      if (timeMatch) extractedData.timePaid = timeMatch[0];
+                    }
+                  }
+                  
+                  // NAMES (Payer and Receiver)
+                  const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*]+\s+[A-Za-z\*]?\.)/) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+\+/i) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+on/i);
+                  extractedData.receiverName = 'TBD';
+                  if (nameToMatch) {
+                    extractedData.receiverName = nameToMatch[1].trim();
+                    addDetection('NAME', extractedData.receiverName, '#a855f7');
+                  }
+                  
+                  const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
+                  extractedData.payerName = 'TBD';
+                  if (msgNameMatch) {
+                    const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
+                    if (cleanMsg) {
+                      extractedData.payerName = cleanMsg;
+                      addDetection('MSG NAME', extractedData.payerName, '#ec4899');
+                    }
+                  }
+                }
+
+                // Check for TBD fields
+                const requiredFields = ['referenceNumber', 'amount', 'payerName', 'datePaid', 'timePaid'];
+                const hasTBD = requiredFields.some(f => extractedData[f] === 'TBD' || !extractedData[f]);
+                
+                let fraudDetected = false;
+                
+                if (!hasTBD) {
+                  // --- Semantic Integrity Verification (Strict Template Check) ---
+                  if (!useGemini) {
+                      // Semantic Integrity Check has been removed.
+                  }
+                  
+                  const userStr = localStorage.getItem('clientUser');
+                  const clientUser = userStr ? JSON.parse(userStr) : {};
+                  
+                  // 1. Reference Number Length Validation
+                  const cleanRefNo = String(extractedData.referenceNumber).replace(/[^0-9]/g, '');
+                  if (cleanRefNo.length !== 13) {
+                    fraudDetected = true;
+                    document.getElementById('ai-scanning-overlay').remove();
+                    alert(`🚨 FRAUD DETECTED 🚨\\n\\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits. Your receipt showed ${cleanRefNo.length} digits.`);
+                  }
+                  
+                  // 2. Amount Validation
+                  let expectedAmount = 0;
+                  if (window.clientActiveBills && window.clientActiveBills.length > 0) {
+                      window.clientActiveBills.forEach(ab => {
+                          expectedAmount += parseFloat(String(ab.amount).replace(/[^0-9\\.]/g, '')) || 0;
+                      });
+                  }
+                  if (expectedAmount === 0) {
+                      const rawPlanVal = clientUser.plan_price || clientUser.planPrice || clientUser.price || clientUser.monthlyFee || clientUser.plan || '';
+                      const parsedPlanVal = parseFloat(String(rawPlanVal).replace(/[^0-9\\.]/g, ''));
+                      if (!isNaN(parsedPlanVal) && parsedPlanVal > 0) {
+                          expectedAmount = parsedPlanVal;
+                      }
+                  }
+                  
+                  if (!fraudDetected && expectedAmount > 0) {
+                      const receiptAmount = parseFloat(String(extractedData.amount).replace(/[^0-9\\.]/g, ''));
+                      /* TEMPORARILY DISABLED SECURITY AMOUNT MATCHING
+                      if (receiptAmount < expectedAmount) {
+                          fraudDetected = true;
+                          document.getElementById('ai-scanning-overlay').remove();
+                          alert(`❌ ERROR: INSUFFICIENT AMOUNT ❌\\n\\nYour current plan requires ₱${expectedAmount}, but the receipt is only for ₱${receiptAmount}. Please upload a receipt with the correct full amount.`);
+                      } else */
+                      if (receiptAmount > expectedAmount) {
+                          extractedData.overpaymentNote = `Overpaid by ₱${(receiptAmount - expectedAmount).toFixed(2)}`;
+                          alert(`Note: You have paid ₱${receiptAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(receiptAmount - expectedAmount).toFixed(2)} will be noted.`);
+                      }
+                  }
+                  
+                  // 3. Metadata Forensics Check
+                  if (!fraudDetected) {
+                      const fakeSoftware = await metadataFraudPromise;
+                      if (fakeSoftware) {
+                          fraudDetected = true;
+                          document.getElementById('ai-scanning-overlay').remove();
+                          alert(`🚨 FRAUD DETECTED 🚨\\n\\nMetadata Forensics indicates this receipt was manipulated using photo editing software (${fakeSoftware}). Fake or generated receipts are strictly prohibited.`);
+                      }
+                  }
+                  
+                  // 4. Database Save & Duplicate Check
+                  if (!fraudDetected) {
+                    try {
+                      const { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                      const db = getFirestore();
+                      const receiptsRef = collection(db, 'receipts');
+                      
+                      // Resolve pHash
+                      const uploadedHash = await uploadedHashPromise;
+                      extractedData.imageHash = uploadedHash;
+                      
+                      // Text-based Fraud Check (Reference Number)
+                      const q = query(receiptsRef, where("referenceNumber", "==", extractedData.referenceNumber));
+                      const querySnapshot = await getDocs(q);
+                      
+                      if (!querySnapshot.empty) {
+                        fraudDetected = true;
+                        document.getElementById('ai-scanning-overlay').remove();
+                        alert("🚨 FRAUD DETECTED 🚨\\n\\nThis Reference Number has already been submitted! Submitting duplicate reference numbers is strictly prohibited.\\n\\nWARNING: If you submit this reference number again, your account will be flagged for fraud and may be permanently disabled.");
+                      } else {
+                        // Visual pHash Fraud Check (Check all past receipts for cropped duplicates)
+                        const allReceipts = await getDocs(receiptsRef);
+                        let pHashFraud = false;
+                        allReceipts.forEach(doc => {
+                            const data = doc.data();
+                            if (data.imageHash && uploadedHash) {
+                                if (getHammingDistance(uploadedHash, data.imageHash) <= 10) {
+                                    pHashFraud = true;
+                                }
+                            }
+                        });
+                        
+                        if (pHashFraud) {
+                            fraudDetected = true;
+                            document.getElementById('ai-scanning-overlay').remove();
+                            alert("🚨 FRAUD DETECTED 🚨\\n\\nVisual Analysis indicates this receipt is a cropped or slightly altered duplicate of a previously uploaded receipt. Submitting altered duplicate receipts is strictly prohibited.");
+                        } else {
+                          // Save to Database
+                          const userStr = localStorage.getItem('clientUser');
+                          const clientUser = userStr ? JSON.parse(userStr) : {};
+                          const now = new Date();
+                          const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                          const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+                          
+                          await addDoc(receiptsRef, {
+                            ...extractedData,
+                            clientName: clientUser.name || 'Unknown',
+                            clientAccountNumber: clientUser.accountNumber || 'Unknown',
+                            billingMonth: billingMonth,
+                            status: "Pending Verification",
+                            timestamp: serverTimestamp()
+                          });
+                        }
+                      }
+                    } catch (dbErr) {
+                      console.error("Database Error:", dbErr);
+                    }
+                  }
               }
-              thumbContainer.innerHTML = `<img src="${e.target.result}" style="max-width: 120px; max-height: 120px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" />`;
+                
+                if (fraudDetected) {
+                  return; // Stop the flow
+                }
+
+                // Draw bounding boxes on the overlay container
+                const bboxOverlay = document.getElementById('bbox-overlay');
+                bboxOverlay.innerHTML = '';
+                detections.forEach(d => {
+                  const [ymin, xmin, ymax, xmax] = d.box;
+                  const top = (ymin / 10).toFixed(2);
+                  const left = (xmin / 10).toFixed(2);
+                  const width = ((xmax - xmin) / 10).toFixed(2);
+                  const height = ((ymax - ymin) / 10).toFixed(2);
+                  
+                  const boxEl = document.createElement('div');
+                  boxEl.className = 'bbox-rect';
+                  boxEl.style.top = `${top}%`;
+                  boxEl.style.left = `${left}%`;
+                  boxEl.style.width = `${width}%`;
+                  boxEl.style.height = `${height}%`;
+                  boxEl.style.borderColor = d.color;
+                  boxEl.style.backgroundColor = `${d.color}33`; // 20% opacity
+                  bboxOverlay.appendChild(boxEl);
+                });
+
+                // Remove laser line but keep the image and boxes for the popup
+                document.getElementById('laser-line').remove();
+                
+                const finalPreviewHtml = document.getElementById('receipt-bbox-container').outerHTML;
+                document.getElementById('ai-scanning-overlay').remove();
+                
+                window.showAIAnalysisPopup(extractedData, finalPreviewHtml);
+
+              } catch (error) {
+                console.error('Scan Error:', error);
+                const overlay = document.getElementById('ai-scanning-overlay');
+                if (overlay) overlay.remove();
+                alert(`Failed to scan receipt: ${error.message}`);
+              }
             };
             reader.readAsDataURL(file);
-
-            setTimeout(() => {
-              window.showAIAnalysisPopup();
-            }, 800);
           }
         };
       }
