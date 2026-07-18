@@ -3,7 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, AppState } from 'react-native';
+import { ActivityIndicator, View, AppState, LogBox } from 'react-native';
+
+// Suppress harmless React Native warnings related to Firebase and Clipboard
+LogBox.ignoreLogs([
+  'Setting a timer for a long period of time',
+  'AsyncStorage has been extracted',
+  'Clipboard has been extracted',
+  '@firebase/firestore'
+]);
+LogBox.ignoreAllLogs(); // Ensures the yellow box is completely hidden for a clean UI
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { SairaCondensed_800ExtraBold, SairaCondensed_800ExtraBold_Italic } from '@expo-google-fonts/saira-condensed';

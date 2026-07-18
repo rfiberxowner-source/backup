@@ -1224,19 +1224,27 @@ export const clientViews = {
           const expressNotif = data.expressNotif || 'No';
           const datePaid = data.datePaid || 'TBD';
           const timePaid = data.timePaid || 'TBD';
+          const statusColor = data.isFraud ? '#ef4444' : '#10b981';
           
+          const payerBoxHtml = payerName !== 'N/A' ? `
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer (MSG Name)</div>
+                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${payerName}</div>
+                    </div>` : '';
+
           const modalHtml = `
-            <div id="ai-analysis-modal" style="position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
-              <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 750px; max-width: 95%; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: aiPopupIn 0.3s ease-out forwards; display: flex; flex-direction: column;">
-                <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%);">
-                  <h2 style="color: #fff; font-size: 1.2rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="color: #10b981;">✨</span> AI Analysis Result
-                  </h2>
+              <div id="ai-analysis-modal" style="position: fixed; inset: 0; background: rgba(15,23,42,0.9); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+                <div style="background: #1e293b; width: 900px; max-width: 95vw; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column;">
+                
+                <div style="padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: #0f172a;">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg style="width: 24px; height: 24px; color: #f59e0b;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                    <h2 style="color: #f8fafc; font-size: 1.25rem; font-weight: 700; margin: 0;">AI Analysis Result</h2>
+                  </div>
                   <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="position: relative; width: 30px; height: 30px;">
-                      <svg width="30" height="30" viewBox="0 0 36 36">
-                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
-                        <path class="circle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#10b981" stroke-width="3" stroke-dasharray="100, 100" style="animation: countdown 10s linear forwards;" />
+                    <div style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid ${statusColor}; display: flex; align-items: center; justify-content: center; position: relative;">
+                      <svg style="position: absolute; inset: -2px; width: 40px; height: 40px; transform: rotate(-90deg);" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="48" fill="none" stroke="${statusColor}" stroke-width="4" stroke-dasharray="301.59" stroke-dashoffset="0" style="animation: countdown 10s linear forwards;"></circle>
                       </svg>
                       <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #10b981;" id="popup-timer-text">10</div>
                     </div>
@@ -1261,10 +1269,7 @@ export const clientViews = {
                       <div style="color: #fff; font-size: 1.1rem; font-weight: 700; letter-spacing: 1px;">${refNumber}</div>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                      <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer (MSG Name)</div>
-                      <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">${payerName}</div>
-                    </div>
+                    ${payerBoxHtml}
                     
                     <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                       <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Receiver Name</div>
@@ -1697,82 +1702,179 @@ If a field is not found, return "TBD".`;
                     }
                   };
                   
-                  // Regex Extractions
-                  const refFullMatch = singleLineText.match(/Ref\.\s*No\.\s*\d+/i) || singleLineText.match(/Ref\s+No\s+\d+/i) || singleLineText.match(/RefNo\s+\d+/i);
-                  extractedData.referenceNumber = 'TBD';
-                  if (refFullMatch) {
-                    addDetection('REF NO. FULL', refFullMatch[0], '#ef4444');
-                    const refNoMatch = refFullMatch[0].match(/\d+/);
-                    if (refNoMatch) extractedData.referenceNumber = refNoMatch[0];
-                  }
-                  
-                  const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
-                  extractedData.amount = 'TBD';
-                  if (amountMatch) {
-                    addDetection('AMOUNT', amountMatch[0], '#22c55e');
-                    extractedData.amount = amountMatch[0];
-                  }
-                  
-                  const numberMatch = singleLineText.match(/\+639\d{9}/) || singleLineText.match(/09\d{9}/) || singleLineText.match(/\d{4}\*\*\*\d{4}/) || singleLineText.match(/\+?639[0-9\*]{9,11}/);
-                  extractedData.phoneNumber = 'TBD';
-                  if (numberMatch) {
-                    addDetection('NUMBER', numberMatch[0], '#f97316');
-                    extractedData.phoneNumber = numberMatch[0];
-                  }
-                  
-                  // EXPRESS NOTIF
-                  const expressMatch = singleLineText.match(/Express\s+Send\s+Notification/i) || singleLineText.match(/Express\s+Send/i) || singleLineText.match(/Notification/i);
-                  extractedData.expressNotif = 'No';
-                  if (expressMatch) {
-                    addDetection('XPRESS NOTIF', expressMatch[0], '#06b6d4');
-                    extractedData.expressNotif = 'Yes';
+                  // Layout Detection Router (Format A vs Format B)
+                  let formatType = 'UNKNOWN';
+                  if (singleLineText.match(/successfully\s+received/i) || singleLineText.match(/Your\s+new\s+balance/i)) {
+                      formatType = 'FORMAT_A'; // Notification Style
+                  } else {
+                      formatType = 'FORMAT_B'; // Structured Layout Style or Card Style
                   }
 
-                  // DATE AND TIME
-                  const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
+                  // 1. Reference Number
+                  extractedData.referenceNumber = 'TBD';
+                  if (formatType === 'FORMAT_A') {
+                      const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
+                      if (refFullMatch) {
+                        addDetection('REF NO. FULL', refFullMatch[0], '#ef4444');
+                        const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+                        if (cleanRef.length >= 13) {
+                            extractedData.referenceNumber = cleanRef.substring(0, 13);
+                        } else if (cleanRef.length >= 8) {
+                            extractedData.referenceNumber = cleanRef;
+                        }
+                      }
+                  } else {
+                      // Format B usually has spaces in the reference number (e.g. 6038 296 538242) and OCR can mistake 0 for O
+                      const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
+                      if (refFullMatchB) {
+                        addDetection('REF NO. FULL', refFullMatchB[0], '#ef4444');
+                        const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+                        if (cleanRef.length >= 10) {
+                            extractedData.referenceNumber = cleanRef.substring(0, 13);
+                        }
+                      } else {
+                          // Fallback: search for any standalone 13 digit number that might be the reference number
+                          const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
+                          if (fallbackRef) {
+                              extractedData.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
+                          }
+                      }
+                  }
+                  
+                  // 2. Amount
+                  extractedData.amount = 'TBD';
+                  if (formatType === 'FORMAT_A') {
+                      const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
+                      if (amountMatch) {
+                        addDetection('AMOUNT', amountMatch[0], '#22c55e');
+                        extractedData.amount = amountMatch[0];
+                      }
+                  } else {
+                      // Handles commas in thousands: e.g. 1,000.00
+                      const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
+                                           singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
+                                           singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) || 
+                                           singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
+                                           singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
+                      if (amountMatchB) {
+                        addDetection('AMOUNT', amountMatchB[0], '#22c55e');
+                        extractedData.amount = `PHP ${amountMatchB[1]}`;
+                      }
+                  }
+                  
+                  // 3. Phone Number (Works universally, but must account for spaces)
+                  extractedData.phoneNumber = 'TBD';
+                  const numberMatch = singleLineText.match(/(?:\+?63|0)\s*9\d{2}\s*\d{3}\s*\d{4}/) || singleLineText.match(/\d{4}\s*\*\*\*\s*\d{4}/);
+                  if (numberMatch) {
+                    addDetection('NUMBER', numberMatch[0], '#f97316');
+                    extractedData.phoneNumber = numberMatch[0].replace(/\s+/g, '');
+                  }
+                  
+                  // EXPRESS NOTIF FLAG
+                  extractedData.expressNotif = 'No';
+                  if (formatType === 'FORMAT_A') {
+                      extractedData.expressNotif = 'Yes';
+                  } else {
+                      if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
+                          extractedData.expressNotif = 'Sent via GCash';
+                          addDetection('EXPRESS NOTIF', 'Sent via GCash', '#06b6d4');
+                      } else if (singleLineText.match(/Express\s+Send/i)) {
+                          extractedData.expressNotif = 'Yes';
+                          addDetection('EXPRESS NOTIF', 'Express Send', '#06b6d4');
+                      }
+                  }
+                  
+                  // 4. Date and Time
                   extractedData.datePaid = 'TBD';
                   extractedData.timePaid = 'TBD';
-                  if (secondDateTimeMatch) {
-                    const fullSnippet = secondDateTimeMatch[0];
-                    addDetection('SECOND DATE AND TIME', fullSnippet, '#3b82f6');
-                    
-                    const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
-                    if (secondDateMatch) extractedData.datePaid = secondDateMatch[0];
-                    
-                    const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
-                    if (secondTimeMatch) extractedData.timePaid = secondTimeMatch[0];
+                  if (formatType === 'FORMAT_A') {
+                      const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
+                      if (secondDateTimeMatch) {
+                        const fullSnippet = secondDateTimeMatch[0];
+                        addDetection('SECOND DATE AND TIME', fullSnippet, '#3b82f6');
+                        const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
+                        if (secondDateMatch) extractedData.datePaid = secondDateMatch[0];
+                        const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
+                        if (secondTimeMatch) extractedData.timePaid = secondTimeMatch[0];
+                      } else {
+                        const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                        if (todayMatch) {
+                          addDetection('FIRST DATE AND TIME', todayMatch[0], '#3b82f6');
+                          extractedData.datePaid = "Today";
+                          const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                          if (timeMatch) extractedData.timePaid = timeMatch[0];
+                        }
+                      }
                   } else {
-                    // Fallback to "Today..." if absolute date not found
-                    const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-                    if (todayMatch) {
-                      addDetection('FIRST DATE AND TIME', todayMatch[0], '#3b82f6');
-                      extractedData.datePaid = "Today";
-                      const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-                      if (timeMatch) extractedData.timePaid = timeMatch[0];
-                    }
+                      // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM"
+                      const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+                      if (dateDetailsMatch) {
+                        addDetection('DATE AND TIME', dateDetailsMatch[0], '#3b82f6');
+                        extractedData.datePaid = dateDetailsMatch[1];
+                        extractedData.timePaid = dateDetailsMatch[2];
+                      }
                   }
                   
-                  // NAMES (Payer and Receiver)
-                  const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*]+\s+[A-Za-z\*]?\.)/) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+\+/i) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+on/i);
+                  // 5. Names (Payer and Receiver)
                   extractedData.receiverName = 'TBD';
-                  if (nameToMatch) {
-                    extractedData.receiverName = nameToMatch[1].trim();
-                    addDetection('NAME', extractedData.receiverName, '#a855f7');
-                  }
-                  
-                  const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
                   extractedData.payerName = 'TBD';
-                  if (msgNameMatch) {
-                    const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
-                    if (cleanMsg) {
-                      extractedData.payerName = cleanMsg;
-                      addDetection('MSG NAME', extractedData.payerName, '#ec4899');
-                    }
+                  
+                  if (formatType === 'FORMAT_A') {
+                      const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*]+\s+[A-Za-z\*]?\.)/) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+\+/i) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+on/i);
+                      if (nameToMatch) {
+                        extractedData.receiverName = nameToMatch[1].trim();
+                        addDetection('NAME', extractedData.receiverName, '#a855f7');
+                      }
+                      
+                      const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
+                      if (msgNameMatch) {
+                        const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
+                        if (cleanMsg) extractedData.payerName = cleanMsg;
+                      }
+                  } else {
+                      const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
+                      if (receiverMatch) {
+                          extractedData.receiverName = receiverMatch[1].trim();
+                          addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
+                      } else {
+                          // Fallback for card layout: Name is usually right below "Express Send" and above Phone number
+                          // We use (.+?) to capture anything up to the phone number prefix
+                          const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i);
+                          let rawName = '';
+                          
+                          if (expressSendMatch) {
+                              rawName = expressSendMatch[1];
+                          } else {
+                              // If Express Send is missing, grab up to 30 non-numeric characters right before the phone number
+                              const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
+                              if (beforePhone) {
+                                  rawName = beforePhone[1].replace(/Express\s+Send/i, '');
+                              }
+                          }
+                          
+                          if (rawName) {
+                              // The OCR sometimes reads the checkmark icon above the name as weird symbols or numbers (e.g. "Eli =)").
+                              // We split the raw string by any character that is NOT valid in a name (like numbers, =, ), (, etc.) 
+                              // and take the absolute last segment, which elegantly isolates the actual name right before the phone number.
+                              let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
+                              
+                              // Clean up any stray symbols or spaces at the very beginning of the extracted name
+                              cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '');
+                              
+                              if (cleanName) {
+                                  extractedData.receiverName = cleanName;
+                                  addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
+                              }
+                          }
+                      }
+                      
+                      // Format B doesn't explicitly display the Payer Name, so we set it to N/A. The popup will automatically hide this field.
+                      extractedData.payerName = "N/A"; 
                   }
                 }
 
-                // Check for TBD fields
-                const requiredFields = ['referenceNumber', 'amount', 'payerName', 'datePaid', 'timePaid'];
+                // Check for TBD fields (MSG/Payer Name is excluded as it can be optional)
+                const requiredFields = ['referenceNumber', 'amount', 'datePaid', 'timePaid', 'receiverName', 'phoneNumber'];
                 const hasTBD = requiredFields.some(f => extractedData[f] === 'TBD' || !extractedData[f]);
                 
                 let fraudDetected = false;
@@ -1811,12 +1913,11 @@ If a field is not found, return "TBD".`;
                   
                   if (!fraudDetected && expectedAmount > 0) {
                       const receiptAmount = parseFloat(String(extractedData.amount).replace(/[^0-9\\.]/g, ''));
-                      /* TEMPORARILY DISABLED SECURITY AMOUNT MATCHING
                       if (receiptAmount < expectedAmount) {
                           fraudDetected = true;
                           document.getElementById('ai-scanning-overlay').remove();
-                          alert(`❌ ERROR: INSUFFICIENT AMOUNT ❌\\n\\nYour current plan requires ₱${expectedAmount}, but the receipt is only for ₱${receiptAmount}. Please upload a receipt with the correct full amount.`);
-                      } else */
+                          alert(`❌ ERROR: INSUFFICIENT AMOUNT ❌\n\nYour current plan requires ₱${expectedAmount}, but the receipt is only for ₱${receiptAmount}. Please upload a receipt with the correct full amount.`);
+                      } else
                       if (receiptAmount > expectedAmount) {
                           extractedData.overpaymentNote = `Overpaid by ₱${(receiptAmount - expectedAmount).toFixed(2)}`;
                           alert(`Note: You have paid ₱${receiptAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(receiptAmount - expectedAmount).toFixed(2)} will be noted.`);
@@ -1844,6 +1945,30 @@ If a field is not found, return "TBD".`;
                       const uploadedHash = await uploadedHashPromise;
                       extractedData.imageHash = uploadedHash;
                       
+                      // Receiver Name Fraud Check (Temporarily Disabled for Testing)
+                      /*
+                      if (extractedData.receiverName !== 'TBD' && !extractedData.receiverName.match(/^RE[\.\*•]+L\s*B\.?$/i)) {
+                          fraudDetected = true;
+                          document.getElementById('ai-scanning-overlay').remove();
+                          alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt was sent to an unauthorized receiver: "${extractedData.receiverName}". All payments must be sent to the official company GCash account (RE****L B.).`);
+                          return;
+                      }
+                      */
+
+                      // Time Proximity Fraud Check (24-Hour Rule)
+                      if (extractedData.datePaid && extractedData.datePaid !== 'TBD' && extractedData.datePaid.toLowerCase() !== 'today') {
+                          const parsedDate = new Date(extractedData.datePaid);
+                          if (!isNaN(parsedDate.getTime())) {
+                              const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
+                              if (diffHours > 24 || diffHours < -24) {
+                                  fraudDetected = true;
+                                  document.getElementById('ai-scanning-overlay').remove();
+                                  alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. Please submit a recent, valid receipt.`);
+                                  return;
+                              }
+                          }
+                      }
+
                       // Text-based Fraud Check (Reference Number)
                       const q = query(receiptsRef, where("referenceNumber", "==", extractedData.referenceNumber));
                       const querySnapshot = await getDocs(q);
