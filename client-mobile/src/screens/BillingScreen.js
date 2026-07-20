@@ -380,38 +380,38 @@ export default function BillingScreen({ user, route, navigation }) {
       const extractedAmount = parseFloat(String(extractedDataObj.amount).replace(/[^0-9\.]/g, ''));
       let expectedAmount = parseFloat(totalBalance) || 0;
       
-      if (expectedAmount === 0) {
-          const p = String(user.plan_price || user.planPrice || user.price || user.monthlyFee || user.plan || '').toLowerCase();
-          
-          if (p.includes('starter') || p.includes('800') || (p.match(/30\s*mbps/) && !p.includes('800'))) expectedAmount = 800;
-          else if (p.includes('value') || p.includes('1000') || (p.match(/50\s*mbps/) && !p.includes('1000'))) expectedAmount = 1000;
-          else if (p.includes('family') || p.includes('1300') || (p.match(/70\s*mbps/) && !p.includes('1300'))) expectedAmount = 1300;
-          else if (p.includes('pro') || p.includes('1500') || (p.match(/100\s*mbps/) && !p.includes('1500'))) expectedAmount = 1500;
-          else if (p.includes('extreme') || p.includes('2000') || (p.match(/200\s*mbps/) && !p.includes('2000'))) expectedAmount = 2000;
-          else {
-              const parsedPlanVal = parseFloat(p.replace(/[^0-9\.]/g, ''));
-              if (!isNaN(parsedPlanVal) && parsedPlanVal > 300) {
-                  expectedAmount = parsedPlanVal;
+      const unpaidBillsList = bills.filter(b => b.status !== 'paid');
+      // Sort oldest to newest
+      unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
+
+      if (extractedAmount > 0) {
+          let isValid = false;
+
+          // Check if it exactly matches the TOTAL balance
+          if (expectedAmount > 0 && extractedAmount === expectedAmount) {
+              isValid = true;
+          } 
+          // Check if it exactly matches the oldest SINGLE bill
+          else if (unpaidBillsList.length > 0) {
+              const oldestBillAmt = parseFloat(unpaidBillsList[0].amount || 0);
+              if (oldestBillAmt > 0 && extractedAmount === oldestBillAmt) {
+                  isValid = true;
               }
           }
-      }
 
-      // Amount matching temporarily disabled as requested
-      /*
-      if (extractedAmount > 0 && expectedAmount > 0) {
-          const matchesAnyBill = bills.filter(b => b.status !== 'paid').some(b => extractedAmount >= parseFloat(b.amount || 0));
-          
-          if (extractedAmount < expectedAmount && !matchesAnyBill) {
-              Alert.alert("🚨 INSUFFICIENT AMOUNT 🚨", `Your current required balance is ₱${expectedAmount}, but the receipt is only for ₱${extractedAmount}. Please upload a receipt with the correct full amount.`);
+          if (!isValid) {
+              let errorMsg = `Your receipt is for ₱${extractedAmount}. `;
+              if (unpaidBillsList.length > 1) {
+                  errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${parseFloat(unpaidBillsList[0].amount || 0)} (for the oldest month) OR exactly ₱${expectedAmount} (for the total balance).`;
+              } else {
+                  errorMsg += `Your required balance is exactly ₱${expectedAmount}. Partial payments or overpayments are not accepted.`;
+              }
+              Alert.alert("🚨 INVALID AMOUNT 🚨", errorMsg);
               setIsAnalyzing(false);
               setUploadedImage(null);
               return;
-          } else if (extractedAmount > expectedAmount) {
-              extractedDataObj.overpaymentNote = `Overpaid by ₱${(extractedAmount - expectedAmount).toFixed(2)}`;
-              Alert.alert("Note", `You have paid ₱${extractedAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(extractedAmount - expectedAmount).toFixed(2)} will be credited to your account.`);
           }
       }
-      */
       
       if (hasTBD) {
          const missingFields = requiredFields.filter(f => extractedDataObj[f] === 'TBD' || !extractedDataObj[f]).join(', ');
@@ -457,22 +457,30 @@ export default function BillingScreen({ user, route, navigation }) {
 
   const markAsPaid = async (billId, amount, receiptData = null) => {
     try {
-      if (billId) {
-          const bill = bills.find(b => b.id === billId);
-          const expectedAmt = parseFloat(bill?.amount || 0);
-          const paidAmt = parseFloat(amount);
+      const paidAmt = parseFloat(amount);
+      let remainingAmt = paidAmt;
+      const unpaidBillsList = bills.filter(b => b.status !== 'paid');
+      unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
+
+      for (const bill of unpaidBillsList) {
+          if (remainingAmt <= 0) break;
           
-          if (paidAmt < expectedAmt) {
-              await updateDoc(doc(db, "users", user.id, "billing_emails", billId), {
-                status: 'partially_paid',
-                amount: expectedAmt - paidAmt,
-                datePaid: new Date().toISOString()
-              });
-          } else {
-              await updateDoc(doc(db, "users", user.id, "billing_emails", billId), {
+          const billExpected = parseFloat(bill.amount || 0);
+          if (billExpected <= 0) continue;
+
+          if (remainingAmt >= billExpected) {
+              await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
                 status: 'paid',
                 datePaid: new Date().toISOString()
               });
+              remainingAmt -= billExpected;
+          } else {
+              await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
+                status: 'partially_paid',
+                amount: billExpected - remainingAmt,
+                datePaid: new Date().toISOString()
+              });
+              remainingAmt = 0;
           }
       }
 
@@ -543,15 +551,6 @@ export default function BillingScreen({ user, route, navigation }) {
         <View style={styles.headerTextContainer}>
           <Text style={styles.greeting}>Billing & Payment</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          {user.profilePicture ? (
-            <Image source={{ uri: user.profilePicture }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-          ) : (
-            <View style={styles.avatarSmall}>
-              <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -599,9 +598,8 @@ export default function BillingScreen({ user, route, navigation }) {
         })()}
 
         <TouchableOpacity 
-          style={[styles.payButton, parseFloat(totalBalance) <= 0 && styles.payButtonDisabled]} 
+          style={styles.payButton} 
           onPress={() => mainScrollRef.current?.scrollToEnd({ animated: true })}
-          disabled={parseFloat(totalBalance) <= 0}
         >
           <MaterialCommunityIcons name="credit-card-fast-outline" size={20} color="#fff" />
           <Text style={styles.payButtonText}>Pay Now</Text>
@@ -644,8 +642,33 @@ export default function BillingScreen({ user, route, navigation }) {
                     {bills.filter(b => b.status !== 'paid').map(b => (
                       <View key={b.id} style={styles.billCard}>
                         <View style={styles.billHeader}>
-                          <View style={styles.billIconBox}>
-                            <MaterialCommunityIcons name="receipt" size={24} color={colors.primary} />
+                          <View style={{
+                            width: 38, height: 50, 
+                            backgroundColor: '#fff', 
+                            borderRadius: 2, 
+                            marginRight: 15,
+                            padding: 4,
+                            justifyContent: 'flex-start',
+                            borderWidth: 1,
+                            borderColor: '#e2e8f0',
+                            shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
+                          }}>
+                            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
+                              <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
+                              <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                            </View>
+                            <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
+                            <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
+                            <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
+                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
+                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                            </View>
+                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
+                              <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
+                              <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                            </View>
+                            <View style={{height: 4, width: '100%', backgroundColor: '#E53935', borderRadius: 1, marginTop: 'auto'}} />
                           </View>
                           <View style={styles.billInfo}>
                             <Text style={styles.billMonth}>{new Date(b.dateSent).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -687,8 +710,33 @@ export default function BillingScreen({ user, route, navigation }) {
                     {payments.map(p => (
                       <View key={p.id} style={styles.billCard}>
                         <View style={styles.billHeader}>
-                          <View style={styles.billIconBox}>
-                            <MaterialCommunityIcons name="check-circle" size={24} color="#10b981" />
+                          <View style={{
+                            width: 38, height: 50, 
+                            backgroundColor: '#fff', 
+                            borderRadius: 2, 
+                            marginRight: 15,
+                            padding: 4,
+                            justifyContent: 'flex-start',
+                            borderWidth: 1,
+                            borderColor: '#e2e8f0',
+                            shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
+                          }}>
+                            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
+                              <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
+                              <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                            </View>
+                            <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
+                            <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
+                            <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
+                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
+                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                            </View>
+                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
+                              <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
+                              <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                            </View>
+                            <View style={{height: 4, width: '100%', backgroundColor: '#10b981', borderRadius: 1, marginTop: 'auto'}} />
                           </View>
                           <View style={styles.billInfo}>
                             <Text style={styles.billMonth}>{new Date(p.datePaid || p.date || 0).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -877,6 +925,28 @@ export default function BillingScreen({ user, route, navigation }) {
                     <View style={{flex: 1, paddingRight: 10}}>
                       <Text style={styles.rClientName} numberOfLines={2}>{user.name || 'User'}</Text>
                       <Text style={styles.rClientAddress} numberOfLines={3}>{user.address || 'None'}</Text>
+                      
+                      {(() => {
+                        const currentPlan = user.Plan || user.plan || selectedReceipt.plan || '';
+                        let currentSpeedStr = '';
+                        const match = currentPlan.match(/(\d+)\s*Mbps/i);
+                        if (match) {
+                          currentSpeedStr = `${match[1]}Mbps`;
+                        } else {
+                          const n = currentPlan.toLowerCase();
+                          if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
+                          else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
+                          else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
+                          else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
+                          else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
+                          else currentSpeedStr = currentPlan;
+                        }
+                        return currentSpeedStr ? (
+                          <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
+                            {currentSpeedStr}
+                          </Text>
+                        ) : null;
+                      })()}
                     </View>
                     <View style={styles.rSummaryGrid}>
                       <View style={styles.rGridRow}>
@@ -1121,7 +1191,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  markPaidBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  markPaidBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   emptyText: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 20 },
   modalOverlay: {
     flex: 1,

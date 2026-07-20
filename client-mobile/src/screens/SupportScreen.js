@@ -190,54 +190,74 @@ export default function SupportScreen({ user, route, navigation }) {
     ));
   };
 
-  const renderNewRequest = () => (
-    <View style={styles.formContainer}>
-      <Text style={styles.formTitle}>Submit a Request</Text>
-      <Text style={styles.formDesc}>Our support team will get back to you as soon as possible.</Text>
+  const renderNewRequest = () => {
+    const currentPlan = user.Plan || user.plan || '';
+    let currentSpeed = 0;
+    const match = currentPlan.match(/(\d+)\s*Mbps/i);
+    if (match) {
+      currentSpeed = parseInt(match[1]);
+    } else {
+      const n = currentPlan.toLowerCase();
+      if (n.includes('starter') || n.includes('800')) currentSpeed = 30;
+      else if (n.includes('value') || n.includes('1000')) currentSpeed = 50;
+      else if (n.includes('family') || n.includes('1300')) currentSpeed = 70;
+      else if (n.includes('pro') || n.includes('1500')) currentSpeed = 100;
+      else if (n.includes('extreme') || n.includes('2000')) currentSpeed = 200;
+    }
 
-      <Text style={styles.label}>Subject</Text>
-      <TextInput 
-        style={styles.input} 
-        placeholder="E.g., Internet is slow" 
-        placeholderTextColor={colors.textMuted}
-        value={subject}
-        onChangeText={setSubject}
-      />
-
-      <Text style={styles.label}>Category</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={category}
-          onValueChange={(val) => setCategory(val)}
-          style={styles.picker}
-          dropdownIconColor="#fff"
-        >
-          <Picker.Item label="Other" value="Other" />
-          <Picker.Item label="Billing" value="Billing" />
-          <Picker.Item label="Technical" value="Technical" />
-          <Picker.Item label="Upgrade internet" value="Upgrade internet" />
-          <Picker.Item label="Downgrade internet" value="Downgrade internet" />
-        </Picker>
+    return (
+      <View style={styles.formContainer}>
+        <Text style={styles.formTitle}>Submit a Request</Text>
+        <Text style={styles.formDesc}>Our support team will get back to you as soon as possible.</Text>
+  
+        <Text style={styles.label}>Subject</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="E.g., Internet is slow" 
+          placeholderTextColor={colors.textMuted}
+          value={subject}
+          onChangeText={setSubject}
+        />
+  
+        <Text style={styles.label}>Category</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={category}
+            onValueChange={(val) => setCategory(val)}
+            style={styles.picker}
+            dropdownIconColor="#fff"
+          >
+            <Picker.Item label="Other" value="Other" />
+            <Picker.Item label="Billing" value="Billing" />
+            <Picker.Item label="Technical" value="Technical" />
+            {(currentSpeed === 0 || currentSpeed < 200) && <Picker.Item label="Upgrade internet" value="Upgrade internet" />}
+            {(currentSpeed === 0 || currentSpeed > 30) && <Picker.Item label="Downgrade internet" value="Downgrade internet" />}
+          </Picker>
+        </View>
+  
+        <Text style={styles.label}>Description</Text>
+        <TextInput 
+          style={[styles.input, { height: 120, textAlignVertical: 'top' }]} 
+          placeholder="Please provide as much detail as possible..." 
+          placeholderTextColor={colors.textMuted}
+          multiline
+          value={desc}
+          onChangeText={setDesc}
+        />
+  
+        <TouchableOpacity style={styles.btnPrimary} onPress={submitReport}>
+          <Text style={styles.btnPrimaryText}>Submit Request</Text>
+        </TouchableOpacity>
       </View>
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput 
-        style={[styles.input, { height: 120, textAlignVertical: 'top' }]} 
-        placeholder="Please provide as much detail as possible..." 
-        placeholderTextColor={colors.textMuted}
-        multiline
-        value={desc}
-        onChangeText={setDesc}
-      />
-
-      <TouchableOpacity style={styles.btnPrimary} onPress={submitReport}>
-        <Text style={styles.btnPrimaryText}>Submit Request</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Background Decor */}
+      <View style={[styles.bgDecorCircle, styles.bgDecor1]} />
+      <View style={[styles.bgDecorCircle, styles.bgDecor2]} />
+      
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Support Center</Text>
@@ -357,7 +377,30 @@ export default function SupportScreen({ user, route, navigation }) {
 }
 
 const createStyles = (colors, isDarkMode) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  bgDecorCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  bgDecor1: {
+    top: -100,
+    left: -50,
+    width: 300,
+    height: 300,
+    backgroundColor: colors.primary,
+    opacity: isDarkMode ? 0.06 : 0.04,
+  },
+  bgDecor2: {
+    top: 300,
+    right: -150,
+    width: 400,
+    height: 400,
+    backgroundColor: '#3b82f6',
+    opacity: isDarkMode ? 0.05 : 0.03,
+  },
   header: { padding: 20, paddingBottom: 10 },
   title: { color: colors.text, fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   tabsContainer: {
@@ -371,7 +414,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
   tabActive: { backgroundColor: colors.card, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 5, elevation: 3 },
   tabText: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  tabTextActive: { color: '#fff' },
+  tabTextActive: { color: colors.text },
   scrollContent: { padding: 20, paddingBottom: 40 },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyTitle: { color: colors.text, fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 20, marginBottom: 5 },

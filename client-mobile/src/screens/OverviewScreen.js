@@ -137,10 +137,25 @@ export default function OverviewScreen({ user, navigation }) {
       });
     });
 
+    if (userData.recentProfileUpdates && Array.isArray(userData.recentProfileUpdates)) {
+      userData.recentProfileUpdates.forEach(u => {
+        const changedFieldsStr = u.changes.map(c => c.key).join(', ');
+        recentList.push({
+          id: u.id, type: 'profile_update', collection: 'users',
+          title: 'Profile Details Updated',
+          desc: `You recently updated your: ${changedFieldsStr}`,
+          icon: 'account-edit', color: '#8b5cf6',
+          date: new Date(u.date),
+          isRead: u.isRead || false,
+          originalData: u
+        });
+      });
+    }
+
     recentList.sort((a, b) => b.date - a.date);
 
     setRecentUpdates(recentList);
-  }, [reportsData, billsData, paymentsData, globalAnnData]);
+  }, [reportsData, billsData, paymentsData, globalAnnData, userData.recentProfileUpdates]);
 
   const onRefresh = () => {
     // With real-time listeners, pull-to-refresh is mostly visual
@@ -171,6 +186,10 @@ export default function OverviewScreen({ user, navigation }) {
             await updateDoc(doc(db, "payments", item.id), { isRead: true });
             setRecentUpdates(prev => prev.map(a => a.id === item.id ? { ...a, isRead: true } : a));
           }
+        } else if (item.type === 'profile_update') {
+          const updatedRecent = userData.recentProfileUpdates.map(u => u.id === item.id ? { ...u, isRead: true } : u);
+          await updateDoc(doc(db, "users", userData.id), { recentProfileUpdates: updatedRecent });
+          setRecentUpdates(prev => prev.map(a => a.id === item.id ? { ...a, isRead: true } : a));
         }
       }
 
@@ -184,6 +203,8 @@ export default function OverviewScreen({ user, navigation }) {
         }
       } else if (item.type === 'ticket') {
         navigation.navigate('Support', { ticketId: item.id });
+      } else if (item.type === 'profile_update') {
+        navigation.navigate('Profile', { showUpdateDetails: item.originalData });
       }
     } catch (err) {
       console.error("Failed to mark as read", err);
@@ -220,6 +241,12 @@ export default function OverviewScreen({ user, navigation }) {
         console.error("Failed to mark as read", item.id, err);
       }
     }
+    
+    const hasProfileUpdates = unreadItems.some(i => i.type === 'profile_update');
+    if (hasProfileUpdates && userData.recentProfileUpdates) {
+      const updatedRecent = userData.recentProfileUpdates.map(u => ({ ...u, isRead: true }));
+      try { await updateDoc(doc(db, "users", userData.id), { recentProfileUpdates: updatedRecent }); } catch(err){}
+    }
   };
 
   const currentPlan = userData.Plan || userData.plan || 'No Plan';
@@ -229,8 +256,27 @@ export default function OverviewScreen({ user, navigation }) {
 
   const unreadRecentCount = recentUpdates.filter(i => !i.isRead).length;
 
+  let currentAmount = 0;
+  let currentAmountStr = String(userData.plan_price || userData.planPrice || userData.price || userData.monthlyFee || userData.amount || userData.ammount || 0);
+  let parsedAmount = parseFloat(currentAmountStr.replace(/[^0-9.]/g, ''));
+  if (parsedAmount > 300) {
+      currentAmount = parsedAmount;
+  } else {
+      const pStr = String(userData.plan || userData.Plan || '').toLowerCase();
+      if (pStr.includes('starter') || pStr.includes('800') || (pStr.match(/30\s*mbps/) && !pStr.includes('800'))) currentAmount = 800;
+      else if (pStr.includes('value') || pStr.includes('1000') || (pStr.match(/50\s*mbps/) && !pStr.includes('1000'))) currentAmount = 1000;
+      else if (pStr.includes('family') || pStr.includes('1300') || (pStr.match(/70\s*mbps/) && !pStr.includes('1300'))) currentAmount = 1300;
+      else if (pStr.includes('pro') || pStr.includes('1500') || (pStr.match(/100\s*mbps/) && !pStr.includes('1500'))) currentAmount = 1500;
+      else if (pStr.includes('extreme') || pStr.includes('2000') || (pStr.match(/200\s*mbps/) && !pStr.includes('2000'))) currentAmount = 2000;
+  }
+  const displayAmount = currentAmount > 0 ? `₱${currentAmount.toFixed(2)}` : '₱0.00';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Background Decor */}
+      <View style={[styles.bgDecorCircle, styles.bgDecor1]} />
+      <View style={[styles.bgDecorCircle, styles.bgDecor2]} />
+
       {/* Header */}
       <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
         <View style={styles.headerTextContainer}>
@@ -254,9 +300,9 @@ export default function OverviewScreen({ user, navigation }) {
           
           <View style={styles.profileHeroRow}>
             {userData.profilePicture ? (
-              <Image source={{ uri: userData.profilePicture }} style={{ width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#fff' }} />
+              <Image source={{ uri: userData.profilePicture }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fff', marginRight: 20 }} />
             ) : (
-              <View style={styles.avatarLarge}>
+              <View style={[styles.avatarLarge, { marginRight: 20 }]}>
                 <Text style={styles.avatarLargeText}>{getInitials(fullName)}</Text>
               </View>
             )}
@@ -269,9 +315,18 @@ export default function OverviewScreen({ user, navigation }) {
           </View>
           
           <View style={styles.mottoContainer}>
-            <Text style={styles.mottoText}>Your connection, account, and support - right where you need them.</Text>
-            <View style={{alignItems: 'flex-end', marginTop: 10}}>
-              <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium'}} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+               <View>
+                  <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase'}}>Current Plan</Text>
+                  <Text style={{color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold'}}>{currentPlan}</Text>
+               </View>
+               <View style={{alignItems: 'flex-end'}}>
+                  <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase'}}>Monthly Fee</Text>
+                  <Text style={{color: '#10b981', fontSize: 16, fontFamily: 'Inter_700Bold'}}>{displayAmount}</Text>
+               </View>
+            </View>
+            <View style={{alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}}>
+              <Text style={{color: '#94a3b8', fontSize: 12, fontFamily: 'Inter_500Medium'}} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>
             </View>
           </View>
         </View>
@@ -315,21 +370,48 @@ export default function OverviewScreen({ user, navigation }) {
                   {/* Miniature Thumbnail Preview for Bills and Tickets */}
                   {(item.type === 'ticket' || item.type === 'bill') && (
                     <View style={{
-                      width: 34, height: 44, 
-                      backgroundColor: item.type === 'bill' ? '#f8fafc' : item.color + '15', 
-                      borderRadius: 4, 
+                      width: 38, height: 50, 
+                      backgroundColor: item.type === 'bill' ? '#fff' : item.color + '15', 
+                      borderRadius: 2, 
                       marginRight: 10,
                       padding: 4,
-                      justifyContent: 'space-between',
+                      justifyContent: 'flex-start',
                       borderWidth: 1,
                       borderColor: item.type === 'bill' ? '#e2e8f0' : item.color + '40',
+                      shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
                     }}>
-                      <View style={{height: 2, width: '100%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
-                      <View style={{height: 2, width: '70%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
-                      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                         <MaterialCommunityIcons name={item.type === 'bill' ? 'check-decagram' : 'ticket-confirmation'} size={14} color={item.type === 'bill' ? '#10b981' : item.color} />
-                      </View>
-                      <View style={{height: 2, width: '50%', backgroundColor: item.type === 'bill' ? '#cbd5e1' : item.color, opacity: 0.6, borderRadius: 1}} />
+                      {item.type === 'bill' ? (
+                        <>
+                          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
+                            <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
+                            <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                          </View>
+                          <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
+                          <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
+                          <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
+                          
+                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
+                            <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                            <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                          </View>
+                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
+                            <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
+                            <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                          </View>
+                          
+                          {/* Bottom Status Bar (Green for Paid, Red for Unpaid) */}
+                          <View style={{height: 4, width: '100%', backgroundColor: item.title.toLowerCase().includes('paid') || item.title.toLowerCase().includes('successful') ? '#10b981' : '#E53935', borderRadius: 1, marginTop: 'auto'}} />
+                        </>
+                      ) : (
+                        <>
+                          <View style={{height: 2, width: '100%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
+                          <View style={{height: 2, width: '70%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
+                          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                             <MaterialCommunityIcons name="ticket-confirmation" size={14} color={item.color} />
+                          </View>
+                          <View style={{height: 2, width: '50%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
+                        </>
+                      )}
                     </View>
                   )}
 
@@ -341,6 +423,12 @@ export default function OverviewScreen({ user, navigation }) {
           )}
         </View>
 
+        {/* Footer Motto */}
+        <View style={{alignItems: 'center', marginTop: 30, marginBottom: 10, paddingHorizontal: 20}}>
+            <Text style={{color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center'}}>
+                Your connection, account, and support - right where you need them.
+            </Text>
+        </View>
       </ScrollView>
 
       {/* Receipt Modal */}
@@ -434,6 +522,28 @@ export default function OverviewScreen({ user, navigation }) {
                     <View style={{flex: 1, paddingRight: 10}}>
                       <Text style={styles.rClientName} numberOfLines={2}>{userData.name || 'User'}</Text>
                       <Text style={styles.rClientAddress} numberOfLines={3}>{userData.address || 'None'}</Text>
+                      
+                      {(() => {
+                        const currentPlan = userData.Plan || userData.plan || selectedReceipt.plan || '';
+                        let currentSpeedStr = '';
+                        const match = currentPlan.match(/(\d+)\s*Mbps/i);
+                        if (match) {
+                          currentSpeedStr = `${match[1]}Mbps`;
+                        } else {
+                          const n = currentPlan.toLowerCase();
+                          if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
+                          else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
+                          else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
+                          else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
+                          else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
+                          else currentSpeedStr = currentPlan;
+                        }
+                        return currentSpeedStr ? (
+                          <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
+                            {currentSpeedStr}
+                          </Text>
+                        ) : null;
+                      })()}
                     </View>
                     <View style={styles.rSummaryGrid}>
                       <View style={styles.rGridRow}>
@@ -515,6 +625,26 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgDecorCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  bgDecor1: {
+    top: -100,
+    left: -50,
+    width: 300,
+    height: 300,
+    backgroundColor: colors.primary,
+    opacity: isDarkMode ? 0.06 : 0.04,
+  },
+  bgDecor2: {
+    top: 300,
+    right: -150,
+    width: 400,
+    height: 400,
+    backgroundColor: '#3b82f6',
+    opacity: isDarkMode ? 0.05 : 0.03,
   },
   scrollContent: {
     paddingHorizontal: 20,

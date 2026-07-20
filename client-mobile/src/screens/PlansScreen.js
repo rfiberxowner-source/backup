@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -60,28 +60,39 @@ export default function PlansScreen({ user, navigation }) {
     navigation.navigate('Support', { prefillCategory: action, timestamp: Date.now() });
   };
 
+  let accountAgeMonths = 0;
+  if (user.dateInstalled || user.dateCreated || user.createdAt) {
+      const start = new Date(user.dateInstalled || user.dateCreated || user.createdAt);
+      if (!isNaN(start.getTime())) {
+          accountAgeMonths = (new Date() - start) / (1000 * 60 * 60 * 24 * 30.44);
+      }
+  }
+  const isEligibleForChange = accountAgeMonths >= 6;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Background Decor */}
+      <View style={[styles.bgDecorCircle, styles.bgDecor1]} />
+      <View style={[styles.bgDecorCircle, styles.bgDecor2]} />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.greeting}>Plans</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          {user.profilePicture ? (
-            <Image source={{ uri: user.profilePicture }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-          ) : (
-            <View style={styles.avatarSmall}>
-              <Text style={styles.avatarSmallText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
         <View style={styles.policyBox}>
           <Text style={styles.policyTitle}>PLAN POLICY</Text>
-          <Text style={styles.policyText}>Requests for upgrades or downgrades will be queued for admin approval. Clients cannot upgrade or downgrade if they haven't been subscribed for at least 6 months on their current plan.</Text>
+          {isEligibleForChange ? (
+            <Text style={styles.policyText}>
+              Your account has been subscribed for at least 6 months. You can now upgrade or downgrade your plan by messaging our <Text style={{ color: '#3b82f6', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://www.facebook.com/RFiber1')}>Facebook page</Text>.
+            </Text>
+          ) : (
+            <Text style={styles.policyText}>
+              Requests for upgrades or downgrades will be queued for admin approval. Clients cannot upgrade or downgrade if they haven't been subscribed for at least 6 months on their current plan.
+            </Text>
+          )}
         </View>
 
         <View style={styles.carouselContainer}>
@@ -152,7 +163,30 @@ export default function PlansScreen({ user, navigation }) {
 }
 
 const createStyles = (colors, isDarkMode) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  bgDecorCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  bgDecor1: {
+    top: -100,
+    left: -50,
+    width: 300,
+    height: 300,
+    backgroundColor: colors.primary,
+    opacity: isDarkMode ? 0.06 : 0.04,
+  },
+  bgDecor2: {
+    top: 300,
+    right: -150,
+    width: 400,
+    height: 400,
+    backgroundColor: '#3b82f6',
+    opacity: isDarkMode ? 0.05 : 0.03,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
