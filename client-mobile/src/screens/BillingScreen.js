@@ -275,10 +275,13 @@ export default function BillingScreen({ user, route, navigation }) {
             }
           }
       } else {
-          const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+          // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
+          const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
           if (dateDetailsMatch) {
             extractedDataObj.datePaid = dateDetailsMatch[1];
-            extractedDataObj.timePaid = dateDetailsMatch[2];
+            if (dateDetailsMatch[2]) {
+                extractedDataObj.timePaid = dateDetailsMatch[2];
+            }
           }
       }
       
@@ -343,11 +346,15 @@ export default function BillingScreen({ user, route, navigation }) {
 
       // --- 5. Time Proximity Fraud Check (24-Hour Rule) ---
       if (extractedDataObj.datePaid && extractedDataObj.datePaid !== 'TBD' && extractedDataObj.datePaid.toLowerCase() !== 'today') {
-          const parsedDate = new Date(extractedDataObj.datePaid);
+          let dateToParse = extractedDataObj.datePaid;
+          if (extractedDataObj.timePaid && extractedDataObj.timePaid !== 'TBD') {
+              dateToParse += ' ' + extractedDataObj.timePaid;
+          }
+          const parsedDate = new Date(dateToParse);
           if (!isNaN(parsedDate.getTime())) {
               const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
               if (diffHours > 24 || diffHours < -24) {
-                 Alert.alert("🚨 FRAUD DETECTED 🚨", "This receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. Please submit a recent, valid receipt.");
+                 Alert.alert("🚨 FRAUD DETECTED 🚨", "This receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.");
                  setIsAnalyzing(false);
                  setUploadedImage(null);
                  return;
@@ -389,6 +396,8 @@ export default function BillingScreen({ user, route, navigation }) {
           }
       }
 
+      // Amount matching temporarily disabled as requested
+      /*
       if (extractedAmount > 0 && expectedAmount > 0) {
           const matchesAnyBill = bills.filter(b => b.status !== 'paid').some(b => extractedAmount >= parseFloat(b.amount || 0));
           
@@ -402,6 +411,7 @@ export default function BillingScreen({ user, route, navigation }) {
               Alert.alert("Note", `You have paid ₱${extractedAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(extractedAmount - expectedAmount).toFixed(2)} will be credited to your account.`);
           }
       }
+      */
       
       if (hasTBD) {
          const missingFields = requiredFields.filter(f => extractedDataObj[f] === 'TBD' || !extractedDataObj[f]).join(', ');
@@ -448,10 +458,22 @@ export default function BillingScreen({ user, route, navigation }) {
   const markAsPaid = async (billId, amount, receiptData = null) => {
     try {
       if (billId) {
-          await updateDoc(doc(db, "users", user.id, "billing_emails", billId), {
-            status: 'paid',
-            datePaid: new Date().toISOString()
-          });
+          const bill = bills.find(b => b.id === billId);
+          const expectedAmt = parseFloat(bill?.amount || 0);
+          const paidAmt = parseFloat(amount);
+          
+          if (paidAmt < expectedAmt) {
+              await updateDoc(doc(db, "users", user.id, "billing_emails", billId), {
+                status: 'partially_paid',
+                amount: expectedAmt - paidAmt,
+                datePaid: new Date().toISOString()
+              });
+          } else {
+              await updateDoc(doc(db, "users", user.id, "billing_emails", billId), {
+                status: 'paid',
+                datePaid: new Date().toISOString()
+              });
+          }
       }
 
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -460,12 +482,24 @@ export default function BillingScreen({ user, route, navigation }) {
         refId += chars.charAt(Math.floor(Math.random() * chars.length));
       }
 
+      const bill = billId ? bills.find(b => b.id === billId) : null;
+      const planStr = bill?.plan || user.plan_price || user.planPrice || user.price || user.monthlyFee || user.plan || '-';
+      
+      const now = new Date();
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const bMonth = bill?.period || bill?.billingMonth || `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
       await addDoc(collection(db, "payments"), {
         userId: user.id,
         accountNumber: user.accountNumber || '-',
         name: user.name || 'User',
         amount: parseFloat(amount),
-        date: new Date().toISOString(),
+        plan: planStr,
+        billingMonth: bMonth,
+        period: bMonth,
+        dueDate: bill?.dueDate || '',
+        datePaid: now.toISOString(),
+        date: now.toISOString(),
         referenceId: refId,
         method: 'Online',
         status: 'Completed'
@@ -549,11 +583,12 @@ export default function BillingScreen({ user, route, navigation }) {
           let baseAmount = parseFloat(String(userAmountStr).replace(/[^0-9.]/g, '')) || 0;
           
           if (baseAmount === 0 && userPlan) {
-            const pStr = userPlan;
-            if (pStr.includes('200Mbps')) baseAmount = 2000;
-            else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
-            else if (pStr.includes('50Mbps')) baseAmount = 1000;
-            else if (pStr.includes('30Mbps')) baseAmount = 800;
+            const pStr = userPlan.toLowerCase();
+            if (pStr.includes('200mbps') || pStr.includes('200 mbps')) baseAmount = 3500;
+            else if (pStr.includes('100mbps') || pStr.includes('100 mbps')) baseAmount = 2500;
+            else if (pStr.includes('70mbps') || pStr.includes('70 mbps')) baseAmount = 2000;
+            else if (pStr.includes('50mbps') || pStr.includes('50 mbps')) baseAmount = 1500;
+            else if (pStr.includes('30mbps') || pStr.includes('30 mbps')) baseAmount = 1000;
           }
           return (
             <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border, marginBottom: 20, alignItems: 'center' }}>
@@ -729,19 +764,6 @@ export default function BillingScreen({ user, route, navigation }) {
                >
                   <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
                </TouchableOpacity>
-               
-               <TouchableOpacity 
-                 style={{ backgroundColor: 'rgba(16,185,129,0.1)', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}
-                 onPress={() => {
-                   if (!uploadedImage) {
-                     Alert.alert("No image", "Please upload a payment screenshot first before running AI analysis.");
-                     return;
-                   }
-                   setShowAIModal(true);
-                 }}
-               >
-                  <Text style={{ color: '#10b981', fontFamily: 'Inter_500Medium' }}>View AI Analysis</Text>
-               </TouchableOpacity>
             </View>
           )}
 
@@ -789,35 +811,45 @@ export default function BillingScreen({ user, route, navigation }) {
                 
                 allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
                 
-                let prevCharges = 0;
-                let prevPaid = true;
-                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
-                if (currentIdx > 0) {
-                  prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
-                  prevPaid = allPays[currentIdx - 1].isPaidRec;
-                }
-                
                 const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
                 
-                let baseAmount = parseFloat(String(user.amount || 0).replace(/[^0-9.]/g, '')) || 0;
-                if (baseAmount === 0 && amount > 0) {
-                  const pStr = selectedReceipt.plan || '';
-                  if (pStr.includes('200Mbps')) baseAmount = 2000;
-                  else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
-                  else if (pStr.includes('50Mbps')) baseAmount = 1000;
-                  else if (pStr.includes('30Mbps')) baseAmount = 800;
-                  else {
-                    if (amount % 2000 === 0) baseAmount = 2000;
-                    else if (amount % 1500 === 0) baseAmount = 1500;
-                    else if (amount % 1000 === 0) baseAmount = 1000;
-                    else baseAmount = amount;
+                let baseAmountStr = String(user.amount || user.ammount || user.plan_price || user.planPrice || user.price || user.monthlyFee || 0);
+                let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
+                
+                if (baseAmount === 0) {
+                  const pStr = String(user.plan || user.Plan || selectedReceipt.plan || '').toLowerCase();
+                  if (pStr.includes('200')) baseAmount = 3500;
+                  else if (pStr.includes('100')) baseAmount = 2500;
+                  else if (pStr.includes('70')) baseAmount = 2000;
+                  else if (pStr.includes('50')) baseAmount = 1500;
+                  else if (pStr.includes('30')) baseAmount = 1000;
+                  else baseAmount = amount > 0 ? amount : 0;
+                }
+                
+                let prevPaid = true;
+                let prevCharges = 0; // Default to 0 for start of records
+                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
+                if (currentIdx > 0) {
+                  prevPaid = allPays[currentIdx - 1].isPaidRec;
+                  if (!prevPaid) {
+                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                  } else {
+                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   }
                 }
                 
-                let currentCharges = !isPaidReceipt ? amount : baseAmount;
+                let currentCharges = baseAmount > 0 ? baseAmount : amount;
                 let remainingBalance = prevPaid ? 0 : prevCharges;
-                let totalAmountDue = !isPaidReceipt ? (currentCharges + remainingBalance) : 0;
+                
+                let paymentMade = isPaidReceipt ? amount : 0;
+                let totalAmountDue = currentCharges + remainingBalance - paymentMade;
+                if (totalAmountDue < 0) totalAmountDue = 0;
+                
+                if (!isPaidReceipt && selectedReceipt.status === 'partially_paid') {
+                   totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                }
+                
                 let previousCharges = prevCharges;
                 
                 let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
@@ -1137,7 +1169,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     marginBottom: 20,
   },
   closeSheetBtnText: { color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  receiptPaper: { backgroundColor: colors.card, borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
+  receiptPaper: { backgroundColor: '#fff', borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
   rHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 3, borderBottomColor: '#E53935', paddingBottom: 15, marginBottom: 20 },
   rLogoRow: { flexDirection: 'row', alignItems: 'center' },
   rLogoBox: { backgroundColor: '#E53935', width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -1151,23 +1183,23 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   rClientAddress: { fontSize: 11, color: '#555', fontFamily: 'Inter_400Regular' },
   rSummaryGrid: { borderWidth: 1, borderColor: '#1a1a1a', width: 150 },
   rGridRow: { flexDirection: 'row' },
-  rGridHeader: { flex: 1, backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 4, alignItems: 'center', justifyContent: 'center' },
-  rGridHeaderText: { color: colors.text, fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
-  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  rGridHeader: { flex: 1, backgroundColor: '#111', padding: 4, alignItems: 'center', justifyContent: 'center' },
+  rGridHeaderText: { color: '#fff', fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   rGridCellText: { color: '#333', fontSize: 9, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   rAcctLine: { fontSize: 11, color: '#333', marginBottom: 20 },
-  rBillSummaryBadge: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', color: colors.text, paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  rBillSummaryBadge: { backgroundColor: '#111', color: '#fff', paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   rCalculationsBox: { borderWidth: 1, borderColor: '#ddd', padding: 15, marginBottom: 20 },
   rCalcSectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#1a1a1a', marginBottom: 10 },
   rCalcRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 10 },
   rCalcLabel: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
   rCalcValue: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
-  rTotalBox: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-  rTotalText: { color: colors.text, fontSize: 11, fontFamily: 'Inter_700Bold' },
-  rTotalValue: { color: colors.text, fontSize: 13, fontFamily: 'Inter_700Bold' },
+  rTotalBox: { backgroundColor: '#111', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
+  rTotalText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold' },
+  rTotalValue: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
   rThankYou: { textAlign: 'center', color: '#E53935', fontSize: 10, marginBottom: 20, fontStyle: 'italic', fontFamily: 'Inter_600SemiBold' },
-  rCloseBtn: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 12, borderRadius: 8, alignItems: 'center' },
-  rCloseBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  rCloseBtn: { backgroundColor: '#E53935', padding: 12, borderRadius: 8, alignItems: 'center' },
+  rCloseBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',

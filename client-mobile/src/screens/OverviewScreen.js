@@ -368,35 +368,45 @@ export default function OverviewScreen({ user, navigation }) {
                 
                 allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
                 
-                let prevCharges = 0;
-                let prevPaid = true;
-                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
-                if (currentIdx > 0) {
-                  prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
-                  prevPaid = allPays[currentIdx - 1].isPaidRec;
-                }
-                
                 const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
                 
-                let baseAmount = parseFloat(String(userData.amount || 0).replace(/[^0-9.]/g, '')) || 0;
-                if (baseAmount === 0 && amount > 0) {
-                  const pStr = selectedReceipt.plan || '';
-                  if (pStr.includes('200Mbps')) baseAmount = 2000;
-                  else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
-                  else if (pStr.includes('50Mbps')) baseAmount = 1000;
-                  else if (pStr.includes('30Mbps')) baseAmount = 800;
-                  else {
-                    if (amount % 2000 === 0) baseAmount = 2000;
-                    else if (amount % 1500 === 0) baseAmount = 1500;
-                    else if (amount % 1000 === 0) baseAmount = 1000;
-                    else baseAmount = amount;
+                let baseAmountStr = String(userData.amount || userData.ammount || userData.plan_price || userData.planPrice || userData.price || userData.monthlyFee || 0);
+                let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
+                
+                if (baseAmount === 0) {
+                  const pStr = String(userData.plan || userData.Plan || selectedReceipt.plan || '').toLowerCase();
+                  if (pStr.includes('200')) baseAmount = 3500;
+                  else if (pStr.includes('100')) baseAmount = 2500;
+                  else if (pStr.includes('70')) baseAmount = 2000;
+                  else if (pStr.includes('50')) baseAmount = 1500;
+                  else if (pStr.includes('30')) baseAmount = 1000;
+                  else baseAmount = amount > 0 ? amount : 0;
+                }
+                
+                let prevPaid = true;
+                let prevCharges = 0; // Default to 0 for start of records
+                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
+                if (currentIdx > 0) {
+                  prevPaid = allPays[currentIdx - 1].isPaidRec;
+                  if (!prevPaid) {
+                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                  } else {
+                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   }
                 }
                 
-                let currentCharges = !isPaidReceipt ? amount : baseAmount;
+                let currentCharges = baseAmount > 0 ? baseAmount : amount;
                 let remainingBalance = prevPaid ? 0 : prevCharges;
-                let totalAmountDue = !isPaidReceipt ? (currentCharges + remainingBalance) : 0;
+                
+                let paymentMade = isPaidReceipt ? amount : 0;
+                let totalAmountDue = currentCharges + remainingBalance - paymentMade;
+                if (totalAmountDue < 0) totalAmountDue = 0;
+                
+                if (!isPaidReceipt && selectedReceipt.status === 'partially_paid') {
+                   totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                }
+                
                 let previousCharges = prevCharges;
                 
                 let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
@@ -788,7 +798,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  receiptPaper: { backgroundColor: colors.card, borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
+  receiptPaper: { backgroundColor: '#fff', borderRadius: 8, width: '100%', maxHeight: '90%', overflow: 'hidden' },
   rHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 3, borderBottomColor: '#E53935', paddingBottom: 15, marginBottom: 20 },
   rLogoRow: { flexDirection: 'row', alignItems: 'center' },
   rLogoBox: { backgroundColor: '#E53935', width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
@@ -802,21 +812,21 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   rClientAddress: { fontSize: 11, color: '#555', fontFamily: 'Inter_400Regular' },
   rSummaryGrid: { borderWidth: 1, borderColor: '#1a1a1a', width: 150 },
   rGridRow: { flexDirection: 'row' },
-  rGridHeader: { flex: 1, backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 4, alignItems: 'center', justifyContent: 'center' },
-  rGridHeaderText: { color: colors.text, fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
-  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.card },
+  rGridHeader: { flex: 1, backgroundColor: '#111', padding: 4, alignItems: 'center', justifyContent: 'center' },
+  rGridHeaderText: { color: '#fff', fontSize: 7, fontFamily: 'Inter_700Bold', textAlign: 'center' },
+  rGridCell: { flex: 1, padding: 4, borderBottomWidth: 1, borderBottomColor: '#ddd', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
   rGridCellText: { color: '#333', fontSize: 9, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   rAcctLine: { fontSize: 11, color: '#333', marginBottom: 20 },
-  rBillSummaryBadge: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', color: colors.text, paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  rBillSummaryBadge: { backgroundColor: '#111', color: '#fff', paddingVertical: 4, paddingHorizontal: 15, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
   rCalculationsBox: { borderWidth: 1, borderColor: '#ddd', padding: 15, marginBottom: 20 },
   rCalcSectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#1a1a1a', marginBottom: 10 },
   rCalcRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, paddingLeft: 10 },
   rCalcLabel: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
   rCalcValue: { fontSize: 11, color: '#444', fontFamily: 'Inter_400Regular' },
-  rTotalBox: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-  rTotalText: { color: colors.text, fontSize: 11, fontFamily: 'Inter_700Bold' },
-  rTotalValue: { color: colors.text, fontSize: 13, fontFamily: 'Inter_700Bold' },
-  rThankYou: { textAlign: 'center', color: '#555', fontSize: 10, marginBottom: 20, fontStyle: 'italic' },
-  rCloseBtn: { backgroundColor: isDarkMode ? '#1a1a1a' : '#f1f5f9', padding: 12, borderRadius: 8, alignItems: 'center' },
-  rCloseBtnText: { color: colors.text, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  rTotalBox: { backgroundColor: '#111', padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
+  rTotalText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_700Bold' },
+  rTotalValue: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  rThankYou: { textAlign: 'center', color: '#E53935', fontSize: 10, marginBottom: 20, fontStyle: 'italic', fontFamily: 'Inter_600SemiBold' },
+  rCloseBtn: { backgroundColor: '#E53935', padding: 12, borderRadius: 8, alignItems: 'center' },
+  rCloseBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 });

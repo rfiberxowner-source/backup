@@ -19,7 +19,7 @@ import { SairaCondensed_800ExtraBold, SairaCondensed_800ExtraBold_Italic } from 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from './src/config/firebase';
 
 import Colors from './src/constants/Colors';
@@ -35,8 +35,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function MainTabs({ route }) {
-  const { user, setUser } = route.params;
+function MainTabs({ user, setUser }) {
   const { colors } = useTheme();
   
   return (
@@ -113,9 +112,26 @@ function RootNavigator() {
   }, []);
 
   useEffect(() => {
+    let unsubscribe = null;
+    if (user?.id) {
+      const userRef = doc(db, "users", user.id);
+      unsubscribe = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const freshData = { id: docSnap.id, ...docSnap.data() };
+          setUser(freshData);
+          AsyncStorage.setItem('clientUser', JSON.stringify(freshData)).catch(() => {});
+        }
+      });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     let interval = null;
     const updatePresence = async () => {
-      if (user && AppState.currentState === 'active') {
+      if (user?.id && AppState.currentState === 'active') {
         try {
           const userRef = doc(db, "users", user.id);
           await updateDoc(userRef, { lastActive: serverTimestamp() });
@@ -125,15 +141,15 @@ function RootNavigator() {
       }
     };
 
-    if (user) {
+    if (user?.id) {
       updatePresence();
-      interval = setInterval(updatePresence, 30000);
+      interval = setInterval(updatePresence, 120000); // 2 minutes
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [user]);
+  }, [user?.id]);
 
   if ((!fontsLoaded && !fontError) || isLoading) {
     return (
@@ -148,14 +164,12 @@ function RootNavigator() {
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         {user ? (
-          <Stack.Screen 
-            name="Main" 
-            component={MainTabs} 
-            initialParams={{ user, setUser: async (u) => {
+          <Stack.Screen name="Main">
+            {props => <MainTabs {...props} user={user} setUser={async (u) => {
               if(!u) await AsyncStorage.removeItem('clientUser');
               setUser(u);
-            }}} 
-          />
+            }} />}
+          </Stack.Screen>
         ) : (
           <Stack.Screen name="Login">
             {props => <LoginScreen {...props} onLogin={(u) => setUser(u)} />}

@@ -700,6 +700,15 @@ export const adminViews = {
                 <div id="modal-ticket-desc" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
               </div>
             </div>
+
+            <!-- Rating Details -->
+            <div id="modal-ticket-rating-container" style="display: none; margin-bottom: 1rem;">
+              <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Client Rating</div>
+              <div style="background: rgba(251,191,36,0.05); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(251,191,36,0.1);">
+                <div id="modal-ticket-rating" style="color: #fbbf24; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;"></div>
+                <div id="modal-ticket-feedback" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; font-style: italic;"></div>
+              </div>
+            </div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
               <div style="font-size: 0.75rem; color: #64748b;">Submitted: <span id="modal-ticket-date"></span></div>
@@ -2071,9 +2080,29 @@ window.renderAdminReportsTable = async function () {
       `;
     });
 
+    // 3. Fetch all ratings using collectionGroup to calculate real average
+    let avgRating = '0.0';
+    try {
+      const ratingsSnap = await firestore.getDocs(firestore.collectionGroup(db, "ratings"));
+      let totalRatingScore = 0;
+      let totalRatingCount = 0;
+      ratingsSnap.forEach(rd => {
+        const ratingVal = Number(rd.data().rating) || 0;
+        if (ratingVal > 0) {
+          totalRatingScore += ratingVal;
+          totalRatingCount++;
+        }
+      });
+      if (totalRatingCount > 0) {
+        avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
+      }
+    } catch (err) {
+      console.warn("Could not fetch ratings for average:", err);
+    }
+
     document.getElementById('admin-total-tickets').innerText = total;
     document.getElementById('admin-resolved-tickets').innerText = resolved;
-    document.getElementById('admin-service-rate').innerText = '4.8 ★';
+    document.getElementById('admin-service-rate').innerText = avgRating + ' ★';
 
     if (!html) html = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">No reports found</td></tr>';
     tb.innerHTML = html;
@@ -2118,6 +2147,15 @@ window.openAdminReport = async function (id) {
       }
     }
 
+    if (currentStatus === 'pending') {
+      try {
+        await firestore.updateDoc(firestore.doc(db, "reports", id), { status: 'Read' });
+        r.status = 'Read';
+      } catch (err) {
+        console.warn("Could not update report status to Read:", err);
+      }
+    }
+
     document.getElementById('modal-ticket-id').innerText = id;
     document.getElementById('modal-ticket-name').innerText = r.name || '-';
     document.getElementById('modal-ticket-account').innerText = r.accountNumber || '-';
@@ -2140,6 +2178,26 @@ window.openAdminReport = async function (id) {
     const status = r.status || 'Pending';
     const stColor = status === 'Pending' ? '#f59e0b' : (status === 'Read' ? '#3b82f6' : '#10b981');
     document.getElementById('modal-ticket-status-badge').innerHTML = `<div style="color: ${stColor}; background: ${stColor}22; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; border: 1px solid ${stColor}44;">${status}</div>`;
+
+    // Fetch rating subcollection
+    const ratingContainer = document.getElementById('modal-ticket-rating-container');
+    document.getElementById('modal-ticket-rating').innerText = '';
+    document.getElementById('modal-ticket-feedback').innerText = '';
+    ratingContainer.style.display = 'none';
+
+    try {
+      const ratingsSnap = await firestore.getDocs(firestore.collection(db, "reports", id, "ratings"));
+      if (!ratingsSnap.empty) {
+        const ratingDoc = ratingsSnap.docs[0].data();
+        if (ratingDoc.rating) {
+          document.getElementById('modal-ticket-rating').innerText = ratingDoc.rating + ' ★';
+          document.getElementById('modal-ticket-feedback').innerText = ratingDoc.feedback ? `"${ratingDoc.feedback}"` : 'No feedback provided.';
+          ratingContainer.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch ratings for ticket:", err);
+    }
 
     document.getElementById('admin-ticket-modal').style.display = 'flex';
   } catch (e) { console.error(e); }
@@ -2745,7 +2803,13 @@ window.requestAdminClientUpdate = async function () {
       await firestore.updateDoc(firestore.doc(db, "users", id), {
         plan: plan,
         amount: amount,
-        password: pass
+        password: pass,
+        Plan: firestore.deleteField(),
+        ammount: firestore.deleteField(),
+        plan_price: firestore.deleteField(),
+        planPrice: firestore.deleteField(),
+        price: firestore.deleteField(),
+        monthlyFee: firestore.deleteField()
       });
 
       msg.style.display = 'block';

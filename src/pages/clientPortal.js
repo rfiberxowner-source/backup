@@ -549,24 +549,20 @@ export const clientViews = {
       btn.disabled = true;
 
       try {
-        const firebaseConfig = {
-          apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
-          authDomain: "portal-c293a.firebaseapp.com",
-          projectId: "portal-c293a",
-          storageBucket: "portal-c293a.firebasestorage.app",
-          messagingSenderId: "159583415029",
-          appId: "1:159583415029:web:bb5221ff531fa1005a33bc"
-        };
-        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        try { initializeApp(firebaseConfig); } catch (err) { }
-        const { getFirestore, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const db = getFirestore();
-
+        const { db, firestore } = await window._getDb();
+        const { doc, updateDoc, collection, addDoc, serverTimestamp } = firestore;
         const feedback = document.getElementById('rating-feedback').value || '';
 
-        await updateDoc(doc(db, "reports", window.currentRatingReportId), {
+        // Save rating to the 'ratings' subcollection of this report
+        await addDoc(collection(db, "reports", window.currentRatingReportId, "ratings"), {
           rating: window.currentRatingScore,
-          feedback: feedback
+          feedback: feedback,
+          timestamp: serverTimestamp()
+        });
+
+        // Also mark the report as resolved
+        await updateDoc(doc(db, "reports", window.currentRatingReportId), {
+          status: 'resolved'
         });
 
         if (window.clientReportsData[window.currentRatingReportId]) {
@@ -946,27 +942,21 @@ export const clientViews = {
         let paymentMethod = pay.method || (isPaid ? 'Online payment' : 'N/A');
         if (paymentMethod === 'Instant Payment' || paymentMethod === 'Digital Payment') paymentMethod = 'Online payment';
 
-        let baseAmount = 0;
-        if (userObj.amount) {
-          baseAmount = parseFloat(String(userObj.amount).replace(/[^0-9.]/g, '')) || 0;
+        let baseAmountStr = String(userObj.amount || userObj.ammount || userObj.plan_price || userObj.planPrice || userObj.price || userObj.monthlyFee || 0);
+        let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
+
+        if (baseAmount === 0) {
+          const pStr = String(userObj.plan || userObj.Plan || pay.plan || '').toLowerCase();
+          if (pStr.includes('200')) baseAmount = 3500;
+          else if (pStr.includes('100')) baseAmount = 2500;
+          else if (pStr.includes('70')) baseAmount = 2000;
+          else if (pStr.includes('50')) baseAmount = 1500;
+          else if (pStr.includes('30')) baseAmount = 1000;
+          else baseAmount = amount > 0 ? amount : 0;
         }
 
-        if (baseAmount === 0 && amount > 0) {
-          const pStr = pay.plan || '';
-          if (pStr.includes('200Mbps')) baseAmount = 2000;
-          else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
-          else if (pStr.includes('50Mbps')) baseAmount = 1000;
-          else if (pStr.includes('30Mbps')) baseAmount = 800;
-          else {
-            if (amount % 2000 === 0) baseAmount = 2000;
-            else if (amount % 1500 === 0) baseAmount = 1500;
-            else if (amount % 1000 === 0) baseAmount = 1000;
-            else baseAmount = amount;
-          }
-        }
-
-        let prevCharges = 0;
         let prevPaid = true;
+        let prevCharges = 0; // Default to 0 for start of records
         try {
           if (accountNumber && accountNumber !== 'N/A') {
             const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
@@ -998,9 +988,16 @@ export const clientViews = {
           }
         } catch (e) { console.warn('Could not fetch previous charges:', e); }
 
-        let currentCharges = !isPaid ? amount : baseAmount;
+        let currentCharges = baseAmount > 0 ? baseAmount : amount; 
         let remainingBalance = prevPaid ? 0 : prevCharges;
-        let totalAmountDue = !isPaid ? (currentCharges + remainingBalance) : 0;
+        let paymentMade = isPaid ? amount : 0;
+        let totalAmountDue = currentCharges + remainingBalance - paymentMade;
+        if (totalAmountDue < 0) totalAmountDue = 0; // Overpayments shouldn't show negative due here unless designed so
+        
+        if (!isPaid && pay.status === 'partially_paid') {
+           totalAmountDue = parseFloat(String(pay.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+        }
+
         let previousCharges = prevCharges;
 
         let prevPaymentText = prevPaid && prevCharges > 0 ? '\u20b1' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '\u20b10.00';
@@ -1098,9 +1095,15 @@ export const clientViews = {
                     <span>Monthly Service Fee (${plan})</span>
                     <span>\u20b1${currentCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+                  ${isPaid ? `
+                  <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #444; margin-bottom: 0.25rem; padding-left: 1rem;">
+                    <span><em>Less:</em> Payment Received — Thank You!</span>
+                    <span>\u20b1${paymentMade.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CR</span>
+                  </div>
+                  ` : ''}
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #1a1a1a; padding-left: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; margin-top: 0.5rem;">
-                    <span><strong>Total Current Charges</strong> — <em style="font-weight: 400; color: #888;">Please pay on or before the due date</em></span>
-                    <span>\u20b1${currentCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span><strong>Total Current Charges</strong> — <em style="font-weight: 400; color: #888;">${isPaid ? 'After Payment' : 'Please pay on or before the due date'}</em></span>
+                    <span>\u20b1${Math.max(0, currentCharges - paymentMade).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -1806,12 +1809,14 @@ If a field is not found, return "TBD".`;
                         }
                       }
                   } else {
-                      // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM"
-                      const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+                      // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
+                      const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
                       if (dateDetailsMatch) {
                         addDetection('DATE AND TIME', dateDetailsMatch[0], '#3b82f6');
                         extractedData.datePaid = dateDetailsMatch[1];
-                        extractedData.timePaid = dateDetailsMatch[2];
+                        if (dateDetailsMatch[2]) {
+                            extractedData.timePaid = dateDetailsMatch[2];
+                        }
                       }
                   }
                   
@@ -1957,13 +1962,17 @@ If a field is not found, return "TBD".`;
 
                       // Time Proximity Fraud Check (24-Hour Rule)
                       if (extractedData.datePaid && extractedData.datePaid !== 'TBD' && extractedData.datePaid.toLowerCase() !== 'today') {
-                          const parsedDate = new Date(extractedData.datePaid);
+                          let dateToParse = extractedData.datePaid;
+                          if (extractedData.timePaid && extractedData.timePaid !== 'TBD') {
+                              dateToParse += ' ' + extractedData.timePaid;
+                          }
+                          const parsedDate = new Date(dateToParse);
                           if (!isNaN(parsedDate.getTime())) {
                               const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
                               if (diffHours > 24 || diffHours < -24) {
                                   fraudDetected = true;
                                   document.getElementById('ai-scanning-overlay').remove();
-                                  alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. Please submit a recent, valid receipt.`);
+                                  alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.`);
                                   return;
                               }
                           }
