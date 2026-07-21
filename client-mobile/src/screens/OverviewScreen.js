@@ -14,13 +14,13 @@ export default function OverviewScreen({ user, navigation }) {
   const styles = createStyles(colors, isDarkMode);
   const [refreshing, setRefreshing] = useState(false);
   const [userData, setUserData] = useState(user);
-  
+
   const [recentUpdates, setRecentUpdates] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [activeTab, setActiveTab] = useState(0); // 0 = Recent, 1 = Announcements
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
-  
+
   const scrollRef = useRef(null);
 
   const [reportsData, setReportsData] = useState([]);
@@ -57,18 +57,18 @@ export default function OverviewScreen({ user, navigation }) {
         if (status !== 'paid' && status !== 'completed' && b.dueDate) {
           const dueDate = new Date(b.dueDate);
           const now = new Date();
-          now.setHours(0,0,0,0);
-          dueDate.setHours(0,0,0,0);
+          now.setHours(0, 0, 0, 0);
+          dueDate.setHours(0, 0, 0, 0);
           if (now > dueDate) {
-             status = 'overdue';
-             isOverdue = true;
-             b.status = 'overdue';
+            status = 'overdue';
+            isOverdue = true;
+            b.status = 'overdue';
           }
         }
         if (isOverdue && (d.data().status || '').toLowerCase() !== 'overdue') {
-            updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
-                status: 'Overdue'
-            }).catch(e => console.log(e));
+          updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
+            status: 'Overdue'
+          }).catch(e => console.log(e));
         }
         arr.push({ id: d.id, ...b });
       });
@@ -243,7 +243,7 @@ export default function OverviewScreen({ user, navigation }) {
   const markAllAsRead = async () => {
     const unreadItems = recentUpdates.filter(i => !i.isRead);
     if (unreadItems.length === 0) return;
-    
+
     for (const item of unreadItems) {
       try {
         if (item.type === 'announcement') {
@@ -263,11 +263,11 @@ export default function OverviewScreen({ user, navigation }) {
         console.error("Failed to mark as read", item.id, err);
       }
     }
-    
+
     const hasProfileUpdates = unreadItems.some(i => i.type === 'profile_update');
     if (hasProfileUpdates && userData.recentProfileUpdates) {
       const updatedRecent = userData.recentProfileUpdates.map(u => ({ ...u, isRead: true }));
-      try { await updateDoc(doc(db, "users", userData.id), { recentProfileUpdates: updatedRecent }); } catch(err){}
+      try { await updateDoc(doc(db, "users", userData.id), { recentProfileUpdates: updatedRecent }); } catch (err) { }
     }
   };
 
@@ -282,14 +282,14 @@ export default function OverviewScreen({ user, navigation }) {
   let currentAmountStr = String(userData.plan_price || userData.planPrice || userData.price || userData.monthlyFee || userData.amount || userData.ammount || 0);
   let parsedAmount = parseFloat(currentAmountStr.replace(/[^0-9.]/g, ''));
   if (parsedAmount > 300) {
-      currentAmount = parsedAmount;
+    currentAmount = parsedAmount;
   } else {
-      const pStr = String(userData.plan || userData.Plan || '').toLowerCase();
-      if (pStr.includes('starter') || pStr.includes('800') || (pStr.match(/30\s*mbps/) && !pStr.includes('800'))) currentAmount = 800;
-      else if (pStr.includes('value') || pStr.includes('1000') || (pStr.match(/50\s*mbps/) && !pStr.includes('1000'))) currentAmount = 1000;
-      else if (pStr.includes('family') || pStr.includes('1300') || (pStr.match(/70\s*mbps/) && !pStr.includes('1300'))) currentAmount = 1300;
-      else if (pStr.includes('pro') || pStr.includes('1500') || (pStr.match(/100\s*mbps/) && !pStr.includes('1500'))) currentAmount = 1500;
-      else if (pStr.includes('extreme') || pStr.includes('2000') || (pStr.match(/200\s*mbps/) && !pStr.includes('2000'))) currentAmount = 2000;
+    const pStr = String(userData.plan || userData.Plan || '').toLowerCase();
+    if (pStr.includes('starter') || pStr.includes('800') || (pStr.match(/30\s*mbps/) && !pStr.includes('800'))) currentAmount = 800;
+    else if (pStr.includes('value') || pStr.includes('1000') || (pStr.match(/50\s*mbps/) && !pStr.includes('1000'))) currentAmount = 1000;
+    else if (pStr.includes('family') || pStr.includes('1300') || (pStr.match(/70\s*mbps/) && !pStr.includes('1300'))) currentAmount = 1300;
+    else if (pStr.includes('pro') || pStr.includes('1500') || (pStr.match(/100\s*mbps/) && !pStr.includes('1500'))) currentAmount = 1500;
+    else if (pStr.includes('extreme') || pStr.includes('2000') || (pStr.match(/200\s*mbps/) && !pStr.includes('2000'))) currentAmount = 2000;
   }
   const displayAmount = currentAmount > 0 ? `₱${currentAmount.toFixed(2)}` : '₱0.00';
 
@@ -300,17 +300,17 @@ export default function OverviewScreen({ user, navigation }) {
       <View style={[styles.bgDecorCircle, styles.bgDecor2]} />
 
       {/* Header */}
-      <View style={[styles.header, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}]}>
+      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.greeting}>Overview</Text>
         </View>
-        <View style={[styles.statusBadge, {paddingVertical: 4, paddingHorizontal: 8}]}>
+        <View style={[styles.statusBadge, { paddingVertical: 4, paddingHorizontal: 8 }]}>
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>Active Account</Text>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
@@ -319,7 +319,7 @@ export default function OverviewScreen({ user, navigation }) {
         <View style={styles.profileCard}>
           <View style={styles.cardDecoration1} />
           <View style={styles.cardDecoration2} />
-          
+
           <View style={styles.profileHeroRow}>
             {userData.profilePicture ? (
               <Image source={{ uri: userData.profilePicture }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#fff', marginRight: 20 }} />
@@ -329,34 +329,34 @@ export default function OverviewScreen({ user, navigation }) {
               </View>
             )}
             <View style={styles.heroInfo}>
-              <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2}}>
-                <Text style={[styles.heroName, {flex: 1}]} numberOfLines={1} adjustsFontSizeToFit>{fullName}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                <Text style={[styles.heroName, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{fullName}</Text>
               </View>
-              <Text style={{color: '#94a3b8', fontSize: 13, fontFamily: 'Inter_500Medium'}}>{currentAcct}</Text>
+              <Text style={{ color: '#94a3b8', fontSize: 13, fontFamily: 'Inter_500Medium' }}>{currentAcct}</Text>
             </View>
           </View>
-          
+
           <View style={styles.mottoContainer}>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-               <View>
-                  <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase'}}>Current Plan</Text>
-                  <Text style={{color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold'}}>{currentPlan}</Text>
-               </View>
-               <View style={{alignItems: 'flex-end'}}>
-                  <Text style={{color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase'}}>Monthly Fee</Text>
-                  <Text style={{color: '#10b981', fontSize: 16, fontFamily: 'Inter_700Bold'}}>{displayAmount}</Text>
-               </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase' }}>Current Plan</Text>
+                <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' }}>{currentPlan}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase' }}>Monthly Fee</Text>
+                <Text style={{ color: '#10b981', fontSize: 16, fontFamily: 'Inter_700Bold' }}>{displayAmount}</Text>
+              </View>
             </View>
-            <View style={{alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}}>
-              <Text style={{color: '#94a3b8', fontSize: 12, fontFamily: 'Inter_500Medium'}} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>
+            <View style={{ alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
+              <Text style={{ color: '#94a3b8', fontSize: 12, fontFamily: 'Inter_500Medium' }} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>
             </View>
           </View>
         </View>
 
         {/* Header for Recent Updates */}
-        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Text style={{color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold'}}>Recent Updates</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' }}>Recent Updates</Text>
             {unreadRecentCount > 0 && (
               <View style={styles.notificationCircle}>
                 <Text style={styles.notificationCount}>{unreadRecentCount > 99 ? '99+' : unreadRecentCount}</Text>
@@ -364,8 +364,8 @@ export default function OverviewScreen({ user, navigation }) {
             )}
           </View>
           {unreadRecentCount > 0 && (
-            <TouchableOpacity onPress={markAllAsRead} style={{paddingHorizontal: 10, paddingVertical: 5, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 6, borderWidth: 1, borderColor: colors.border}}>
-              <Text style={{color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium'}}>Mark all as read</Text>
+            <TouchableOpacity onPress={markAllAsRead} style={{ paddingHorizontal: 10, paddingVertical: 5, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 6, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium' }}>Mark all as read</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -388,50 +388,50 @@ export default function OverviewScreen({ user, navigation }) {
                     <Text style={[styles.feedTitle, !item.isRead && styles.feedTitleUnread]}>{item.title}</Text>
                     <Text style={styles.feedDesc} numberOfLines={2}>{item.desc}</Text>
                   </View>
-                  
+
                   {/* Miniature Thumbnail Preview for Bills and Tickets */}
                   {(item.type === 'ticket' || item.type === 'bill') && (
                     <View style={{
-                      width: 38, height: 50, 
-                      backgroundColor: item.type === 'bill' ? '#fff' : item.color + '15', 
-                      borderRadius: 2, 
+                      width: 38, height: 50,
+                      backgroundColor: item.type === 'bill' ? '#fff' : item.color + '15',
+                      borderRadius: 2,
                       marginRight: 10,
                       padding: 4,
                       justifyContent: 'flex-start',
                       borderWidth: 1,
                       borderColor: item.type === 'bill' ? '#e2e8f0' : item.color + '40',
-                      shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
+                      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
                     }}>
                       {item.type === 'bill' ? (
                         <>
-                          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
-                            <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
-                            <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                            <View style={{ width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3 }} />
+                            <View style={{ width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1 }} />
                           </View>
-                          <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
-                          <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
-                          <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
-                          
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
-                            <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
-                            <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                          <View style={{ height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3 }} />
+                          <View style={{ height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2 }} />
+                          <View style={{ height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4 }} />
+
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+                            <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
+                            <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
                           </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
-                            <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
-                            <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <View style={{ height: 2.5, width: '35%', backgroundColor: '#cbd5e1' }} />
+                            <View style={{ height: 2.5, width: '40%', backgroundColor: '#E53935' }} />
                           </View>
-                          
+
                           {/* Bottom Status Bar (Green for Paid, Red for Unpaid) */}
-                          <View style={{height: 4, width: '100%', backgroundColor: item.title.toLowerCase().includes('paid') || item.title.toLowerCase().includes('successful') ? '#10b981' : '#E53935', borderRadius: 1, marginTop: 'auto'}} />
+                          <View style={{ height: 4, width: '100%', backgroundColor: item.title.toLowerCase().includes('paid') || item.title.toLowerCase().includes('successful') ? '#10b981' : '#E53935', borderRadius: 1, marginTop: 'auto' }} />
                         </>
                       ) : (
                         <>
-                          <View style={{height: 2, width: '100%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
-                          <View style={{height: 2, width: '70%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
-                          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                             <MaterialCommunityIcons name="ticket-confirmation" size={14} color={item.color} />
+                          <View style={{ height: 2, width: '100%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1 }} />
+                          <View style={{ height: 2, width: '70%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1 }} />
+                          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <MaterialCommunityIcons name="ticket-confirmation" size={14} color={item.color} />
                           </View>
-                          <View style={{height: 2, width: '50%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1}} />
+                          <View style={{ height: 2, width: '50%', backgroundColor: item.color, opacity: 0.6, borderRadius: 1 }} />
                         </>
                       )}
                     </View>
@@ -446,10 +446,10 @@ export default function OverviewScreen({ user, navigation }) {
         </View>
 
         {/* Footer Motto */}
-        <View style={{alignItems: 'center', marginTop: 30, marginBottom: 10, paddingHorizontal: 20}}>
-            <Text style={{color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center'}}>
-                Your connection, account, and support - right where you need them.
-            </Text>
+        <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 10, paddingHorizontal: 20 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center' }}>
+            Your connection, account, and support - right where you need them.
+          </Text>
         </View>
       </ScrollView>
 
@@ -460,12 +460,12 @@ export default function OverviewScreen({ user, navigation }) {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
               {selectedReceipt && (() => {
                 const isPaidReceipt = selectedReceipt.status === 'paid' || selectedReceipt.collection === 'payments';
-                
-                const statementDateObj = isPaidReceipt 
+
+                const statementDateObj = isPaidReceipt
                   ? new Date(selectedReceipt.datePaid || selectedReceipt.date || selectedReceipt.dateSent || 0)
                   : new Date(selectedReceipt.dateSent || selectedReceipt.date || 0);
                 const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
+
                 const allPays = [];
                 (typeof paymentsData !== 'undefined' ? paymentsData : []).forEach(p => {
                   allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
@@ -475,15 +475,15 @@ export default function OverviewScreen({ user, navigation }) {
                     allPays.push({ ...b, isPaidRec: false, sortDate: b.dateSent || b.datePaid || b.date || '' });
                   }
                 });
-                
+
                 allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
-                
+
                 const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
-                
+
                 let baseAmountStr = String(userData.amount || userData.ammount || userData.plan_price || userData.planPrice || userData.price || userData.monthlyFee || 0);
                 let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
-                
+
                 if (baseAmount === 0) {
                   const pStr = String(userData.plan || userData.Plan || selectedReceipt.plan || '').toLowerCase();
                   if (pStr.includes('200')) baseAmount = 3500;
@@ -493,145 +493,139 @@ export default function OverviewScreen({ user, navigation }) {
                   else if (pStr.includes('30')) baseAmount = 1000;
                   else baseAmount = amount > 0 ? amount : 0;
                 }
-                
+
                 let prevPaid = true;
                 let prevCharges = 0; // Default to 0 for start of records
                 const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
                 if (currentIdx > 0) {
                   prevPaid = allPays[currentIdx - 1].isPaidRec;
                   if (!prevPaid) {
-                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   } else {
-                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   }
                 }
-                
+
                 let currentCharges = baseAmount > 0 ? baseAmount : amount;
                 let remainingBalance = prevPaid ? 0 : prevCharges;
-                
+
                 let paymentMade = isPaidReceipt ? amount : 0;
                 let totalAmountDue = currentCharges + remainingBalance - paymentMade;
                 if (totalAmountDue < 0) totalAmountDue = 0;
-                
+
                 if (!isPaidReceipt && selectedReceipt.status === 'partially_paid') {
-                   totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                  totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 }
-                
+
                 let previousCharges = prevCharges;
-                
+
                 let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
-                
+
                 return (
-                <>
-                  <View style={styles.rHeader}>
-                    <View style={styles.rLogoRow}>
-                      <View style={styles.rLogoBox}>
-                        <MaterialCommunityIcons name="wifi" size={24} color="#fff" />
+                  <>
+                    <View style={styles.rHeader}>
+                      <View style={{ width: 200, height: 80 }}>
+                        <Image source={require('../../assets/logo2-removebg-preview.png')} style={{ height: 140, width: 300, resizeMode: 'contain', position: 'absolute', left: -30, top: -30 }} />
                       </View>
-                      <View>
-                        <Text style={styles.rLogoText}><Text style={{color: '#E53935'}}>R</Text>FIBER<Text style={{color: '#E53935'}}>X</Text></Text>
-                        <Text style={styles.rLogoSub}>NETWORK AND DATA SOLUTION</Text>
-                      </View>
+                      <Text style={styles.rPage}>Page 1 of 1</Text>
                     </View>
-                    <Text style={styles.rPage}>Page 1 of 1</Text>
-                  </View>
-                  
-                  <View style={styles.rTitleBox}>
-                    <Text style={styles.rTitle}>STATEMENT OF ACCOUNT</Text>
-                  </View>
-                  
-                  <View style={styles.rInfoRow}>
-                    <View style={{flex: 1, paddingRight: 10}}>
-                      <Text style={styles.rClientName} numberOfLines={2}>{userData.name || 'User'}</Text>
-                      <Text style={styles.rClientAddress} numberOfLines={3}>{userData.address || 'None'}</Text>
-                      
-                      {(() => {
-                        const currentPlan = userData.Plan || userData.plan || selectedReceipt.plan || '';
-                        let currentSpeedStr = '';
-                        const match = currentPlan.match(/(\d+)\s*Mbps/i);
-                        if (match) {
-                          currentSpeedStr = `${match[1]}Mbps`;
-                        } else {
-                          const n = currentPlan.toLowerCase();
-                          if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
-                          else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
-                          else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
-                          else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
-                          else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
-                          else currentSpeedStr = currentPlan;
-                        }
-                        return currentSpeedStr ? (
-                          <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
-                            {currentSpeedStr}
-                          </Text>
-                        ) : null;
-                      })()}
+
+                    <View style={styles.rTitleBox}>
+                      <Text style={styles.rTitle}>STATEMENT OF ACCOUNT</Text>
                     </View>
-                    <View style={styles.rSummaryGrid}>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>STATEMENT DATE</Text></View>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
+
+                    <View style={styles.rInfoRow}>
+                      <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Text style={styles.rClientName} numberOfLines={2}>{userData.name || 'User'}</Text>
+                        <Text style={styles.rClientAddress} numberOfLines={3}>{userData.address || 'None'}</Text>
+
+                        {(() => {
+                          const currentPlan = userData.Plan || userData.plan || selectedReceipt.plan || '';
+                          let currentSpeedStr = '';
+                          const match = currentPlan.match(/(\d+)\s*Mbps/i);
+                          if (match) {
+                            currentSpeedStr = `${match[1]}Mbps`;
+                          } else {
+                            const n = currentPlan.toLowerCase();
+                            if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
+                            else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
+                            else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
+                            else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
+                            else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
+                            else currentSpeedStr = currentPlan;
+                          }
+                          return currentSpeedStr ? (
+                            <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
+                              {currentSpeedStr}
+                            </Text>
+                          ) : null;
+                        })()}
                       </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
-                        <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {fontSize: 8}]}>{selectedReceipt.id}</Text></View>
-                      </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>TOTAL AMOUNT DUE</Text></View>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>DUE DATE</Text></View>
-                      </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {color: '#E53935', fontFamily: 'Inter_700Bold'}]}>₱{totalAmountDue.toFixed(2)}</Text></View>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{selectedReceipt.dueDate || '-'}</Text></View>
+                      <View style={styles.rSummaryGrid}>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>STATEMENT DATE</Text></View>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
+                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { fontSize: 8 }]}>{selectedReceipt.id}</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>TOTAL AMOUNT DUE</Text></View>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>DUE DATE</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { color: '#E53935', fontFamily: 'Inter_700Bold' }]}>₱{totalAmountDue.toFixed(2)}</Text></View>
+                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{selectedReceipt.dueDate || '-'}</Text></View>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  
-                  <Text style={styles.rAcctLine}><Text style={{fontFamily: 'Inter_700Bold'}}>Statement of Account Number:</Text> {userData.accountNumber || '-'}</Text>
-                  
-                  <View style={{alignItems: 'center', marginBottom: 15}}>
-                    <Text style={styles.rBillSummaryBadge}>BILL SUMMARY</Text>
-                  </View>
-                  
-                  <View style={styles.rCalculationsBox}>
-                    <Text style={styles.rCalcSectionTitle}>A. Previous Charges</Text>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Balance from Previous Bill</Text>
-                      <Text style={styles.rCalcValue}>₱{previousCharges.toFixed(2)}</Text>
+
+                    <Text style={styles.rAcctLine}><Text style={{ fontFamily: 'Inter_700Bold' }}>Statement of Account Number:</Text> {userData.accountNumber || '-'}</Text>
+
+                    <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                      <Text style={styles.rBillSummaryBadge}>BILL SUMMARY</Text>
                     </View>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
-                      <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
-                    </View>
-                    <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance from Previous Bill</Text>
-                      <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{remainingBalance.toFixed(2)}</Text>
-                    </View>
-                    
-                    <Text style={[styles.rCalcSectionTitle, {marginTop: 20}]}>B. Current Charges</Text>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
-                      <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
-                    </View>
-                    {isPaidReceipt && (
+
+                    <View style={styles.rCalculationsBox}>
+                      <Text style={styles.rCalcSectionTitle}>A. Previous Charges</Text>
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Balance from Previous Bill</Text>
+                        <Text style={styles.rCalcValue}>₱{previousCharges.toFixed(2)}</Text>
+                      </View>
                       <View style={styles.rCalcRow}>
                         <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
-                        <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                        <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
                       </View>
-                    )}
-                    
-                    <View style={styles.rTotalBox}>
-                      <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
-                      <Text style={styles.rTotalValue}>₱{totalAmountDue.toFixed(2)}</Text>
+                      <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
+                        <Text style={[styles.rCalcLabel, { fontFamily: 'Inter_700Bold' }]}>Remaining Balance from Previous Bill</Text>
+                        <Text style={[styles.rCalcValue, { fontFamily: 'Inter_700Bold' }]}>₱{remainingBalance.toFixed(2)}</Text>
+                      </View>
+
+                      <Text style={[styles.rCalcSectionTitle, { marginTop: 20 }]}>B. Current Charges</Text>
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
+                        <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
+                      </View>
+                      {isPaidReceipt && (
+                        <View style={styles.rCalcRow}>
+                          <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
+                          <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                        </View>
+                      )}
+
+                      <View style={styles.rTotalBox}>
+                        <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
+                        <Text style={styles.rTotalValue}>₱{totalAmountDue.toFixed(2)}</Text>
+                      </View>
                     </View>
-                  </View>
-                  
-                  <Text style={styles.rThankYou}>Thank you for keeping your account current. We value your continued patronage.</Text>
-                  
-                  <TouchableOpacity style={styles.rCloseBtn} onPress={() => setReceiptVisible(false)}>
-                    <Text style={styles.rCloseBtnText}>Close Receipt</Text>
-                  </TouchableOpacity>
-                </>
+
+                    <Text style={styles.rThankYou}>Thank you for keeping your account current. We value your continued patronage.</Text>
+
+                    <TouchableOpacity style={styles.rCloseBtn} onPress={() => setReceiptVisible(false)}>
+                      <Text style={styles.rCloseBtnText}>Close Receipt</Text>
+                    </TouchableOpacity>
+                  </>
                 );
               })()}
             </ScrollView>
@@ -705,7 +699,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
   },
-  
+
   /* Box 1: Profile Card */
   profileCard: {
     backgroundColor: colors.card,

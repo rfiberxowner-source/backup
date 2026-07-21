@@ -58,10 +58,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
         
         <div style="height: 70px; padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #E53935, #B71C1C); display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(229,57,53,0.3);">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-            </div>
-            <span style="font-size: 1.25rem; font-weight: 800; color: #fff; letter-spacing: -0.5px;">RFiber<span style="color: #E53935;">X</span></span>
+            <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 75px; width: auto;" />
           </div>
         </div>
 
@@ -1460,7 +1457,7 @@ export const adminViews = {
         sidebar.style.transform = 'translateX(-260px)';
         main.style.marginLeft = '0px';
       }
-      
+
       // Mount the React component
       if (window.mountNetworkMap) {
         window.mountNetworkMap('network-map-root');
@@ -1708,74 +1705,74 @@ window.initDashboard = async function () {
 
       if (dashClients) dashClients.innerText = usersSnap.size;
 
-    const overdueSet = new Set();
-    billsSnap.docs.forEach(d => {
-      const b = d.data();
-      let status = (b.status || 'Pending').toLowerCase();
-      if (status === 'unread') status = 'pending';
-      if (status !== 'paid' && status !== 'completed' && b.dueDate) {
-        const dueDate = new Date(b.dueDate);
-        const now = new Date();
-        now.setHours(0,0,0,0);
-        dueDate.setHours(0,0,0,0);
-        if (now > dueDate) {
-          status = 'overdue';
+      const overdueSet = new Set();
+      billsSnap.docs.forEach(d => {
+        const b = d.data();
+        let status = (b.status || 'Pending').toLowerCase();
+        if (status === 'unread') status = 'pending';
+        if (status !== 'paid' && status !== 'completed' && b.dueDate) {
+          const dueDate = new Date(b.dueDate);
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          dueDate.setHours(0, 0, 0, 0);
+          if (now > dueDate) {
+            status = 'overdue';
+          }
         }
-      }
-      if (status === 'overdue' && b.accountNumber) {
-        overdueSet.add(b.accountNumber);
-      }
-    });
-    if (dashOverdue) dashOverdue.innerText = overdueSet.size;
-
-    const monthlyRevenue = {};
-    const monthKeys = [];
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const k = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-      monthKeys.push(k);
-      monthlyRevenue[k] = 0;
-    }
-    const thisMonthKey = monthKeys[0];
-    let thisMonthRev = 0;
-
-    paymentsSnap.docs.forEach(d => {
-      const p = d.data();
-      const amt = parseFloat(p.amount) || 0;
-
-      let pDate;
-      if (p.timestamp && p.timestamp.toDate) {
-        pDate = p.timestamp.toDate();
-      } else if (p.datePaid) {
-        pDate = new Date(p.datePaid);
-      } else if (p.date) {
-        pDate = new Date(p.date);
-      }
-
-      if (pDate && !isNaN(pDate)) {
-        const pk = pDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        if (monthlyRevenue[pk] !== undefined) {
-          monthlyRevenue[pk] += amt;
+        if (status === 'overdue' && b.accountNumber) {
+          overdueSet.add(b.accountNumber);
         }
-        if (pk === thisMonthKey) {
-          thisMonthRev += amt;
-        }
+      });
+      if (dashOverdue) dashOverdue.innerText = overdueSet.size;
+
+      const monthlyRevenue = {};
+      const monthKeys = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const k = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        monthKeys.push(k);
+        monthlyRevenue[k] = 0;
       }
-    });
+      const thisMonthKey = monthKeys[0];
+      let thisMonthRev = 0;
+
+      paymentsSnap.docs.forEach(d => {
+        const p = d.data();
+        const amt = parseFloat(p.amount) || 0;
+
+        let pDate;
+        if (p.timestamp && p.timestamp.toDate) {
+          pDate = p.timestamp.toDate();
+        } else if (p.datePaid) {
+          pDate = new Date(p.datePaid);
+        } else if (p.date) {
+          pDate = new Date(p.date);
+        }
+
+        if (pDate && !isNaN(pDate)) {
+          const pk = pDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+          if (monthlyRevenue[pk] !== undefined) {
+            monthlyRevenue[pk] += amt;
+          }
+          if (pk === thisMonthKey) {
+            thisMonthRev += amt;
+          }
+        }
+      });
 
 
-    // DUMMY DATA FOR TESTING
-    if (monthlyRevenue["March 2026"] !== undefined) monthlyRevenue["March 2026"] += 5000;
-    if (monthlyRevenue["June 2026"] !== undefined) monthlyRevenue["June 2026"] += 1000;
-    // END DUMMY DATA
+      // DUMMY DATA FOR TESTING
+      if (monthlyRevenue["March 2026"] !== undefined) monthlyRevenue["March 2026"] += 5000;
+      if (monthlyRevenue["June 2026"] !== undefined) monthlyRevenue["June 2026"] += 1000;
+      // END DUMMY DATA
 
-    if (dashRevenue) dashRevenue.innerText = '₱' + thisMonthRev.toLocaleString();
+      if (dashRevenue) dashRevenue.innerText = '₱' + thisMonthRev.toLocaleString();
 
-    // Payment Methods Donut Logic
-    const payColors = ['#3b82f6', '#10b981', '#f59e0b']; // Online, Cash, Pending
-    let payLegendHtml = '';
-    let payDonutHtml = `
+      // Payment Methods Donut Logic
+      const payColors = ['#3b82f6', '#10b981', '#f59e0b']; // Online, Cash, Pending
+      let payLegendHtml = '';
+      let payDonutHtml = `
       <div style="position:relative; width:160px; height:160px;">
         <div id="pay-donut-tooltip" style="display:none; position:absolute; top:-40px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:0.4rem 0.6rem; border-radius:6px; font-size:0.65rem; font-weight:600; white-space:nowrap; z-index:20; pointer-events:none; flex-direction:column; align-items:center; box-shadow:0 4px 6px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
           <span id="pay-donut-tooltip-title" style="color:#94a3b8; font-size:0.55rem; text-transform:uppercase; margin-bottom:2px;"></span>
@@ -1784,52 +1781,52 @@ window.initDashboard = async function () {
         <svg width="160" height="160" viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="8"></circle>
     `;
 
-    let pendingCount = 0;
-    billsSnap.docs.forEach(d => {
-      const b = d.data();
-      let status = (b.status || 'Pending').toLowerCase();
-      if (status !== 'paid' && status !== 'completed') {
-        pendingCount++;
-      }
-    });
+      let pendingCount = 0;
+      billsSnap.docs.forEach(d => {
+        const b = d.data();
+        let status = (b.status || 'Pending').toLowerCase();
+        if (status !== 'paid' && status !== 'completed') {
+          pendingCount++;
+        }
+      });
 
-    let onlineCount = 0;
-    let cashCount = 0;
-    paymentsSnap.docs.forEach(d => {
-      const p = d.data();
-      let method = (p.method || p.paymentMethod || 'Online payment').toLowerCase();
-      if (method.includes('cash')) {
-        cashCount++;
-      } else {
-        onlineCount++;
-      }
-    });
+      let onlineCount = 0;
+      let cashCount = 0;
+      paymentsSnap.docs.forEach(d => {
+        const p = d.data();
+        let method = (p.method || p.paymentMethod || 'Online payment').toLowerCase();
+        if (method.includes('cash')) {
+          cashCount++;
+        } else {
+          onlineCount++;
+        }
+      });
 
-    const payStats = [
-      { name: 'Online', count: onlineCount },
-      { name: 'Cash', count: cashCount },
-      { name: 'Pending', count: pendingCount }
-    ].filter(s => s.count > 0);
+      const payStats = [
+        { name: 'Online', count: onlineCount },
+        { name: 'Cash', count: cashCount },
+        { name: 'Pending', count: pendingCount }
+      ].filter(s => s.count > 0);
 
-    const payTotal = onlineCount + cashCount + pendingCount;
-    let payCumPct = 0;
+      const payTotal = onlineCount + cashCount + pendingCount;
+      let payCumPct = 0;
 
-    payStats.forEach((stat, i) => {
-      const c = payColors[i % payColors.length];
-      const pct = payTotal > 0 ? (stat.count / payTotal) * 100 : 0;
-      const offset = 25 - payCumPct;
+      payStats.forEach((stat, i) => {
+        const c = payColors[i % payColors.length];
+        const pct = payTotal > 0 ? (stat.count / payTotal) * 100 : 0;
+        const offset = 25 - payCumPct;
 
-      const hoverIn = `document.getElementById('pay-donut-tooltip').style.display='flex'; document.getElementById('pay-donut-tooltip-title').innerText='${stat.name}'; document.getElementById('pay-donut-tooltip-val').innerText='${stat.count} (${pct.toFixed(1)}%)'; this.style.strokeWidth='10';`;
-      const hoverOut = `document.getElementById('pay-donut-tooltip').style.display='none'; this.style.strokeWidth='8';`;
+        const hoverIn = `document.getElementById('pay-donut-tooltip').style.display='flex'; document.getElementById('pay-donut-tooltip-title').innerText='${stat.name}'; document.getElementById('pay-donut-tooltip-val').innerText='${stat.count} (${pct.toFixed(1)}%)'; this.style.strokeWidth='10';`;
+        const hoverOut = `document.getElementById('pay-donut-tooltip').style.display='none'; this.style.strokeWidth='8';`;
 
-      payDonutHtml += `<circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="${c}" stroke-width="8" stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${offset}" style="transition: stroke-width 0.2s; cursor: pointer;" onmouseover="${hoverIn}" onmouseout="${hoverOut}"></circle>`;
+        payDonutHtml += `<circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="${c}" stroke-width="8" stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${offset}" style="transition: stroke-width 0.2s; cursor: pointer;" onmouseover="${hoverIn}" onmouseout="${hoverOut}"></circle>`;
 
-      payLegendHtml += `<div style="display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:0.75rem;"><div style="width:12px; height:12px; border-radius:4px; background:${c}; box-shadow: 0 0 4px ${c};"></div><div><div style="font-size:0.85rem; color:#fff; font-weight:500;">${stat.name}</div><div style="font-size:0.7rem; color:#94a3b8;">${pct.toFixed(1)}%</div></div></div><div style="font-size:0.85rem; color:#fff; font-weight:600;">${stat.count}</div></div>`;
+        payLegendHtml += `<div style="display:flex; justify-content:space-between; align-items:center;"><div style="display:flex; align-items:center; gap:0.75rem;"><div style="width:12px; height:12px; border-radius:4px; background:${c}; box-shadow: 0 0 4px ${c};"></div><div><div style="font-size:0.85rem; color:#fff; font-weight:500;">${stat.name}</div><div style="font-size:0.7rem; color:#94a3b8;">${pct.toFixed(1)}%</div></div></div><div style="font-size:0.85rem; color:#fff; font-weight:600;">${stat.count}</div></div>`;
 
-      payCumPct += pct;
-    });
+        payCumPct += pct;
+      });
 
-    payDonutHtml += `
+      payDonutHtml += `
           <!-- Inner text -->
           <div style="position:absolute; top:0; left:0; right:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
             <div style="font-size:1.5rem; font-weight:700; color:#fff;">${payTotal}</div>
@@ -1839,87 +1836,87 @@ window.initDashboard = async function () {
       </div>
     `;
 
-    const payContainer = document.getElementById('metric-payment-donut-container');
-    if (payContainer) payContainer.innerHTML = payTotal > 0 ? payDonutHtml : '<div style="font-size:0.75rem; color:#64748b;">No data</div>';
+      const payContainer = document.getElementById('metric-payment-donut-container');
+      if (payContainer) payContainer.innerHTML = payTotal > 0 ? payDonutHtml : '<div style="font-size:0.75rem; color:#64748b;">No data</div>';
 
-    const payLegend = document.getElementById('metric-payment-legend');
-    if (payLegend) payLegend.innerHTML = payLegendHtml;
+      const payLegend = document.getElementById('metric-payment-legend');
+      if (payLegend) payLegend.innerHTML = payLegendHtml;
 
-    // Chart processing
-    let maxRev = 1; // Prevent division by zero
-    for (const mk of monthKeys) {
-      if (monthlyRevenue[mk] > maxRev) maxRev = monthlyRevenue[mk];
-    }
-
-    const points = [];
-    const numBars = 6;
-
-    for (let bi = 0; bi < numBars; bi++) {
-      const uiIndex = 5 - bi;
-      const labelEl = document.getElementById('rev-label-' + uiIndex);
-      const barEl = document.getElementById('rev-bar-' + uiIndex);
-      const amtEl = document.getElementById('rev-amt-' + uiIndex);
-
-      const mk = monthKeys[bi];
-      const monthName = mk.split(' ')[0].substring(0, 3);
-      const mAmt = monthlyRevenue[mk];
-
-      if (labelEl) labelEl.innerText = monthName;
-      if (amtEl) amtEl.innerText = '₱' + mAmt.toLocaleString();
-
-      const hPct = mAmt > 0 ? (mAmt / maxRev) : 0;
-      // Height for bar graph (percentage based)
-      const barH = hPct > 0 ? Math.max(2, Math.round(hPct * 100)) : 0;
-      if (barEl) {
-        barEl.style.height = barH + '%';
-        const wrapper = barEl.parentElement;
-        if (wrapper) {
-          wrapper.onclick = () => {
-            if (window.showRevenueTaxPopup) {
-              window.showRevenueTaxPopup(mk, mAmt);
-            }
-          };
-        }
+      // Chart processing
+      let maxRev = 1; // Prevent division by zero
+      for (const mk of monthKeys) {
+        if (monthlyRevenue[mk] > maxRev) maxRev = monthlyRevenue[mk];
       }
 
-      // Calculate coordinates for the line graph
-      const chartHeight = 220; // Matches CSS height of container
-      const y = hPct > 0 ? chartHeight - (hPct * chartHeight) : chartHeight;
-      points.push({ x: uiIndex, y: y });
-    }
+      const points = [];
+      const numBars = 6;
 
-    const svgLine = document.getElementById('rev-line');
-    if (svgLine) {
-      points.sort((a, b) => a.x - b.x);
-      const w = svgLine.parentElement.clientWidth || 1000;
-      // We have 6 flex columns. The center of each column is at (1/12 + i/6) * w
-      const gap = w / 6;
-      const dPath = points.map((p, i) => {
-        const x = gap / 2 + (p.x * gap);
-        // Show point circle
-        const circle = document.getElementById('rev-point-' + p.x);
-        if (circle) {
-          circle.setAttribute('cx', x);
-          circle.setAttribute('cy', p.y);
-          circle.style.display = 'block';
+      for (let bi = 0; bi < numBars; bi++) {
+        const uiIndex = 5 - bi;
+        const labelEl = document.getElementById('rev-label-' + uiIndex);
+        const barEl = document.getElementById('rev-bar-' + uiIndex);
+        const amtEl = document.getElementById('rev-amt-' + uiIndex);
+
+        const mk = monthKeys[bi];
+        const monthName = mk.split(' ')[0].substring(0, 3);
+        const mAmt = monthlyRevenue[mk];
+
+        if (labelEl) labelEl.innerText = monthName;
+        if (amtEl) amtEl.innerText = '₱' + mAmt.toLocaleString();
+
+        const hPct = mAmt > 0 ? (mAmt / maxRev) : 0;
+        // Height for bar graph (percentage based)
+        const barH = hPct > 0 ? Math.max(2, Math.round(hPct * 100)) : 0;
+        if (barEl) {
+          barEl.style.height = barH + '%';
+          const wrapper = barEl.parentElement;
+          if (wrapper) {
+            wrapper.onclick = () => {
+              if (window.showRevenueTaxPopup) {
+                window.showRevenueTaxPopup(mk, mAmt);
+              }
+            };
+          }
         }
-        return `${i === 0 ? 'M' : 'L'}${x},${p.y}`;
-      }).join(' ');
-      svgLine.setAttribute('d', dPath);
 
-      // Also update on resize to keep SVG coordinates accurate
-      window.addEventListener('resize', () => {
-        const newW = svgLine.parentElement.clientWidth || 1000;
-        const newGap = newW / 6;
-        const newPath = points.map((p, i) => {
-          const nx = newGap / 2 + (p.x * newGap);
-          const c = document.getElementById('rev-point-' + p.x);
-          if (c) c.setAttribute('cx', nx);
-          return `${i === 0 ? 'M' : 'L'}${nx},${p.y}`;
+        // Calculate coordinates for the line graph
+        const chartHeight = 220; // Matches CSS height of container
+        const y = hPct > 0 ? chartHeight - (hPct * chartHeight) : chartHeight;
+        points.push({ x: uiIndex, y: y });
+      }
+
+      const svgLine = document.getElementById('rev-line');
+      if (svgLine) {
+        points.sort((a, b) => a.x - b.x);
+        const w = svgLine.parentElement.clientWidth || 1000;
+        // We have 6 flex columns. The center of each column is at (1/12 + i/6) * w
+        const gap = w / 6;
+        const dPath = points.map((p, i) => {
+          const x = gap / 2 + (p.x * gap);
+          // Show point circle
+          const circle = document.getElementById('rev-point-' + p.x);
+          if (circle) {
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', p.y);
+            circle.style.display = 'block';
+          }
+          return `${i === 0 ? 'M' : 'L'}${x},${p.y}`;
         }).join(' ');
-        svgLine.setAttribute('d', newPath);
-      });
-    }
+        svgLine.setAttribute('d', dPath);
+
+        // Also update on resize to keep SVG coordinates accurate
+        window.addEventListener('resize', () => {
+          const newW = svgLine.parentElement.clientWidth || 1000;
+          const newGap = newW / 6;
+          const newPath = points.map((p, i) => {
+            const nx = newGap / 2 + (p.x * newGap);
+            const c = document.getElementById('rev-point-' + p.x);
+            if (c) c.setAttribute('cx', nx);
+            return `${i === 0 ? 'M' : 'L'}${nx},${p.y}`;
+          }).join(' ');
+          svgLine.setAttribute('d', newPath);
+        });
+      }
     };
 
     if (window._dashUnsubs) {
@@ -1968,10 +1965,10 @@ window.initAdminBanking = async function () {
       window._bankUnsubs.forEach(u => u());
     }
     window._bankUnsubs = [];
-    
+
     let allUsersSnap = null;
     let billsSnap = null;
-    
+
     const updateBankingStats = () => {
       if (!allUsersSnap || !billsSnap) return;
 
@@ -1990,22 +1987,22 @@ window.initAdminBanking = async function () {
           if (b.dueDate) {
             const dueDate = new Date(b.dueDate);
             const now = new Date();
-            now.setHours(0,0,0,0);
-            dueDate.setHours(0,0,0,0);
+            now.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
             if (now > dueDate) {
-               status = 'overdue';
-               isOverdue = true;
+              status = 'overdue';
+              isOverdue = true;
             }
           }
           outSum += parseFloat(b.amount) || 0;
           if (b.accountNumber) outSet.add(b.accountNumber);
         }
-        
+
         if (isOverdue && (b.status || 'Pending').toLowerCase() !== 'overdue') {
-            const userId = d.ref.parent.parent.id;
-            firestore.updateDoc(firestore.doc(db, "users", userId, "billing_emails", d.id), {
-                status: 'Overdue'
-            }).catch(e => console.error('Failed to update overdue status:', e));
+          const userId = d.ref.parent.parent.id;
+          firestore.updateDoc(firestore.doc(db, "users", userId, "billing_emails", d.id), {
+            status: 'Overdue'
+          }).catch(e => console.error('Failed to update overdue status:', e));
         }
 
         if (status === 'overdue' && b.accountNumber) overdueCount++;
@@ -2015,7 +2012,7 @@ window.initAdminBanking = async function () {
       document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
       document.getElementById('admin-overdue-accounts').innerText = overdueCount;
     };
-    
+
     window._bankUnsubs.push(
       onSnapshot(collection(db, "users"), snap => {
         allUsersSnap = snap;
@@ -2031,7 +2028,7 @@ window.initAdminBanking = async function () {
         if (window.renderBills) window.renderBills();
       })
     );
-    
+
     window._bankUnsubs.push(
       onSnapshot(collection(db, "payments"), snap => {
         window._adminPaymentsDocs = [...snap.docs];
@@ -2085,13 +2082,13 @@ window.renderBills = async function () {
 
       // Dynamic overdue check
       if (rawStatus !== 'paid' && rawStatus !== 'completed' && b.dueDate) {
-         const dueDate = new Date(b.dueDate);
-         const now = new Date();
-         now.setHours(0,0,0,0);
-         dueDate.setHours(0,0,0,0);
-         if (now > dueDate) {
-            rawStatus = 'overdue';
-         }
+        const dueDate = new Date(b.dueDate);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        if (now > dueDate) {
+          rawStatus = 'overdue';
+        }
       }
 
       // ONLY SHOW UNPAID/PENDING/OVERDUE bills (not Paid/Completed)
@@ -2209,18 +2206,18 @@ window.renderPayments = async function () {
 window.initAdminReports = async function () {
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     if (window._adminReportsUnsub) window._adminReportsUnsub();
     if (window._adminRatingsUnsub) window._adminRatingsUnsub();
 
     window._adminReportsUnsub = firestore.onSnapshot(firestore.collection(db, "reports"), snap => {
-       window._adminReportsSnap = snap;
-       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+      window._adminReportsSnap = snap;
+      if (window.renderAdminReportsTable) window.renderAdminReportsTable();
     });
 
     window._adminRatingsUnsub = firestore.onSnapshot(firestore.collectionGroup(db, "ratings"), snap => {
-       window._adminRatingsSnap = snap;
-       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+      window._adminRatingsSnap = snap;
+      if (window.renderAdminReportsTable) window.renderAdminReportsTable();
     });
   } catch (e) {
     console.error(e);
@@ -2286,15 +2283,15 @@ window.renderAdminReportsTable = async function () {
     let totalRatingCount = 0;
 
     sortedDocs.forEach(d => {
-       const ratingVal = Number(d.data().rating) || 0;
-       if (ratingVal > 0) {
-          totalRatingScore += ratingVal;
-          totalRatingCount++;
-       }
+      const ratingVal = Number(d.data().rating) || 0;
+      if (ratingVal > 0) {
+        totalRatingScore += ratingVal;
+        totalRatingCount++;
+      }
     });
 
     if (totalRatingCount > 0) {
-       avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
+      avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
     }
 
     document.getElementById('admin-total-tickets').innerText = total;
@@ -2414,18 +2411,18 @@ window.closeAdminReport = function () {
 window.initAdminAccounts = async function () {
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     if (window._adminUsersUnsub) window._adminUsersUnsub();
     if (window._adminStaffUnsub) window._adminStaffUnsub();
 
     window._adminUsersUnsub = firestore.onSnapshot(firestore.collection(db, "users"), snap => {
-       window._adminUsersSnap = snap;
-       if (window.renderAdminClientsTable) window.renderAdminClientsTable();
+      window._adminUsersSnap = snap;
+      if (window.renderAdminClientsTable) window.renderAdminClientsTable();
     });
 
     window._adminStaffUnsub = firestore.onSnapshot(firestore.collection(db, "admin"), snap => {
-       window._adminStaffSnap = snap;
-       if (window.filterAdminAccounts) window.filterAdminAccounts();
+      window._adminStaffSnap = snap;
+      if (window.filterAdminAccounts) window.filterAdminAccounts();
     });
   } catch (e) {
     console.error(e);
@@ -2433,7 +2430,7 @@ window.initAdminAccounts = async function () {
 };
 
 window.isClientDeleteMode = false;
-window.toggleClientDeleteMode = function() {
+window.toggleClientDeleteMode = function () {
   window.isClientDeleteMode = !window.isClientDeleteMode;
   const btn = document.getElementById('client-delete-mode-btn');
   if (btn) {
@@ -2444,7 +2441,7 @@ window.toggleClientDeleteMode = function() {
 };
 
 window.isTechDeleteMode = false;
-window.toggleTechDeleteMode = function() {
+window.toggleTechDeleteMode = function () {
   window.isTechDeleteMode = !window.isTechDeleteMode;
   const btn = document.getElementById('tech-delete-mode-btn');
   if (btn) {
@@ -2454,7 +2451,7 @@ window.toggleTechDeleteMode = function() {
   if (window.filterAdminAccounts) window.filterAdminAccounts();
 };
 
-window.confirmAccountDeletion = async function(collection, id) {
+window.confirmAccountDeletion = async function (collection, id) {
   if (window.confirm("Are you sure you want to delete this account?")) {
     try {
       const { db, firestore } = await window._getAdminDb();
@@ -2811,17 +2808,17 @@ window.openAdminAccountModal = function (id, name, email, contact, pass, role) {
   const lName = parts.length > 1 ? parts.pop() : '';
   const mName = parts.slice(1).join(' ');
 
-  if(fnameEl) fnameEl.value = fName;
-  if(mnameEl) mnameEl.value = mName;
-  if(lnameEl) lnameEl.value = lName;
-  
+  if (fnameEl) fnameEl.value = fName;
+  if (mnameEl) mnameEl.value = mName;
+  if (lnameEl) lnameEl.value = lName;
+
   emailEl.value = email;
   contactEl.value = contact;
   passEl.value = pass;
 
-  if(fnameEl) fnameEl.dataset.original = fName;
-  if(mnameEl) mnameEl.dataset.original = mName;
-  if(lnameEl) lnameEl.dataset.original = lName;
+  if (fnameEl) fnameEl.dataset.original = fName;
+  if (mnameEl) mnameEl.dataset.original = mName;
+  if (lnameEl) lnameEl.dataset.original = lName;
   emailEl.dataset.original = email;
   contactEl.dataset.original = contact;
   passEl.dataset.original = pass;
@@ -2918,7 +2915,7 @@ window.requestAdminStaffUpdate = async function () {
   const mName = mnameEl.value.trim();
   const lName = lnameEl.value.trim();
   const name = `${fName} ${mName ? mName + ' ' : ''}${lName}`.trim();
-  
+
   const email = emailEl.value.trim();
   const contact = contactEl.value.trim();
   const pass = passEl.value;
@@ -3279,7 +3276,7 @@ window.sendMaintenanceAdvisory = async function () {
       const usersRef = firestore.collection(db, 'users');
       const q = firestore.query(usersRef, firestore.where('notificationsEnabled', '==', true));
       const querySnapshot = await firestore.getDocs(q);
-      
+
       const tokens = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -3518,13 +3515,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
         <div class="container">
           <div class="header">
             <div class="logo-area">
-              <div class="logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-              </div>
-              <div>
-                <div class="brand-text">RFiber<span>X</span></div>
-                <div class="brand-sub">NETWORK AND DATA SOLUTION</div>
-              </div>
+              <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 250px; width: auto; margin-left: -15px;" />
             </div>
             <div class="page-num">Page 1 of 1</div>
           </div>
@@ -3831,16 +3822,16 @@ window.toggleAdminSidebar = function () {
   }
 };
 
-window.showRevenueTaxPopup = function(month, amount) {
+window.showRevenueTaxPopup = function (month, amount) {
   const tax = amount * 0.03;
   const net = amount - tax;
   document.getElementById('tax-modal-month').innerText = month;
-  document.getElementById('tax-modal-total').innerText = '₱' + amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  document.getElementById('tax-modal-tax').innerText = '-₱' + tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  document.getElementById('tax-modal-net').innerText = '₱' + net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('tax-modal-total').innerText = '₱' + amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('tax-modal-tax').innerText = '-₱' + tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('tax-modal-net').innerText = '₱' + net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   document.getElementById('admin-revenue-tax-modal').style.display = 'flex';
 };
 
-window.closeRevenueTaxPopup = function() {
+window.closeRevenueTaxPopup = function () {
   document.getElementById('admin-revenue-tax-modal').style.display = 'none';
 };

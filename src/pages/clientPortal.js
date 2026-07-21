@@ -94,10 +94,7 @@ export const clientViews = {
           
           <div style="position: relative; z-index: 1;">
             <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: inline-block; margin-bottom: 4rem;">
-              <span style="font-family: 'Saira Condensed', sans-serif; font-size: 28px; font-weight: 800; font-style: italic; letter-spacing: -1px;">
-                <span style="color: #E53935;">R</span><span style="color: #fff;">FIBER</span><span style="color: #E53935;">X</span>
-                <div style="font-size: 10px; color: #fff; letter-spacing: 2px; font-weight: 500; font-style: normal; margin-top: -5px;">NETWORKS</div>
-              </span>
+              <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 55px; width: auto;" />
             </div>
             
             <div style="color: #E53935; font-size: 0.8rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 1rem;">JOIN R-FIBER</div>
@@ -162,7 +159,7 @@ export const clientViews = {
     }
 
     const user = JSON.parse(userStr);
-    
+
     // Online Presence Heartbeat
     if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
     const updatePresence = async () => {
@@ -206,7 +203,7 @@ export const clientViews = {
       document.documentElement.classList.remove('light-mode');
     }
 
-    window.toggleThemeMode = function() {
+    window.toggleThemeMode = function () {
       const isCurrentlyLight = document.documentElement.classList.toggle('light-mode');
       localStorage.setItem('clientPortalTheme', isCurrentlyLight ? 'light' : 'dark');
       const iconEl = document.getElementById('theme-icon');
@@ -312,16 +309,18 @@ export const clientViews = {
             html += `<span style="color: #64748b; font-size: 0.75rem;">${dateStr}</span>`;
             html += '</div>';
             html += `<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">${message} <span style="color: #3b82f6; font-size: 0.75rem;">View details →</span></div>`;
-            
+
             // Ticket Mini-Preview
-            html += '<div style="margin-top: 1rem; padding-left: 2.25rem; display: flex; justify-content: center;">';
-            html += `<div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: flex; align-items: stretch; position: relative; overflow: hidden;">`;
+            html += '<div style="margin-top: 1rem; padding-left: 2.25rem;">';
+            html += `<div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; overflow: hidden;">`;
             html += `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: ${statusColor};"></div>`;
-            html += '<div style="flex: 1; padding-left: 6px;">';
-            html += `<div style="color: #94a3b8; font-size: 0.55rem; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Ticket ID: ${t.reportId || '---'}</div>`;
-            html += `<div style="color: #fff; font-size: 0.7rem; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${t.subject || 'Ticket'}</div>`;
-            html += '<div style="background: rgba(255,255,255,0.05); height: 4px; width: 100%; margin-bottom: 4px; border-radius: 2px;"></div>';
-            html += '<div style="background: rgba(255,255,255,0.05); height: 4px; width: 70%; border-radius: 2px;"></div>';
+            html += '<div style="padding-left: 8px;">';
+            html += `<div style="color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">Ticket ID: ${t.reportId || '---'}</div>`;
+            html += `<div style="color: #fff; font-size: 1rem; font-weight: 600; margin-bottom: 10px;">${t.subject || 'Ticket'}</div>`;
+            html += `<div style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; max-height: 45px; overflow: hidden; position: relative;">`;
+            html += `${t.description || 'No description provided.'}`;
+            html += `<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 35px; background: linear-gradient(transparent, #1e293b);"></div>`;
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             html += '</div>';
@@ -340,7 +339,7 @@ export const clientViews = {
             let borderColor = isUnread ? 'rgba(229,57,53,0.15)' : 'rgba(255,255,255,0.05)';
             let newBadge = isUnread ? '<span style="background: #E53935; color: #fff; font-size: 0.55rem; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 700;">NEW</span>' : '';
 
-            let aHtml = '<div style="background: ' + bgColor + '; border: 1px solid ' + borderColor + '; border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem;">';
+            let aHtml = '<div onclick="window.viewReceipt(\'' + be.id + '\')" style="background: ' + bgColor + '; border: 1px solid ' + borderColor + '; border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseout="this.style.background=\'' + bgColor + '\'">';
             aHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">';
             aHtml += '<div style="display: flex; align-items: center; gap: 0.5rem;">';
             aHtml += '<div style="width: 28px; height: 28px; background: rgba(229,57,53,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #E53935; font-size: 0.75rem;">📄</div>';
@@ -349,22 +348,49 @@ export const clientViews = {
             aHtml += '</div>';
             aHtml += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
             aHtml += '</div>';
-            aHtml += '<div style="border-left: 3px solid #E53935; padding-left: 1rem; margin-bottom: 0.75rem;">';
-            aHtml += '<div style="color: #E53935; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">Account Information</div>';
-            aHtml += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem;">';
-            aHtml += '<div style="color: #94a3b8; font-size: 0.8rem;">Name:</div>';
-            aHtml += '<div style="color: #fff; font-size: 0.8rem; font-weight: 600;">' + (be.name || '-') + '</div>';
-            aHtml += '<div style="color: #94a3b8; font-size: 0.8rem;">Account #:</div>';
-            aHtml += '<div style="color: #fff; font-size: 0.8rem; font-weight: 600;">' + (be.accountNumber || '-') + '</div>';
-            aHtml += '<div style="color: #94a3b8; font-size: 0.8rem;">Plan:</div>';
-            aHtml += '<div style="color: #fff; font-size: 0.8rem; font-weight: 600;">' + (be.plan || '-') + '</div>';
-            aHtml += '</div></div>';
-            aHtml += '<div style="background: rgba(229,57,53,0.05); border: 1px solid rgba(229,57,53,0.1); border-radius: 8px; padding: 0.75rem; display: flex; justify-content: space-between; align-items: center;">';
-            aHtml += '<div><div style="color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Amount Due</div>';
-            aHtml += '<div style="color: #fff; font-size: 1.1rem; font-weight: 700;">₱' + (be.amount || '0') + '</div></div>';
-            aHtml += '<div style="text-align: right;"><div style="color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Due Date</div>';
-            aHtml += '<div style="color: #E53935; font-size: 0.85rem; font-weight: 600;">' + (be.dueDate || '-') + '</div></div>';
-            aHtml += '</div></div>';
+            aHtml += '<div style="background: #ffffff; border-radius: 8px; padding: 1.5rem; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; overflow: hidden; margin-top: 1rem; pointer-events: none;">';
+
+            // Header: Logo and Page 1 of 1
+            aHtml += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
+            aHtml += '<img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
+            aHtml += '<div style="color: #9ca3af; font-size: 0.7rem;">Page 1 of 1</div>';
+            aHtml += '</div>';
+
+            // Red divider
+            aHtml += '<div style="width: 100%; height: 2px; background: #e53935; margin-bottom: 1.5rem;"></div>';
+
+            // Statement Title
+            aHtml += '<div style="text-align: center; color: #1f2937; font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 1.5rem;">STATEMENT OF ACCOUNT</div>';
+
+            // Details grid
+            aHtml += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
+
+            // Customer Info (Left)
+            aHtml += '<div style="flex: 1; padding-right: 1rem;">';
+            aHtml += '<div style="color: #1f2937; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">' + (be.name || name).toUpperCase() + '</div>';
+            aHtml += '<div style="color: #6b7280; font-size: 0.8rem;">' + (be.address || user.address || 'N/A') + '</div>';
+            aHtml += '<div style="color: #1f2937; font-size: 1.25rem; font-weight: 800; margin-top: 0.5rem; letter-spacing: -0.5px;">' + (be.plan || plan || 'N/A') + '</div>';
+            aHtml += '</div>';
+
+            // Table (Right)
+            aHtml += '<div style="flex: 1.3;">';
+            aHtml += '<div style="display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #1f2937;">';
+            aHtml += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">STATEMENT DATE</div>';
+            aHtml += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">PAYMENT ID</div>';
+            aHtml += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.75rem; font-weight: 600; border-bottom: 1px solid #1f2937; border-right: 1px solid #1f2937;">' + dateStr + '</div>';
+            aHtml += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.7rem; font-weight: 600; border-bottom: 1px solid #1f2937; overflow: hidden; text-overflow: ellipsis;">' + (be.id || '-') + '</div>';
+            aHtml += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">TOTAL AMOUNT DUE</div>';
+            aHtml += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">DUE DATE</div>';
+            aHtml += '<div style="background: white; color: #e53935; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-right: 1px solid #1f2937;">₱' + (be.amount || '0.00') + '</div>';
+            aHtml += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.75rem; font-weight: 600;">' + (be.dueDate || '-') + '</div>';
+            aHtml += '</div>';
+            aHtml += '</div>'; // close flex 1.3
+            aHtml += '</div>'; // close main flex
+
+            // Gradient fade
+            aHtml += '<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(transparent, #ffffff);"></div>';
+            aHtml += '</div>'; // close invoice wrapper
+            aHtml += '</div>'; // close main wrapper
 
             recentItems.push({ time: tTime, html: aHtml });
           });
@@ -386,23 +412,36 @@ export const clientViews = {
             html += '<span style="color: #64748b; font-size: 0.75rem;">' + pDate + '</span>';
             html += '</div>';
             html += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">You paid <strong style="color:#fff;">₱' + (p.amount || '0') + '</strong> for ' + (p.period || p.billingMonth || '-') + '. <span style="color: #3b82f6; font-size: 0.75rem;">View receipt →</span></div>';
-            
+
             // Payment Receipt Mini-Preview
-            html += '<div style="margin-top: 1rem; padding-left: 2.25rem; display: flex; justify-content: center;">';
-            html += '<div style="background: #f8fafc; border-radius: 6px; padding: 0.75rem; width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative;">';
-            html += '<div style="border-bottom: 1px dashed #94a3b8; margin-bottom: 0.5rem; padding-bottom: 0.4rem; text-align: center;">';
-            html += '<div style="color: #E53935; font-size: 0.7rem; font-weight: 800; letter-spacing: 1px;">RFIBERX</div>';
-            html += '<div style="color: #475569; font-size: 0.45rem; text-transform: uppercase;">Official Receipt</div>';
+            html += '<div style="margin-top: 1rem; padding-left: 2.25rem;">';
+            html += '<div style="background: #ffffff; border-radius: 8px; padding: 1.5rem; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; overflow: hidden; pointer-events: none;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
+            html += '<img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
+            html += '<div style="color: #10b981; font-size: 0.75rem; font-weight: 800; border: 2px solid #10b981; padding: 0.1rem 0.5rem; border-radius: 4px; transform: rotate(15deg);">PAID</div>';
             html += '</div>';
-            html += '<div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 0.5rem;">';
-            html += '<div style="background: #cbd5e1; height: 4px; width: 100%; border-radius: 2px;"></div>';
-            html += '<div style="background: #cbd5e1; height: 4px; width: 60%; border-radius: 2px;"></div>';
-            html += '<div style="background: #cbd5e1; height: 4px; width: 80%; border-radius: 2px;"></div>';
+            html += '<div style="width: 100%; height: 2px; background: #10b981; margin-bottom: 1.5rem;"></div>';
+            html += '<div style="text-align: center; color: #1f2937; font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; margin-bottom: 1.5rem;">STATEMENT OF ACCOUNT</div>';
+            html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
+            html += '<div style="flex: 1; padding-right: 1rem;">';
+            html += '<div style="color: #1f2937; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">' + name.toUpperCase() + '</div>';
+            html += '<div style="color: #6b7280; font-size: 0.8rem;">' + (p.address || user.address || 'N/A') + '</div>';
+            html += '<div style="color: #1f2937; font-size: 1.25rem; font-weight: 800; margin-top: 0.5rem; letter-spacing: -0.5px;">' + (p.plan || plan || 'N/A') + '</div>';
             html += '</div>';
-            html += '<div style="border-top: 1px solid #cbd5e1; padding-top: 0.4rem; text-align: center;">';
-            html += '<div style="color: #0f172a; font-size: 0.9rem; font-weight: 700;">₱' + (p.amount || '0') + '</div>';
-            html += '<div style="color: #64748b; font-size: 0.5rem;">' + (p.period || p.billingMonth || 'Paid') + '</div>';
+            html += '<div style="flex: 1.3;">';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #1f2937;">';
+            html += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">STATEMENT DATE</div>';
+            html += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">PAYMENT ID</div>';
+            html += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.75rem; font-weight: 600; border-bottom: 1px solid #1f2937; border-right: 1px solid #1f2937;">' + pDate + '</div>';
+            html += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.7rem; font-weight: 600; border-bottom: 1px solid #1f2937; overflow: hidden; text-overflow: ellipsis;">' + p.id + '</div>';
+            html += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">AMOUNT PAID</div>';
+            html += '<div style="background: #1f2937; color: white; padding: 0.5rem; font-size: 0.65rem; font-weight: 700;">BILLING PERIOD</div>';
+            html += '<div style="background: white; color: #10b981; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-right: 1px solid #1f2937;">₱' + (p.amount || '0') + '</div>';
+            html += '<div style="background: white; color: #1f2937; padding: 0.5rem; font-size: 0.75rem; font-weight: 600;">' + (p.period || p.billingMonth || 'Paid') + '</div>';
             html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(transparent, #ffffff);"></div>';
             html += '</div>';
             html += '</div>';
 
@@ -988,14 +1027,14 @@ export const clientViews = {
           }
         } catch (e) { console.warn('Could not fetch previous charges:', e); }
 
-        let currentCharges = baseAmount > 0 ? baseAmount : amount; 
+        let currentCharges = baseAmount > 0 ? baseAmount : amount;
         let remainingBalance = prevPaid ? 0 : prevCharges;
         let paymentMade = isPaid ? amount : 0;
         let totalAmountDue = currentCharges + remainingBalance - paymentMade;
         if (totalAmountDue < 0) totalAmountDue = 0; // Overpayments shouldn't show negative due here unless designed so
-        
+
         if (!isPaid && pay.status === 'partially_paid') {
-           totalAmountDue = parseFloat(String(pay.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+          totalAmountDue = parseFloat(String(pay.amount || 0).replace(/[^0-9.]/g, '')) || 0;
         }
 
         let previousCharges = prevCharges;
@@ -1014,22 +1053,8 @@ export const clientViews = {
             <div style="background: #fff; border-radius: 8px; padding: 3rem; color: #1a1a1a; font-family: 'Inter', Arial, sans-serif; box-shadow: 0 4px 24px rgba(0,0,0,0.3); position: relative; overflow: hidden;">
 
               <!-- Header -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 3px solid #E53935; padding-bottom: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                  <div style="background: #E53935; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g transform="rotate(-40 12 20)">
-                        <path d="M8.5 16.5a5 5 0 0 1 7 0 M4.5 12.5a10 10 0 0 1 15 0" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </g>
-                    </svg>
-                  </div>
-                  <div>
-                    <div style="font-family: 'Saira Condensed', sans-serif; font-size: 22px; font-weight: 800; font-style: italic; letter-spacing: -1px; color: #1a1a1a;">
-                      <span style="color: #E53935;">R</span>FIBER<span style="color: #E53935;">X</span>
-                    </div>
-                    <div style="font-size: 0.65rem; color: #666; letter-spacing: 2px; font-weight: 600; text-transform: uppercase;">Network and Data Solution</div>
-                  </div>
-                </div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 1px solid #E53935; padding-bottom: 1rem;">
+                <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 200px; width: auto;" />
                 <div style="text-align: right; font-size: 0.75rem; color: #888;">
                   Page 1 of 1
                 </div>
@@ -1045,6 +1070,7 @@ export const clientViews = {
                 <div>
                   <div style="font-size: 1rem; font-weight: 700; color: #1a1a1a; text-transform: uppercase; margin-bottom: 0.25rem;">${clientName}</div>
                   <div style="font-size: 0.85rem; color: #555; max-width: 280px;">${clientAddress}</div>
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin-top: 0.75rem; letter-spacing: -0.5px;">${plan}</div>
                 </div>
                 <div style="border: 2px solid #1a1a1a; min-width: 280px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; font-size: 0.7rem; font-weight: 700;">
@@ -1218,7 +1244,7 @@ export const clientViews = {
       }
 
       if (!window.showAIAnalysisPopup) {
-        window.showAIAnalysisPopup = function(data, previewHtml) {
+        window.showAIAnalysisPopup = function (data, previewHtml) {
           const refNumber = data.referenceNumber || 'TBD';
           const amount = data.amount || 'TBD';
           const payerName = data.payerName || 'TBD';
@@ -1228,7 +1254,7 @@ export const clientViews = {
           const datePaid = data.datePaid || 'TBD';
           const timePaid = data.timePaid || 'TBD';
           const statusColor = data.isFraud ? '#ef4444' : '#10b981';
-          
+
           const payerBoxHtml = payerName !== 'N/A' ? `
                     <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                       <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem;">Payer (MSG Name)</div>
@@ -1329,7 +1355,7 @@ export const clientViews = {
             </div>
           `;
           document.body.insertAdjacentHTML('beforeend', modalHtml);
-          
+
           let timerSecs = 10;
           const timerEl = document.getElementById('popup-timer-text');
           const modalEl = document.getElementById('ai-analysis-modal');
@@ -1347,12 +1373,12 @@ export const clientViews = {
           }, 1000);
         };
 
-        window.getBoundingBoxForText = function(fullTextSnippet, ocrWords, width, height) {
+        window.getBoundingBoxForText = function (fullTextSnippet, ocrWords, width, height) {
           if (!fullTextSnippet) return null;
           const snippetWords = fullTextSnippet.split(/\s+/).map(w => w.replace(/[^\w\*\:\.\+\-\,]/g, '').toLowerCase()).filter(Boolean);
           if (snippetWords.length === 0) return null;
           const cleanedOcrWords = ocrWords.map(w => ({ text: w.text.replace(/[^\w\*\:\.\+\-\,]/g, '').toLowerCase(), bbox: w.bbox }));
-          
+
           for (let i = 0; i <= cleanedOcrWords.length - snippetWords.length; i++) {
             let match = true;
             for (let j = 0; j < snippetWords.length; j++) {
@@ -1391,206 +1417,206 @@ export const clientViews = {
           return null;
         };
 
-        window.simulateAIAnalysis = async function(input) {
+        window.simulateAIAnalysis = async function (input) {
           if (input.files && input.files[0]) {
             const file = input.files[0];
-            
+
             // --- Aspect Ratio & Dimension Check ---
             const checkDimensions = (imgFile) => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const ratio = img.width / img.height;
-                        
-                        // Standard modern phone portrait screenshot ratio falls between 0.42 and 0.57
-                        if (ratio < 0.40 || ratio > 0.60) {
-                            reject(`Invalid dimensions (${img.width}x${img.height}). Aspect ratio: ${ratio.toFixed(2)}`);
-                        } else {
-                            resolve(true);
-                        }
-                    };
-                    img.onerror = () => reject('Invalid image');
-                    const r = new FileReader();
-                    r.onload = (e) => { img.src = e.target.result; };
-                    r.readAsDataURL(imgFile);
-                });
+              return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                  const ratio = img.width / img.height;
+
+                  // Standard modern phone portrait screenshot ratio falls between 0.42 and 0.57
+                  if (ratio < 0.40 || ratio > 0.60) {
+                    reject(`Invalid dimensions (${img.width}x${img.height}). Aspect ratio: ${ratio.toFixed(2)}`);
+                  } else {
+                    resolve(true);
+                  }
+                };
+                img.onerror = () => reject('Invalid image');
+                const r = new FileReader();
+                r.onload = (e) => { img.src = e.target.result; };
+                r.readAsDataURL(imgFile);
+              });
             };
-            
+
             try {
-                await checkDimensions(file);
+              await checkDimensions(file);
             } catch (err) {
-                alert(`🚨 FRAUD DETECTED 🚨\\n\\nImage format rejected. The uploaded receipt does not match the standard dimensions of a mobile phone screenshot.\\n\\nOnly raw, uncropped 1-to-1 screenshots are allowed.`);
-                input.value = ''; // Clear input
-                return;
+              alert(`🚨 FRAUD DETECTED 🚨\\n\\nImage format rejected. The uploaded receipt does not match the standard dimensions of a mobile phone screenshot.\\n\\nOnly raw, uncropped 1-to-1 screenshots are allowed.`);
+              input.value = ''; // Clear input
+              return;
             }
-            
+
             // --- Error Level Analysis (ELA) ---
             const runErrorLevelAnalysis = (imageFile) => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        // Scale down to max 600px to keep it fast
-                        const scale = Math.min(1, 600 / Math.max(img.width, img.height));
-                        const w = Math.floor(img.width * scale);
-                        const h = Math.floor(img.height * scale);
-                        
-                        const canvas1 = document.createElement('canvas');
-                        canvas1.width = w; canvas1.height = h;
-                        const ctx1 = canvas1.getContext('2d', { willReadFrequently: true });
-                        ctx1.drawImage(img, 0, 0, w, h);
-                        const origData = ctx1.getImageData(0, 0, w, h).data;
-                        
-                        // Compress to 90% JPEG to introduce compression artifacts
-                        const compressedUrl = canvas1.toDataURL('image/jpeg', 0.90);
-                        const compImg = new Image();
-                        compImg.onload = () => {
-                            const canvas2 = document.createElement('canvas');
-                            canvas2.width = w; canvas2.height = h;
-                            const ctx2 = canvas2.getContext('2d', { willReadFrequently: true });
-                            ctx2.drawImage(compImg, 0, 0, w, h);
-                            const compData = ctx2.getImageData(0, 0, w, h).data;
-                            
-                            let diffSum = 0;
-                            const diffs = [];
-                            
-                            for (let i = 0; i < origData.length; i += 4) {
-                                // Calculate RGB difference per pixel
-                                const dr = Math.abs(origData[i] - compData[i]);
-                                const dg = Math.abs(origData[i+1] - compData[i+1]);
-                                const db = Math.abs(origData[i+2] - compData[i+2]);
-                                const diff = dr + dg + db;
-                                diffs.push(diff);
-                                diffSum += diff;
-                            }
-                            
-                            const mean = diffSum / diffs.length;
-                            let varianceSum = 0;
-                            for (let i = 0; i < diffs.length; i++) {
-                                varianceSum += Math.pow(diffs[i] - mean, 2);
-                            }
-                            const variance = varianceSum / diffs.length;
-                            const stdDev = Math.sqrt(variance);
-                            
-                            // GCash receipts are very flat/uniform, meaning low natural variance (< 5).
-                            // Spliced text forces massive local compression spikes, driving stdDev > 12.
-                            if (stdDev > 12) {
-                                reject(`ELA Variance too high: ${stdDev.toFixed(2)}`);
-                            } else {
-                                resolve(true);
-                            }
-                        };
-                        compImg.src = compressedUrl;
-                    };
-                    img.onerror = () => reject('Invalid image for ELA');
-                    const r = new FileReader();
-                    r.onload = (e) => { img.src = e.target.result; };
-                    r.readAsDataURL(imageFile);
-                });
+              return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                  // Scale down to max 600px to keep it fast
+                  const scale = Math.min(1, 600 / Math.max(img.width, img.height));
+                  const w = Math.floor(img.width * scale);
+                  const h = Math.floor(img.height * scale);
+
+                  const canvas1 = document.createElement('canvas');
+                  canvas1.width = w; canvas1.height = h;
+                  const ctx1 = canvas1.getContext('2d', { willReadFrequently: true });
+                  ctx1.drawImage(img, 0, 0, w, h);
+                  const origData = ctx1.getImageData(0, 0, w, h).data;
+
+                  // Compress to 90% JPEG to introduce compression artifacts
+                  const compressedUrl = canvas1.toDataURL('image/jpeg', 0.90);
+                  const compImg = new Image();
+                  compImg.onload = () => {
+                    const canvas2 = document.createElement('canvas');
+                    canvas2.width = w; canvas2.height = h;
+                    const ctx2 = canvas2.getContext('2d', { willReadFrequently: true });
+                    ctx2.drawImage(compImg, 0, 0, w, h);
+                    const compData = ctx2.getImageData(0, 0, w, h).data;
+
+                    let diffSum = 0;
+                    const diffs = [];
+
+                    for (let i = 0; i < origData.length; i += 4) {
+                      // Calculate RGB difference per pixel
+                      const dr = Math.abs(origData[i] - compData[i]);
+                      const dg = Math.abs(origData[i + 1] - compData[i + 1]);
+                      const db = Math.abs(origData[i + 2] - compData[i + 2]);
+                      const diff = dr + dg + db;
+                      diffs.push(diff);
+                      diffSum += diff;
+                    }
+
+                    const mean = diffSum / diffs.length;
+                    let varianceSum = 0;
+                    for (let i = 0; i < diffs.length; i++) {
+                      varianceSum += Math.pow(diffs[i] - mean, 2);
+                    }
+                    const variance = varianceSum / diffs.length;
+                    const stdDev = Math.sqrt(variance);
+
+                    // GCash receipts are very flat/uniform, meaning low natural variance (< 5).
+                    // Spliced text forces massive local compression spikes, driving stdDev > 12.
+                    if (stdDev > 12) {
+                      reject(`ELA Variance too high: ${stdDev.toFixed(2)}`);
+                    } else {
+                      resolve(true);
+                    }
+                  };
+                  compImg.src = compressedUrl;
+                };
+                img.onerror = () => reject('Invalid image for ELA');
+                const r = new FileReader();
+                r.onload = (e) => { img.src = e.target.result; };
+                r.readAsDataURL(imageFile);
+              });
             };
-            
+
             try {
-                await runErrorLevelAnalysis(file);
+              await runErrorLevelAnalysis(file);
             } catch (err) {
-                alert(`🚨 FRAUD DETECTED 🚨\\n\\nError Level Analysis (ELA) indicates this image has been digitally altered or spliced.\\n\\nThe compression artifacts on the text do not match the background, proving this receipt was manually edited.`);
-                input.value = ''; // Clear input
-                return;
+              alert(`🚨 FRAUD DETECTED 🚨\\n\\nError Level Analysis (ELA) indicates this image has been digitally altered or spliced.\\n\\nThe compression artifacts on the text do not match the background, proving this receipt was manually edited.`);
+              input.value = ''; // Clear input
+              return;
             }
-            
+
             // --- pHash Image Fingerprinting ---
             const generateDHash = (imageFile) => {
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                        canvas.width = 9;
-                        canvas.height = 8;
-                        ctx.drawImage(img, 0, 0, 9, 8);
-                        const imgData = ctx.getImageData(0, 0, 9, 8).data;
-                        const grays = [];
-                        for (let i = 0; i < imgData.length; i += 4) {
-                            grays.push((imgData[i] + imgData[i+1] + imgData[i+2]) / 3);
-                        }
-                        let hash = '';
-                        for (let y = 0; y < 8; y++) {
-                            for (let x = 0; x < 8; x++) {
-                                const left = grays[y * 9 + x];
-                                const right = grays[y * 9 + x + 1];
-                                hash += (left > right) ? '1' : '0';
-                            }
-                        }
-                        let hexHash = '';
-                        for (let i = 0; i < 64; i += 4) {
-                            hexHash += parseInt(hash.substring(i, i+4), 2).toString(16);
-                        }
-                        resolve(hexHash);
-                    };
-                    const r = new FileReader();
-                    r.onload = (e) => { img.src = e.target.result; };
-                    r.readAsDataURL(imageFile);
-                });
+              return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                  canvas.width = 9;
+                  canvas.height = 8;
+                  ctx.drawImage(img, 0, 0, 9, 8);
+                  const imgData = ctx.getImageData(0, 0, 9, 8).data;
+                  const grays = [];
+                  for (let i = 0; i < imgData.length; i += 4) {
+                    grays.push((imgData[i] + imgData[i + 1] + imgData[i + 2]) / 3);
+                  }
+                  let hash = '';
+                  for (let y = 0; y < 8; y++) {
+                    for (let x = 0; x < 8; x++) {
+                      const left = grays[y * 9 + x];
+                      const right = grays[y * 9 + x + 1];
+                      hash += (left > right) ? '1' : '0';
+                    }
+                  }
+                  let hexHash = '';
+                  for (let i = 0; i < 64; i += 4) {
+                    hexHash += parseInt(hash.substring(i, i + 4), 2).toString(16);
+                  }
+                  resolve(hexHash);
+                };
+                const r = new FileReader();
+                r.onload = (e) => { img.src = e.target.result; };
+                r.readAsDataURL(imageFile);
+              });
             };
 
             const getHammingDistance = (hex1, hex2) => {
-                if (!hex1 || !hex2 || hex1.length !== 16 || hex2.length !== 16) return 64;
-                let dist = 0;
-                for (let i = 0; i < 16; i++) {
-                    const val1 = parseInt(hex1[i], 16);
-                    const val2 = parseInt(hex2[i], 16);
-                    const diff = val1 ^ val2;
-                    dist += (diff & 1) + ((diff >> 1) & 1) + ((diff >> 2) & 1) + ((diff >> 3) & 1);
-                }
-                return dist;
+              if (!hex1 || !hex2 || hex1.length !== 16 || hex2.length !== 16) return 64;
+              let dist = 0;
+              for (let i = 0; i < 16; i++) {
+                const val1 = parseInt(hex1[i], 16);
+                const val2 = parseInt(hex2[i], 16);
+                const diff = val1 ^ val2;
+                dist += (diff & 1) + ((diff >> 1) & 1) + ((diff >> 2) & 1) + ((diff >> 3) & 1);
+              }
+              return dist;
             };
-            
+
             const uploadedHashPromise = generateDHash(file);
-            
+
             // --- Metadata Forensics (EXIF & XMP) ---
             const analyzeMetadata = async (imageFile) => {
-                try {
-                    const exifr = await import('https://cdn.jsdelivr.net/npm/exifr/dist/full.esm.js');
-                    // Parse both EXIF and XMP (AI generators often use XMP for watermarks)
-                    const exifData = await exifr.parse(imageFile, { xmp: true, tiff: true, exif: true });
-                    if (!exifData) return null;
-                    
-                    const blacklist = [
-                        // Professional Editors
-                        'photoshop', 'illustrator', 'lightroom', 'coreldraw', 'gimp', 'affinity', 'capture one',
-                        // Web/Online Editors
-                        'canva', 'photopea', 'figma', 'pixlr', 'fotor', 'befunky',
-                        // Mobile Editing Apps
-                        'snapseed', 'picsart', 'vsco', 'facetune', 'b612', 'remini', 'lightleap', 'photodirector', 'polarr',
-                        // AI Generators
-                        'gemini', 'midjourney', 'dall-e', 'openai', 'google', 'imagen', 'ai-generated', 'stable diffusion', 'runway', 'leonardo', 'firefly', 'bing',
-                        // Rendering Engines & Fake Receipt Script Libraries
-                        'skia', 'cairo', 'puppeteer', 'phantomjs', 'html2canvas', 'dom-to-image', 'selenium', 'fakereceipt', 'receiptmaker', 'express-expense'
-                    ];
-                    
-                    // Check standard tags and XMP Creator/Software tags
-                    const softwareUsed = (
-                        exifData.Software || 
-                        exifData.ProcessingSoftware || 
-                        exifData.CreatorTool || 
-                        exifData.HistorySoftwareAgent || 
-                        exifData.Producer || 
-                        ''
-                    ).toLowerCase();
-                    
-                    if (softwareUsed && blacklist.some(app => softwareUsed.includes(app))) {
-                        return softwareUsed;
-                    }
-                    return null;
-                } catch (e) {
-                    return null;
+              try {
+                const exifr = await import('https://cdn.jsdelivr.net/npm/exifr/dist/full.esm.js');
+                // Parse both EXIF and XMP (AI generators often use XMP for watermarks)
+                const exifData = await exifr.parse(imageFile, { xmp: true, tiff: true, exif: true });
+                if (!exifData) return null;
+
+                const blacklist = [
+                  // Professional Editors
+                  'photoshop', 'illustrator', 'lightroom', 'coreldraw', 'gimp', 'affinity', 'capture one',
+                  // Web/Online Editors
+                  'canva', 'photopea', 'figma', 'pixlr', 'fotor', 'befunky',
+                  // Mobile Editing Apps
+                  'snapseed', 'picsart', 'vsco', 'facetune', 'b612', 'remini', 'lightleap', 'photodirector', 'polarr',
+                  // AI Generators
+                  'gemini', 'midjourney', 'dall-e', 'openai', 'google', 'imagen', 'ai-generated', 'stable diffusion', 'runway', 'leonardo', 'firefly', 'bing',
+                  // Rendering Engines & Fake Receipt Script Libraries
+                  'skia', 'cairo', 'puppeteer', 'phantomjs', 'html2canvas', 'dom-to-image', 'selenium', 'fakereceipt', 'receiptmaker', 'express-expense'
+                ];
+
+                // Check standard tags and XMP Creator/Software tags
+                const softwareUsed = (
+                  exifData.Software ||
+                  exifData.ProcessingSoftware ||
+                  exifData.CreatorTool ||
+                  exifData.HistorySoftwareAgent ||
+                  exifData.Producer ||
+                  ''
+                ).toLowerCase();
+
+                if (softwareUsed && blacklist.some(app => softwareUsed.includes(app))) {
+                  return softwareUsed;
                 }
+                return null;
+              } catch (e) {
+                return null;
+              }
             };
             const metadataFraudPromise = analyzeMetadata(file);
-            
+
             const reader = new FileReader();
-            
+
             const useGemini = false;
             const loadingMsg = useGemini ? 'Extracting details using Gemini AI' : 'Extracting details using Local OCR';
-            
+
             // Show scanning overlay centered in the screen with the image
             const scanningHtml = `
               <div id="ai-scanning-overlay" style="position: fixed; inset: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
@@ -1613,32 +1639,32 @@ export const clientViews = {
             `;
             document.body.insertAdjacentHTML('beforeend', scanningHtml);
 
-            reader.onload = async function(e) {
+            reader.onload = async function (e) {
               const imgPreviewSrc = e.target.result;
               const img = document.getElementById('receipt-preview-img');
               img.src = imgPreviewSrc;
               await new Promise(resolve => img.onload = resolve);
-              
+
               const imgWidth = img.naturalWidth;
               const imgHeight = img.naturalHeight;
-              
+
               document.getElementById('laser-line').classList.add('scanning-laser');
               const base64Content = imgPreviewSrc.split(';base64,').pop();
-              
+
               try {
                 let extractedData = {};
                 let detections = [];
-                
+
                 if (useGemini) {
                   // GEMINI API IMPLEMENTATION
                   const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
                   const db = getFirestore();
                   let apiKey = window._GEMINI_TEMP_KEY || '';
                   if (!apiKey) {
-                      try {
-                          const apiKeyDoc = await getDoc(doc(db, 'settings', 'apiKeys'));
-                          if (apiKeyDoc.exists() && apiKeyDoc.data().gemini) apiKey = apiKeyDoc.data().gemini;
-                      } catch (dbErr) { console.warn("Could not fetch API key", dbErr); }
+                    try {
+                      const apiKeyDoc = await getDoc(doc(db, 'settings', 'apiKeys'));
+                      if (apiKeyDoc.exists() && apiKeyDoc.data().gemini) apiKey = apiKeyDoc.data().gemini;
+                    } catch (dbErr) { console.warn("Could not fetch API key", dbErr); }
                   }
                   if (!apiKey) throw new Error('Gemini API Key missing');
 
@@ -1670,11 +1696,11 @@ If a field is not found, return "TBD".`;
                   if (!res.ok) throw new Error(await res.text());
                   const jsonRes = await res.json();
                   extractedData = JSON.parse(jsonRes.candidates[0].content.parts[0].text);
-                  
+
                 } else {
                   // TESSERACT LOCAL OCR IMPLEMENTATION
                   document.getElementById('scanning-subtitle').innerText = "Downloading Local OCR Engine (once)...";
-                  
+
                   if (!window.Tesseract) {
                     await new Promise((resolve, reject) => {
                       const script = document.createElement('script');
@@ -1684,87 +1710,87 @@ If a field is not found, return "TBD".`;
                       document.head.appendChild(script);
                     });
                   }
-                  
+
                   document.getElementById('scanning-subtitle').innerText = "Scanning text from image...";
                   const worker = await window.Tesseract.createWorker('eng');
                   const { data } = await worker.recognize(imgPreviewSrc);
                   await worker.terminate();
-                  
+
                   const ocrWords = [];
                   if (data.words) {
                     data.words.forEach(word => ocrWords.push({ text: word.text, bbox: word.bbox }));
                   }
-                  
+
                   const singleLineText = (data.text || '').replace(/\s+/g, ' ');
-                  
+
                   // Helper
                   const addDetection = (label, textSnippet, color) => {
                     const box = window.getBoundingBoxForText(textSnippet, ocrWords, imgWidth, imgHeight);
                     if (box) {
-                        detections.push({ label, box, color });
+                      detections.push({ label, box, color });
                     }
                   };
-                  
+
                   // Layout Detection Router (Format A vs Format B)
                   let formatType = 'UNKNOWN';
                   if (singleLineText.match(/successfully\s+received/i) || singleLineText.match(/Your\s+new\s+balance/i)) {
-                      formatType = 'FORMAT_A'; // Notification Style
+                    formatType = 'FORMAT_A'; // Notification Style
                   } else {
-                      formatType = 'FORMAT_B'; // Structured Layout Style or Card Style
+                    formatType = 'FORMAT_B'; // Structured Layout Style or Card Style
                   }
 
                   // 1. Reference Number
                   extractedData.referenceNumber = 'TBD';
                   if (formatType === 'FORMAT_A') {
-                      const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
-                      if (refFullMatch) {
-                        addDetection('REF NO. FULL', refFullMatch[0], '#ef4444');
-                        const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-                        if (cleanRef.length >= 13) {
-                            extractedData.referenceNumber = cleanRef.substring(0, 13);
-                        } else if (cleanRef.length >= 8) {
-                            extractedData.referenceNumber = cleanRef;
-                        }
+                    const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
+                    if (refFullMatch) {
+                      addDetection('REF NO. FULL', refFullMatch[0], '#ef4444');
+                      const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+                      if (cleanRef.length >= 13) {
+                        extractedData.referenceNumber = cleanRef.substring(0, 13);
+                      } else if (cleanRef.length >= 8) {
+                        extractedData.referenceNumber = cleanRef;
                       }
+                    }
                   } else {
-                      // Format B usually has spaces in the reference number (e.g. 6038 296 538242) and OCR can mistake 0 for O
-                      const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
-                      if (refFullMatchB) {
-                        addDetection('REF NO. FULL', refFullMatchB[0], '#ef4444');
-                        const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-                        if (cleanRef.length >= 10) {
-                            extractedData.referenceNumber = cleanRef.substring(0, 13);
-                        }
-                      } else {
-                          // Fallback: search for any standalone 13 digit number that might be the reference number
-                          const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
-                          if (fallbackRef) {
-                              extractedData.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
-                          }
+                    // Format B usually has spaces in the reference number (e.g. 6038 296 538242) and OCR can mistake 0 for O
+                    const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
+                    if (refFullMatchB) {
+                      addDetection('REF NO. FULL', refFullMatchB[0], '#ef4444');
+                      const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+                      if (cleanRef.length >= 10) {
+                        extractedData.referenceNumber = cleanRef.substring(0, 13);
                       }
+                    } else {
+                      // Fallback: search for any standalone 13 digit number that might be the reference number
+                      const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
+                      if (fallbackRef) {
+                        extractedData.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
+                      }
+                    }
                   }
-                  
+
                   // 2. Amount
                   extractedData.amount = 'TBD';
                   if (formatType === 'FORMAT_A') {
-                      const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
-                      if (amountMatch) {
-                        addDetection('AMOUNT', amountMatch[0], '#22c55e');
-                        extractedData.amount = amountMatch[0];
-                      }
+                    const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
+                    if (amountMatch) {
+                      addDetection('AMOUNT', amountMatch[0], '#22c55e');
+                      extractedData.amount = amountMatch[0];
+                    }
                   } else {
-                      // Handles commas in thousands: e.g. 1,000.00
-                      const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
-                                           singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
-                                           singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) || 
-                                           singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
-                                           singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
-                      if (amountMatchB) {
-                        addDetection('AMOUNT', amountMatchB[0], '#22c55e');
-                        extractedData.amount = `PHP ${amountMatchB[1]}`;
-                      }
+                    // Handles commas in thousands: e.g. 1,000.00
+                    const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
+                      singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
+                      singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) ||
+                      singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
+                      singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
+                    if (amountMatchB) {
+                      addDetection('AMOUNT', amountMatchB[0], '#22c55e');
+                      extractedData.amount = `PHP ${amountMatchB[1]}`;
+                    }
                   }
-                  
+
                   // 3. Phone Number (Works universally, but must account for spaces)
                   extractedData.phoneNumber = 'TBD';
                   const numberMatch = singleLineText.match(/(?:\+?63|0)\s*9\d{2}\s*\d{3}\s*\d{4}/) || singleLineText.match(/\d{4}\s*\*\*\*\s*\d{4}/);
@@ -1772,127 +1798,127 @@ If a field is not found, return "TBD".`;
                     addDetection('NUMBER', numberMatch[0], '#f97316');
                     extractedData.phoneNumber = numberMatch[0].replace(/\s+/g, '');
                   }
-                  
+
                   // EXPRESS NOTIF FLAG
                   extractedData.expressNotif = 'No';
                   if (formatType === 'FORMAT_A') {
-                      extractedData.expressNotif = 'Yes';
+                    extractedData.expressNotif = 'Yes';
                   } else {
-                      if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
-                          extractedData.expressNotif = 'Sent via GCash';
-                          addDetection('EXPRESS NOTIF', 'Sent via GCash', '#06b6d4');
-                      } else if (singleLineText.match(/Express\s+Send/i)) {
-                          extractedData.expressNotif = 'Yes';
-                          addDetection('EXPRESS NOTIF', 'Express Send', '#06b6d4');
-                      }
+                    if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
+                      extractedData.expressNotif = 'Sent via GCash';
+                      addDetection('EXPRESS NOTIF', 'Sent via GCash', '#06b6d4');
+                    } else if (singleLineText.match(/Express\s+Send/i)) {
+                      extractedData.expressNotif = 'Yes';
+                      addDetection('EXPRESS NOTIF', 'Express Send', '#06b6d4');
+                    }
                   }
-                  
+
                   // 4. Date and Time
                   extractedData.datePaid = 'TBD';
                   extractedData.timePaid = 'TBD';
                   if (formatType === 'FORMAT_A') {
-                      const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
-                      if (secondDateTimeMatch) {
-                        const fullSnippet = secondDateTimeMatch[0];
-                        addDetection('SECOND DATE AND TIME', fullSnippet, '#3b82f6');
-                        const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
-                        if (secondDateMatch) extractedData.datePaid = secondDateMatch[0];
-                        const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
-                        if (secondTimeMatch) extractedData.timePaid = secondTimeMatch[0];
-                      } else {
-                        const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-                        if (todayMatch) {
-                          addDetection('FIRST DATE AND TIME', todayMatch[0], '#3b82f6');
-                          extractedData.datePaid = "Today";
-                          const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-                          if (timeMatch) extractedData.timePaid = timeMatch[0];
-                        }
+                    const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
+                    if (secondDateTimeMatch) {
+                      const fullSnippet = secondDateTimeMatch[0];
+                      addDetection('SECOND DATE AND TIME', fullSnippet, '#3b82f6');
+                      const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
+                      if (secondDateMatch) extractedData.datePaid = secondDateMatch[0];
+                      const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
+                      if (secondTimeMatch) extractedData.timePaid = secondTimeMatch[0];
+                    } else {
+                      const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                      if (todayMatch) {
+                        addDetection('FIRST DATE AND TIME', todayMatch[0], '#3b82f6');
+                        extractedData.datePaid = "Today";
+                        const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+                        if (timeMatch) extractedData.timePaid = timeMatch[0];
                       }
+                    }
                   } else {
-                      // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
-                      const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
-                      if (dateDetailsMatch) {
-                        addDetection('DATE AND TIME', dateDetailsMatch[0], '#3b82f6');
-                        extractedData.datePaid = dateDetailsMatch[1];
-                        if (dateDetailsMatch[2]) {
-                            extractedData.timePaid = dateDetailsMatch[2];
-                        }
+                    // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
+                    const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
+                    if (dateDetailsMatch) {
+                      addDetection('DATE AND TIME', dateDetailsMatch[0], '#3b82f6');
+                      extractedData.datePaid = dateDetailsMatch[1];
+                      if (dateDetailsMatch[2]) {
+                        extractedData.timePaid = dateDetailsMatch[2];
                       }
+                    }
                   }
-                  
+
                   // 5. Names (Payer and Receiver)
                   extractedData.receiverName = 'TBD';
                   extractedData.payerName = 'TBD';
-                  
+
                   if (formatType === 'FORMAT_A') {
-                      const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*]+\s+[A-Za-z\*]?\.)/) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+\+/i) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+on/i);
-                      if (nameToMatch) {
-                        extractedData.receiverName = nameToMatch[1].trim();
-                        addDetection('NAME', extractedData.receiverName, '#a855f7');
-                      }
-                      
-                      const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
-                      if (msgNameMatch) {
-                        const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
-                        if (cleanMsg) extractedData.payerName = cleanMsg;
-                      }
+                    const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*]+\s+[A-Za-z\*]?\.)/) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+\+/i) || singleLineText.match(/to\s+([A-Za-z\*\s]+)\.?\s+on/i);
+                    if (nameToMatch) {
+                      extractedData.receiverName = nameToMatch[1].trim();
+                      addDetection('NAME', extractedData.receiverName, '#a855f7');
+                    }
+
+                    const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
+                    if (msgNameMatch) {
+                      const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
+                      if (cleanMsg) extractedData.payerName = cleanMsg;
+                    }
                   } else {
-                      const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
-                      if (receiverMatch) {
-                          extractedData.receiverName = receiverMatch[1].trim();
-                          addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
+                    const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
+                    if (receiverMatch) {
+                      extractedData.receiverName = receiverMatch[1].trim();
+                      addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
+                    } else {
+                      // Fallback for card layout: Name is usually right below "Express Send" and above Phone number
+                      // We use (.+?) to capture anything up to the phone number prefix
+                      const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i);
+                      let rawName = '';
+
+                      if (expressSendMatch) {
+                        rawName = expressSendMatch[1];
                       } else {
-                          // Fallback for card layout: Name is usually right below "Express Send" and above Phone number
-                          // We use (.+?) to capture anything up to the phone number prefix
-                          const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i);
-                          let rawName = '';
-                          
-                          if (expressSendMatch) {
-                              rawName = expressSendMatch[1];
-                          } else {
-                              // If Express Send is missing, grab up to 30 non-numeric characters right before the phone number
-                              const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
-                              if (beforePhone) {
-                                  rawName = beforePhone[1].replace(/Express\s+Send/i, '');
-                              }
-                          }
-                          
-                          if (rawName) {
-                              // The OCR sometimes reads the checkmark icon above the name as weird symbols or numbers (e.g. "Eli =)").
-                              // We split the raw string by any character that is NOT valid in a name (like numbers, =, ), (, etc.) 
-                              // and take the absolute last segment, which elegantly isolates the actual name right before the phone number.
-                              let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
-                              
-                              // Clean up any stray symbols or spaces at the very beginning of the extracted name
-                              cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '');
-                              
-                              if (cleanName) {
-                                  extractedData.receiverName = cleanName;
-                                  addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
-                              }
-                          }
+                        // If Express Send is missing, grab up to 30 non-numeric characters right before the phone number
+                        const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
+                        if (beforePhone) {
+                          rawName = beforePhone[1].replace(/Express\s+Send/i, '');
+                        }
                       }
-                      
-                      // Format B doesn't explicitly display the Payer Name, so we set it to N/A. The popup will automatically hide this field.
-                      extractedData.payerName = "N/A"; 
+
+                      if (rawName) {
+                        // The OCR sometimes reads the checkmark icon above the name as weird symbols or numbers (e.g. "Eli =)").
+                        // We split the raw string by any character that is NOT valid in a name (like numbers, =, ), (, etc.) 
+                        // and take the absolute last segment, which elegantly isolates the actual name right before the phone number.
+                        let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
+
+                        // Clean up any stray symbols or spaces at the very beginning of the extracted name
+                        cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '');
+
+                        if (cleanName) {
+                          extractedData.receiverName = cleanName;
+                          addDetection('RECEIVER NAME', extractedData.receiverName, '#a855f7');
+                        }
+                      }
+                    }
+
+                    // Format B doesn't explicitly display the Payer Name, so we set it to N/A. The popup will automatically hide this field.
+                    extractedData.payerName = "N/A";
                   }
                 }
 
                 // Check for TBD fields (MSG/Payer Name is excluded as it can be optional)
                 const requiredFields = ['referenceNumber', 'amount', 'datePaid', 'timePaid', 'receiverName', 'phoneNumber'];
                 const hasTBD = requiredFields.some(f => extractedData[f] === 'TBD' || !extractedData[f]);
-                
+
                 let fraudDetected = false;
-                
+
                 if (!hasTBD) {
                   // --- Semantic Integrity Verification (Strict Template Check) ---
                   if (!useGemini) {
-                      // Semantic Integrity Check has been removed.
+                    // Semantic Integrity Check has been removed.
                   }
-                  
+
                   const userStr = localStorage.getItem('clientUser');
                   const clientUser = userStr ? JSON.parse(userStr) : {};
-                  
+
                   // 1. Reference Number Length Validation
                   const cleanRefNo = String(extractedData.referenceNumber).replace(/[^0-9]/g, '');
                   if (cleanRefNo.length !== 13) {
@@ -1900,56 +1926,56 @@ If a field is not found, return "TBD".`;
                     document.getElementById('ai-scanning-overlay').remove();
                     alert(`🚨 FRAUD DETECTED 🚨\\n\\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits. Your receipt showed ${cleanRefNo.length} digits.`);
                   }
-                  
+
                   // 2. Amount Validation
                   let expectedAmount = 0;
                   if (window.clientActiveBills && window.clientActiveBills.length > 0) {
-                      window.clientActiveBills.forEach(ab => {
-                          expectedAmount += parseFloat(String(ab.amount).replace(/[^0-9\\.]/g, '')) || 0;
-                      });
+                    window.clientActiveBills.forEach(ab => {
+                      expectedAmount += parseFloat(String(ab.amount).replace(/[^0-9\\.]/g, '')) || 0;
+                    });
                   }
                   if (expectedAmount === 0) {
-                      const rawPlanVal = clientUser.plan_price || clientUser.planPrice || clientUser.price || clientUser.monthlyFee || clientUser.plan || '';
-                      const parsedPlanVal = parseFloat(String(rawPlanVal).replace(/[^0-9\\.]/g, ''));
-                      if (!isNaN(parsedPlanVal) && parsedPlanVal > 0) {
-                          expectedAmount = parsedPlanVal;
-                      }
+                    const rawPlanVal = clientUser.plan_price || clientUser.planPrice || clientUser.price || clientUser.monthlyFee || clientUser.plan || '';
+                    const parsedPlanVal = parseFloat(String(rawPlanVal).replace(/[^0-9\\.]/g, ''));
+                    if (!isNaN(parsedPlanVal) && parsedPlanVal > 0) {
+                      expectedAmount = parsedPlanVal;
+                    }
                   }
-                  
+
                   if (!fraudDetected && expectedAmount > 0) {
-                      const receiptAmount = parseFloat(String(extractedData.amount).replace(/[^0-9\\.]/g, ''));
-                      if (receiptAmount < expectedAmount) {
-                          fraudDetected = true;
-                          document.getElementById('ai-scanning-overlay').remove();
-                          alert(`❌ ERROR: INSUFFICIENT AMOUNT ❌\n\nYour current plan requires ₱${expectedAmount}, but the receipt is only for ₱${receiptAmount}. Please upload a receipt with the correct full amount.`);
-                      } else
+                    const receiptAmount = parseFloat(String(extractedData.amount).replace(/[^0-9\\.]/g, ''));
+                    if (receiptAmount < expectedAmount) {
+                      fraudDetected = true;
+                      document.getElementById('ai-scanning-overlay').remove();
+                      alert(`❌ ERROR: INSUFFICIENT AMOUNT ❌\n\nYour current plan requires ₱${expectedAmount}, but the receipt is only for ₱${receiptAmount}. Please upload a receipt with the correct full amount.`);
+                    } else
                       if (receiptAmount > expectedAmount) {
-                          extractedData.overpaymentNote = `Overpaid by ₱${(receiptAmount - expectedAmount).toFixed(2)}`;
-                          alert(`Note: You have paid ₱${receiptAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(receiptAmount - expectedAmount).toFixed(2)} will be noted.`);
+                        extractedData.overpaymentNote = `Overpaid by ₱${(receiptAmount - expectedAmount).toFixed(2)}`;
+                        alert(`Note: You have paid ₱${receiptAmount}, which is more than your required amount of ₱${expectedAmount}. The excess of ₱${(receiptAmount - expectedAmount).toFixed(2)} will be noted.`);
                       }
                   }
-                  
+
                   // 3. Metadata Forensics Check
                   if (!fraudDetected) {
-                      const fakeSoftware = await metadataFraudPromise;
-                      if (fakeSoftware) {
-                          fraudDetected = true;
-                          document.getElementById('ai-scanning-overlay').remove();
-                          alert(`🚨 FRAUD DETECTED 🚨\\n\\nMetadata Forensics indicates this receipt was manipulated using photo editing software (${fakeSoftware}). Fake or generated receipts are strictly prohibited.`);
-                      }
+                    const fakeSoftware = await metadataFraudPromise;
+                    if (fakeSoftware) {
+                      fraudDetected = true;
+                      document.getElementById('ai-scanning-overlay').remove();
+                      alert(`🚨 FRAUD DETECTED 🚨\\n\\nMetadata Forensics indicates this receipt was manipulated using photo editing software (${fakeSoftware}). Fake or generated receipts are strictly prohibited.`);
+                    }
                   }
-                  
+
                   // 4. Database Save & Duplicate Check
                   if (!fraudDetected) {
                     try {
                       const { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
                       const db = getFirestore();
                       const receiptsRef = collection(db, 'receipts');
-                      
+
                       // Resolve pHash
                       const uploadedHash = await uploadedHashPromise;
                       extractedData.imageHash = uploadedHash;
-                      
+
                       // Receiver Name Fraud Check (Temporarily Disabled for Testing)
                       /*
                       if (extractedData.receiverName !== 'TBD' && !extractedData.receiverName.match(/^RE[\.\*•]+L\s*B\.?$/i)) {
@@ -1962,26 +1988,26 @@ If a field is not found, return "TBD".`;
 
                       // Time Proximity Fraud Check (24-Hour Rule)
                       if (extractedData.datePaid && extractedData.datePaid !== 'TBD' && extractedData.datePaid.toLowerCase() !== 'today') {
-                          let dateToParse = extractedData.datePaid;
-                          if (extractedData.timePaid && extractedData.timePaid !== 'TBD') {
-                              dateToParse += ' ' + extractedData.timePaid;
+                        let dateToParse = extractedData.datePaid;
+                        if (extractedData.timePaid && extractedData.timePaid !== 'TBD') {
+                          dateToParse += ' ' + extractedData.timePaid;
+                        }
+                        const parsedDate = new Date(dateToParse);
+                        if (!isNaN(parsedDate.getTime())) {
+                          const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
+                          if (diffHours > 24 || diffHours < -24) {
+                            fraudDetected = true;
+                            document.getElementById('ai-scanning-overlay').remove();
+                            alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.`);
+                            return;
                           }
-                          const parsedDate = new Date(dateToParse);
-                          if (!isNaN(parsedDate.getTime())) {
-                              const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
-                              if (diffHours > 24 || diffHours < -24) {
-                                  fraudDetected = true;
-                                  document.getElementById('ai-scanning-overlay').remove();
-                                  alert(`🚨 FRAUD DETECTED 🚨\n\nThis receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.`);
-                                  return;
-                              }
-                          }
+                        }
                       }
 
                       // Text-based Fraud Check (Reference Number)
                       const q = query(receiptsRef, where("referenceNumber", "==", extractedData.referenceNumber));
                       const querySnapshot = await getDocs(q);
-                      
+
                       if (!querySnapshot.empty) {
                         fraudDetected = true;
                         document.getElementById('ai-scanning-overlay').remove();
@@ -1991,18 +2017,18 @@ If a field is not found, return "TBD".`;
                         const allReceipts = await getDocs(receiptsRef);
                         let pHashFraud = false;
                         allReceipts.forEach(doc => {
-                            const data = doc.data();
-                            if (data.imageHash && uploadedHash) {
-                                if (getHammingDistance(uploadedHash, data.imageHash) <= 10) {
-                                    pHashFraud = true;
-                                }
+                          const data = doc.data();
+                          if (data.imageHash && uploadedHash) {
+                            if (getHammingDistance(uploadedHash, data.imageHash) <= 10) {
+                              pHashFraud = true;
                             }
+                          }
                         });
-                        
+
                         if (pHashFraud) {
-                            fraudDetected = true;
-                            document.getElementById('ai-scanning-overlay').remove();
-                            alert("🚨 FRAUD DETECTED 🚨\\n\\nVisual Analysis indicates this receipt is a cropped or slightly altered duplicate of a previously uploaded receipt. Submitting altered duplicate receipts is strictly prohibited.");
+                          fraudDetected = true;
+                          document.getElementById('ai-scanning-overlay').remove();
+                          alert("🚨 FRAUD DETECTED 🚨\\n\\nVisual Analysis indicates this receipt is a cropped or slightly altered duplicate of a previously uploaded receipt. Submitting altered duplicate receipts is strictly prohibited.");
                         } else {
                           // Save to Database
                           const userStr = localStorage.getItem('clientUser');
@@ -2010,7 +2036,7 @@ If a field is not found, return "TBD".`;
                           const now = new Date();
                           const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                           const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-                          
+
                           await addDoc(receiptsRef, {
                             ...extractedData,
                             clientName: clientUser.name || 'Unknown',
@@ -2025,8 +2051,8 @@ If a field is not found, return "TBD".`;
                       console.error("Database Error:", dbErr);
                     }
                   }
-              }
-                
+                }
+
                 if (fraudDetected) {
                   return; // Stop the flow
                 }
@@ -2040,7 +2066,7 @@ If a field is not found, return "TBD".`;
                   const left = (xmin / 10).toFixed(2);
                   const width = ((xmax - xmin) / 10).toFixed(2);
                   const height = ((ymax - ymin) / 10).toFixed(2);
-                  
+
                   const boxEl = document.createElement('div');
                   boxEl.className = 'bbox-rect';
                   boxEl.style.top = `${top}%`;
@@ -2054,10 +2080,10 @@ If a field is not found, return "TBD".`;
 
                 // Remove laser line but keep the image and boxes for the popup
                 document.getElementById('laser-line').remove();
-                
+
                 const finalPreviewHtml = document.getElementById('receipt-bbox-container').outerHTML;
                 document.getElementById('ai-scanning-overlay').remove();
-                
+
                 window.showAIAnalysisPopup(extractedData, finalPreviewHtml);
 
               } catch (error) {
@@ -2118,40 +2144,20 @@ If a field is not found, return "TBD".`;
 
       } else if (method === 'cc') {
         html = `
-          <div style="display: flex; gap: 2rem; align-items: center;">
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
-              <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Card Payment Gateway</div>
-              <div style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">We accept Visa, Mastercard, and JCB cards. You will be redirected to our secure payment processor (PayMongo) to enter your card details safely.</div>
-              <button style="background: #fff; color: #000; font-weight: 700; border: none; padding: 0.85rem 1.5rem; border-radius: 8px; cursor: pointer; align-self: flex-start; font-size: 0.95rem; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">
-                Proceed to Secure Gateway &rarr;
-              </button>
-            </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 2rem; text-align: center;">
+            <div style="width: 64px; height: 64px; background: rgba(245,158,11,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.5rem;">🚧</div>
+            <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">Credit / Debit Card</div>
+            <div style="color: #f59e0b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Coming Soon</div>
+            <div style="color: #94a3b8; font-size: 0.9rem; max-width: 400px; line-height: 1.6;">This payment method is currently in development and not available at this time. Please use GCash to complete your payment.</div>
           </div>
         `;
       } else if (method === 'bt') {
         html = `
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <div>
-              <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Direct Bank Transfer</div>
-              <div style="color: #94a3b8; font-size: 0.95rem;">Transfer directly from your bank app via InstaPay or PESONet.</div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 1rem;">
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px;">
-                <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Bank Name</div>
-                <div style="color: #fff; font-size: 1.1rem; font-weight: 600;">BDO Unibank</div>
-              </div>
-              
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px;">
-                <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Account Name</div>
-                <div style="color: #fff; font-size: 1.1rem; font-weight: 600;">R-FIBER NET</div>
-              </div>
-              
-              <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px; border-left: 3px solid #10b981;">
-                <div style="color: #64748b; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Account Number</div>
-                <div style="color: #fff; font-size: 1.3rem; font-weight: 700; letter-spacing: 1.5px;">0012 3456 7890</div>
-              </div>
-            </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 2rem; text-align: center;">
+            <div style="width: 64px; height: 64px; background: rgba(245,158,11,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin-bottom: 1.5rem;">🚧</div>
+            <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">Bank Transfer</div>
+            <div style="color: #f59e0b; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem;">Coming Soon</div>
+            <div style="color: #94a3b8; font-size: 0.9rem; max-width: 400px; line-height: 1.6;">This payment method is currently in development and not available at this time. Please use GCash to complete your payment.</div>
           </div>
         `;
       }
@@ -2237,24 +2243,24 @@ If a field is not found, return "TBD".`;
             // --- PRESENCE HEARTBEAT SYSTEM ---
             const { serverTimestamp, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const userRef = doc(db, "users", user.id);
-            
+
             const sendHeartbeat = async () => {
               if (document.visibilityState === 'visible') {
-                try { await updateDoc(userRef, { lastActive: serverTimestamp() }); } 
+                try { await updateDoc(userRef, { lastActive: serverTimestamp() }); }
                 catch (e) { console.warn('Heartbeat failed:', e); }
               }
             };
-            
+
             sendHeartbeat();
             if (window._clientHeartbeatInterval) clearInterval(window._clientHeartbeatInterval);
             window._clientHeartbeatInterval = setInterval(sendHeartbeat, 90000);
-            
+
             const onVisibilityChange = () => { if (document.visibilityState === 'visible') sendHeartbeat(); };
             document.removeEventListener('visibilitychange', window._clientHeartbeatVisListener);
             window._clientHeartbeatVisListener = onVisibilityChange;
             document.addEventListener('visibilitychange', onVisibilityChange);
-            
-            const onUnload = () => { updateDoc(userRef, { lastActive: 0 }).catch(()=>{}); };
+
+            const onUnload = () => { updateDoc(userRef, { lastActive: 0 }).catch(() => { }); };
             window.removeEventListener('beforeunload', window._clientHeartbeatUnloadListener);
             window._clientHeartbeatUnloadListener = onUnload;
             window.addEventListener('beforeunload', onUnload);
@@ -2446,19 +2452,19 @@ If a field is not found, return "TBD".`;
                       if (be.dueDate) {
                         const dueDate = new Date(be.dueDate);
                         const now = new Date();
-                        now.setHours(0,0,0,0);
-                        dueDate.setHours(0,0,0,0);
+                        now.setHours(0, 0, 0, 0);
+                        dueDate.setHours(0, 0, 0, 0);
                         if (now > dueDate) {
                           isOverdue = true;
                           be.status = 'overdue';
                         }
                       }
-                      
+
                       // Optionally update in DB
                       if (isOverdue && originalStatus !== 'overdue') {
-                         import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(fs => {
-                           fs.updateDoc(fs.doc(db, "users", user.id, "billing_emails", be.id), { status: 'Overdue' }).catch(e => console.error(e));
-                         });
+                        import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(fs => {
+                          fs.updateDoc(fs.doc(db, "users", user.id, "billing_emails", be.id), { status: 'Overdue' }).catch(e => console.error(e));
+                        });
                       }
                     }
                   });
@@ -2643,10 +2649,7 @@ If a field is not found, return "TBD".`;
         <!-- Sidebar -->
         <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
           <div style="margin-bottom: 3rem;">
-            <span style="font-family: 'Saira Condensed', sans-serif; font-size: 24px; font-weight: 800; font-style: italic; letter-spacing: -1px;">
-              <span style="color: #E53935;">R</span><span style="color: #fff;">FIBER</span><span style="color: #E53935;">X</span>
-              <div style="font-size: 8px; color: #fff; letter-spacing: 2px; font-weight: 500; font-style: normal; margin-top: -5px;">NETWORKS</div>
-            </span>
+            <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 60px; width: auto;" />
           </div>
           
           <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase;">My Account</div>
@@ -2708,7 +2711,16 @@ If a field is not found, return "TBD".`;
                     <div style="color: #E53935; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.5rem; text-transform: uppercase;">Welcome Back</div>
                     <h1 id="ui-overview-welcome" style="color: #fff; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px;">${name}</h1>
                     <div id="ui-overview-acct" style="color: #94a3b8; font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: 1px;">${acctNum}</div>
-                    <p style="color: #94a3b8; font-size: 0.95rem;">Your connection, account, and support - right where you need them.</p>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem;">
+                      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="color: #10b981; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Current Plan</div>
+                        <div style="color: #fff; font-weight: 600; font-size: 0.95rem;">${plan}</div>
+                      </div>
+                      <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="color: #3b82f6; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Monthly Fee</div>
+                        <div style="color: #fff; font-weight: 600; font-size: 0.95rem;">₱${parseFloat(String(basePlanAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
                   </div>
                   <div style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
                     <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">

@@ -21,7 +21,7 @@ export default function BillingScreen({ user, route, navigation }) {
   const [activeTab, setActiveTab] = useState(0);
   const [showGcashDropdown, setShowGcashDropdown] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
-  
+
   // AI Scanner States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
@@ -77,18 +77,18 @@ export default function BillingScreen({ user, route, navigation }) {
         if (status !== 'paid' && status !== 'completed' && b.dueDate) {
           const dueDate = new Date(b.dueDate);
           const now = new Date();
-          now.setHours(0,0,0,0);
-          dueDate.setHours(0,0,0,0);
+          now.setHours(0, 0, 0, 0);
+          dueDate.setHours(0, 0, 0, 0);
           if (now > dueDate) {
-             status = 'overdue';
-             isOverdue = true;
-             b.status = 'overdue';
+            status = 'overdue';
+            isOverdue = true;
+            b.status = 'overdue';
           }
         }
         if (isOverdue && (d.data().status || '').toLowerCase() !== 'overdue') {
-            updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
-                status: 'Overdue'
-            }).catch(e => console.log(e));
+          updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
+            status: 'Overdue'
+          }).catch(e => console.log(e));
         }
         bList.push({ id: d.id, ...b });
       });
@@ -130,39 +130,39 @@ export default function BillingScreen({ user, route, navigation }) {
   const processReceiptImage = async (asset) => {
     setIsAnalyzing(true);
     setIsFraud(false);
-    
+
     // --- 1. Fraud Detection (Aspect Ratio & EXIF) ---
     const width = asset.width || 1;
     const height = asset.height || 1;
     const ratio = width / height;
     const safeZoneMin = 0.40;
     const safeZoneMax = 0.60;
-    
+
     let isForged = false;
     let fraudReason = '';
-    
+
     if (ratio < safeZoneMin || ratio > safeZoneMax) {
       isForged = true;
       fraudReason = `Suspicious Aspect Ratio (${ratio.toFixed(3)}). Real screenshots are typically between 0.40 and 0.60.`;
     }
-    
+
     if (asset.exif) {
       if (asset.exif.Software && asset.exif.Software.trim() !== '') {
-         const softwareField = String(asset.exif.Software).toLowerCase();
-         const blacklist = [
-            'photoshop', 'illustrator', 'lightroom', 'coreldraw', 'gimp', 'affinity', 'capture one',
-            'canva', 'photopea', 'figma', 'pixlr', 'fotor', 'befunky',
-            'snapseed', 'picsart', 'vsco', 'facetune', 'b612', 'remini', 'lightleap', 'photodirector', 'polarr',
-            'gemini', 'midjourney', 'dall-e', 'openai', 'google', 'imagen', 'ai-generated', 'stable diffusion', 'runway', 'leonardo', 'firefly', 'bing',
-            'skia', 'cairo', 'puppeteer', 'phantomjs', 'html2canvas', 'dom-to-image', 'selenium', 'fakereceipt', 'receiptmaker', 'express-expense'
-         ];
-         
-         const isBlacklisted = blacklist.some(badSoftware => softwareField.includes(badSoftware));
-         
-         if (isBlacklisted) {
-            isForged = true;
-            fraudReason = `Metadata Manipulation Detected! Image was processed with external software: ${asset.exif.Software}`;
-         }
+        const softwareField = String(asset.exif.Software).toLowerCase();
+        const blacklist = [
+          'photoshop', 'illustrator', 'lightroom', 'coreldraw', 'gimp', 'affinity', 'capture one',
+          'canva', 'photopea', 'figma', 'pixlr', 'fotor', 'befunky',
+          'snapseed', 'picsart', 'vsco', 'facetune', 'b612', 'remini', 'lightleap', 'photodirector', 'polarr',
+          'gemini', 'midjourney', 'dall-e', 'openai', 'google', 'imagen', 'ai-generated', 'stable diffusion', 'runway', 'leonardo', 'firefly', 'bing',
+          'skia', 'cairo', 'puppeteer', 'phantomjs', 'html2canvas', 'dom-to-image', 'selenium', 'fakereceipt', 'receiptmaker', 'express-expense'
+        ];
+
+        const isBlacklisted = blacklist.some(badSoftware => softwareField.includes(badSoftware));
+
+        if (isBlacklisted) {
+          isForged = true;
+          fraudReason = `Metadata Manipulation Detected! Image was processed with external software: ${asset.exif.Software}`;
+        }
       }
     }
 
@@ -189,7 +189,7 @@ export default function BillingScreen({ user, route, navigation }) {
       });
 
       const json = await response.json();
-      
+
       if (json.IsErroredOnProcessing || !json.ParsedResults || json.ParsedResults.length === 0) {
         throw new Error(json.ErrorMessage?.[0] || 'OCR failed');
       }
@@ -200,11 +200,11 @@ export default function BillingScreen({ user, route, navigation }) {
       // --- 3. Multi-Format Regex Routing ---
       let formatType = 'UNKNOWN';
       if (singleLineText.match(/Express\s+Send\s+Notification/i) || singleLineText.match(/successfully\s+received/i) || singleLineText.match(/Your\s+new\s+balance/i)) {
-          formatType = 'FORMAT_A'; 
+        formatType = 'FORMAT_A';
       } else if (singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver/i) || singleLineText.match(/Amount\s+sent/i) || singleLineText.match(/Date\s+and\s+time/i) || singleLineText.match(/Sent\s+via\s+GCash/i)) {
-          formatType = 'FORMAT_B'; 
+        formatType = 'FORMAT_B';
       } else {
-          formatType = 'FORMAT_A';
+        formatType = 'FORMAT_A';
       }
 
       const extractedDataObj = {};
@@ -214,144 +214,144 @@ export default function BillingScreen({ user, route, navigation }) {
       // 1. Reference Number
       extractedDataObj.referenceNumber = 'TBD';
       if (formatType === 'FORMAT_A') {
-          const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
-          if (refFullMatch) {
-            const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-            if (cleanRef.length >= 13) {
-                extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
-            } else if (cleanRef.length >= 8) {
-                extractedDataObj.referenceNumber = cleanRef;
-            }
+        const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
+        if (refFullMatch) {
+          const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+          if (cleanRef.length >= 13) {
+            extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
+          } else if (cleanRef.length >= 8) {
+            extractedDataObj.referenceNumber = cleanRef;
           }
+        }
       } else {
-          const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
-          if (refFullMatchB) {
-            const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-            if (cleanRef.length >= 10) {
-                extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
-            }
-          } else {
-              const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
-              if (fallbackRef) {
-                  extractedDataObj.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
-              }
+        const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
+        if (refFullMatchB) {
+          const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
+          if (cleanRef.length >= 10) {
+            extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
           }
+        } else {
+          const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
+          if (fallbackRef) {
+            extractedDataObj.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
+          }
+        }
       }
-      
+
       // 2. Amount
       extractedDataObj.amount = 'TBD';
       if (formatType === 'FORMAT_A') {
-          const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
-          if (amountMatch) {
-            extractedDataObj.amount = amountMatch[0];
-          }
+        const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
+        if (amountMatch) {
+          extractedDataObj.amount = amountMatch[0];
+        }
       } else {
-          const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
-                               singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
-                               singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) || 
-                               singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) || 
-                               singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
-          if (amountMatchB) {
-            extractedDataObj.amount = `PHP ${amountMatchB[1]}`;
-          }
+        const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
+          singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
+          singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) ||
+          singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
+          singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
+        if (amountMatchB) {
+          extractedDataObj.amount = `PHP ${amountMatchB[1]}`;
+        }
       }
-      
+
       // 3. Phone Number
       extractedDataObj.phoneNumber = 'TBD';
       const numberMatch = singleLineText.match(/(?:\+?63|0)\s*9\d{2}\s*\d{3}\s*\d{4}/) || singleLineText.match(/\d{4}\s*\*\*\*\s*\d{4}/);
       if (numberMatch) {
         extractedDataObj.phoneNumber = numberMatch[0].replace(/\s+/g, '');
       }
-      
+
       // EXPRESS NOTIF FLAG
       extractedDataObj.expressNotif = 'No';
       if (formatType === 'FORMAT_A') {
-          extractedDataObj.expressNotif = 'Yes';
+        extractedDataObj.expressNotif = 'Yes';
       } else {
-          if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
-              extractedDataObj.expressNotif = 'Sent via GCash';
-          } else if (singleLineText.match(/Express\s+Send/i)) {
-              extractedDataObj.expressNotif = 'Yes';
-          }
+        if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
+          extractedDataObj.expressNotif = 'Sent via GCash';
+        } else if (singleLineText.match(/Express\s+Send/i)) {
+          extractedDataObj.expressNotif = 'Yes';
+        }
       }
-      
+
       // 4. Date and Time
       extractedDataObj.datePaid = 'TBD';
       extractedDataObj.timePaid = 'TBD';
       if (formatType === 'FORMAT_A') {
-          const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
-          if (secondDateTimeMatch) {
-            const fullSnippet = secondDateTimeMatch[0];
-            const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
-            if (secondDateMatch) extractedDataObj.datePaid = secondDateMatch[0];
-            const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
-            if (secondTimeMatch) extractedDataObj.timePaid = secondTimeMatch[0];
-          } else {
-            const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-            if (todayMatch) {
-              extractedDataObj.datePaid = "Today";
-              const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-              if (timeMatch) extractedDataObj.timePaid = timeMatch[0];
-            }
+        const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
+        if (secondDateTimeMatch) {
+          const fullSnippet = secondDateTimeMatch[0];
+          const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
+          if (secondDateMatch) extractedDataObj.datePaid = secondDateMatch[0];
+          const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
+          if (secondTimeMatch) extractedDataObj.timePaid = secondTimeMatch[0];
+        } else {
+          const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+          if (todayMatch) {
+            extractedDataObj.datePaid = "Today";
+            const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
+            if (timeMatch) extractedDataObj.timePaid = timeMatch[0];
           }
+        }
       } else {
-          // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
-          const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
-          if (dateDetailsMatch) {
-            extractedDataObj.datePaid = dateDetailsMatch[1];
-            if (dateDetailsMatch[2]) {
-                extractedDataObj.timePaid = dateDetailsMatch[2];
-            }
+        // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
+        const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
+        if (dateDetailsMatch) {
+          extractedDataObj.datePaid = dateDetailsMatch[1];
+          if (dateDetailsMatch[2]) {
+            extractedDataObj.timePaid = dateDetailsMatch[2];
           }
+        }
       }
-      
+
       // 5. Names (Payer and Receiver)
       extractedDataObj.receiverName = 'TBD';
       extractedDataObj.payerName = 'TBD';
-      
+
       if (formatType === 'FORMAT_A') {
-          const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*\s•\.]+?)\s+(?:on|\+|PHP|₱|\d|Today)/i) || 
-                              singleLineText.match(/to\s+([A-Za-z\*\s•]+?\.?)\s/i);
-          if (nameToMatch) {
-            extractedDataObj.receiverName = nameToMatch[1].replace(/[^A-Za-z\*\s•\.]/g, '').trim();
-          }
-          const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
-          if (msgNameMatch) {
-            const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
-            if (cleanMsg) extractedDataObj.payerName = cleanMsg;
-          }
+        const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*\s•\.]+?)\s+(?:on|\+|PHP|₱|\d|Today)/i) ||
+          singleLineText.match(/to\s+([A-Za-z\*\s•]+?\.?)\s/i);
+        if (nameToMatch) {
+          extractedDataObj.receiverName = nameToMatch[1].replace(/[^A-Za-z\*\s•\.]/g, '').trim();
+        }
+        const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
+        if (msgNameMatch) {
+          const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
+          if (cleanMsg) extractedDataObj.payerName = cleanMsg;
+        }
       } else {
-          const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
-          if (receiverMatch) {
-              extractedDataObj.receiverName = receiverMatch[1].replace(/Amount/i, '').trim();
+        const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
+        if (receiverMatch) {
+          extractedDataObj.receiverName = receiverMatch[1].replace(/Amount/i, '').trim();
+        } else {
+          const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i) ||
+            singleLineText.match(/Express\s+Send\s+(.+?)\s+0?9/i);
+          let rawName = '';
+          if (expressSendMatch) {
+            rawName = expressSendMatch[1];
           } else {
-              const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i) || 
-                                       singleLineText.match(/Express\s+Send\s+(.+?)\s+0?9/i);
-              let rawName = '';
-              if (expressSendMatch) {
-                  rawName = expressSendMatch[1];
-              } else {
-                  const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
-                  if (beforePhone) rawName = beforePhone[1].replace(/Express\s+Send/i, '');
-              }
-              if (rawName) {
-                  let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
-                  cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '').replace(/Amount/i, '').trim();
-                  if (cleanName) extractedDataObj.receiverName = cleanName;
-              }
+            const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
+            if (beforePhone) rawName = beforePhone[1].replace(/Express\s+Send/i, '');
           }
-          extractedDataObj.payerName = "N/A"; 
+          if (rawName) {
+            let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
+            cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '').replace(/Amount/i, '').trim();
+            if (cleanName) extractedDataObj.receiverName = cleanName;
+          }
+        }
+        extractedDataObj.payerName = "N/A";
       }
 
       // Validation (receiverName temporarily disabled per user request)
       const requiredFields = ['referenceNumber', 'amount', 'datePaid', 'timePaid', 'phoneNumber'];
       const hasTBD = requiredFields.some(f => extractedDataObj[f] === 'TBD' || !extractedDataObj[f]);
-      
+
       const cleanRefNo = String(extractedDataObj.referenceNumber).replace(/[^0-9]/g, '');
       if (cleanRefNo.length !== 13 && cleanRefNo.length > 5) {
-         Alert.alert("🚨 FRAUD DETECTED 🚨", "Invalid GCash Reference Number length. It must be exactly 13 digits.");
-         setIsAnalyzing(false);
-         return;
+        Alert.alert("🚨 FRAUD DETECTED 🚨", "Invalid GCash Reference Number length. It must be exactly 13 digits.");
+        setIsAnalyzing(false);
+        return;
       }
 
       // --- 4. Receiver Name Fraud Check (Temporarily Disabled for Testing) ---
@@ -366,88 +366,88 @@ export default function BillingScreen({ user, route, navigation }) {
 
       // --- 5. Time Proximity Fraud Check (24-Hour Rule) ---
       if (extractedDataObj.datePaid && extractedDataObj.datePaid !== 'TBD' && extractedDataObj.datePaid.toLowerCase() !== 'today') {
-          let dateToParse = extractedDataObj.datePaid;
-          if (extractedDataObj.timePaid && extractedDataObj.timePaid !== 'TBD') {
-              dateToParse += ' ' + extractedDataObj.timePaid;
+        let dateToParse = extractedDataObj.datePaid;
+        if (extractedDataObj.timePaid && extractedDataObj.timePaid !== 'TBD') {
+          dateToParse += ' ' + extractedDataObj.timePaid;
+        }
+        const parsedDate = new Date(dateToParse);
+        if (!isNaN(parsedDate.getTime())) {
+          const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
+          if (diffHours > 24 || diffHours < -24) {
+            Alert.alert("🚨 FRAUD DETECTED 🚨", "This receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.");
+            setIsAnalyzing(false);
+            setUploadedImage(null);
+            return;
           }
-          const parsedDate = new Date(dateToParse);
-          if (!isNaN(parsedDate.getTime())) {
-              const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
-              if (diffHours > 24 || diffHours < -24) {
-                 Alert.alert("🚨 FRAUD DETECTED 🚨", "This receipt is too old! Receipts must be uploaded within 24 hours of payment to prevent reuse. If you have a problem with the 24-hour rule, please try contacting support.");
-                 setIsAnalyzing(false);
-                 setUploadedImage(null);
-                 return;
-              }
-          }
+        }
       }
 
       // --- 5. Database Fraud Detection (Duplicate Checks) ---
       if (cleanRefNo && cleanRefNo !== 'TBD') {
-          const receiptsRef = collection(db, 'receipts');
-          const q = query(receiptsRef, where("referenceNumber", "==", extractedDataObj.referenceNumber));
-          const querySnapshot = await getDocs(q);
-          
-          if (!querySnapshot.empty) {
-             Alert.alert("🚨 FRAUD DETECTED 🚨", "This Reference Number has already been submitted! Submitting duplicate reference numbers is strictly prohibited.");
-             setIsAnalyzing(false);
-             setUploadedImage(null);
-             return;
-          }
+        const receiptsRef = collection(db, 'receipts');
+        const q = query(receiptsRef, where("referenceNumber", "==", extractedDataObj.referenceNumber));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          Alert.alert("🚨 FRAUD DETECTED 🚨", "This Reference Number has already been submitted! Submitting duplicate reference numbers is strictly prohibited.");
+          setIsAnalyzing(false);
+          setUploadedImage(null);
+          return;
+        }
       }
 
       // --- 6. Amount Validation ---
       const extractedAmount = parseFloat(String(extractedDataObj.amount).replace(/[^0-9\.]/g, ''));
       let expectedAmount = parseFloat(totalBalance) || 0;
-      
+
       const unpaidBillsList = bills.filter(b => b.status !== 'paid');
       // Sort oldest to newest
       unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
 
       if (extractedAmount > 0) {
-          let isValid = false;
+        let isValid = false;
 
-          // Check if it exactly matches the TOTAL balance
-          if (expectedAmount > 0 && extractedAmount === expectedAmount) {
-              isValid = true;
-          } 
-          // Check if it exactly matches the oldest SINGLE bill
-          else if (unpaidBillsList.length > 0) {
-              const oldestBillAmt = parseFloat(unpaidBillsList[0].amount || 0);
-              if (oldestBillAmt > 0 && extractedAmount === oldestBillAmt) {
-                  isValid = true;
-              }
+        // Check if it exactly matches the TOTAL balance
+        if (expectedAmount > 0 && extractedAmount === expectedAmount) {
+          isValid = true;
+        }
+        // Check if it exactly matches the oldest SINGLE bill
+        else if (unpaidBillsList.length > 0) {
+          const oldestBillAmt = parseFloat(unpaidBillsList[0].amount || 0);
+          if (oldestBillAmt > 0 && extractedAmount === oldestBillAmt) {
+            isValid = true;
           }
+        }
 
-          if (!isValid) {
-              let errorMsg = `Your receipt is for ₱${extractedAmount}. `;
-              if (unpaidBillsList.length > 1) {
-                  errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${parseFloat(unpaidBillsList[0].amount || 0)} (for the oldest month) OR exactly ₱${expectedAmount} (for the total balance).`;
-              } else {
-                  errorMsg += `Your required balance is exactly ₱${expectedAmount}. Partial payments or overpayments are not accepted.`;
-              }
-              Alert.alert("🚨 INVALID AMOUNT 🚨", errorMsg);
-              setIsAnalyzing(false);
-              setUploadedImage(null);
-              return;
+        if (!isValid) {
+          let errorMsg = `Your receipt is for ₱${extractedAmount}. `;
+          if (unpaidBillsList.length > 1) {
+            errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${parseFloat(unpaidBillsList[0].amount || 0)} (for the oldest month) OR exactly ₱${expectedAmount} (for the total balance).`;
+          } else {
+            errorMsg += `Your required balance is exactly ₱${expectedAmount}. Partial payments or overpayments are not accepted.`;
           }
+          Alert.alert("🚨 INVALID AMOUNT 🚨", errorMsg);
+          setIsAnalyzing(false);
+          setUploadedImage(null);
+          return;
+        }
       }
-      
+
       if (hasTBD) {
-         const missingFields = requiredFields.filter(f => extractedDataObj[f] === 'TBD' || !extractedDataObj[f]).join(', ');
-         Alert.alert("Missing Details", `Could not extract the following required fields: ${missingFields}.\n\nOCR Read: ${singleLineText.substring(0, 100)}...`);
-         setIsAnalyzing(false);
-         return;
+        const missingFields = requiredFields.filter(f => extractedDataObj[f] === 'TBD' || !extractedDataObj[f]).join(', ');
+        Alert.alert("Missing Details", `Could not extract the following required fields: ${missingFields}.\n\nOCR Read: ${singleLineText.substring(0, 100)}...`);
+        setIsAnalyzing(false);
+        return;
       }
 
       setExtractedData(extractedDataObj);
       setAiTimer(10);
-      
+
       // Auto-save data immediately upon successful analysis
       const amtStr = extractedDataObj.amount ? String(extractedDataObj.amount).replace(/[^0-9\.]/g, '') : '0';
       const unpaidBillId = bills.find(b => b.status !== 'paid')?.id || null;
       await markAsPaid(unpaidBillId, amtStr, extractedDataObj);
-      
+
       // Clear the image from the GCash box so it doesn't persist
       setUploadedImage(null);
 
@@ -483,25 +483,25 @@ export default function BillingScreen({ user, route, navigation }) {
       unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
 
       for (const bill of unpaidBillsList) {
-          if (remainingAmt <= 0) break;
-          
-          const billExpected = parseFloat(bill.amount || 0);
-          if (billExpected <= 0) continue;
+        if (remainingAmt <= 0) break;
 
-          if (remainingAmt >= billExpected) {
-              await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
-                status: 'paid',
-                datePaid: new Date().toISOString()
-              });
-              remainingAmt -= billExpected;
-          } else {
-              await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
-                status: 'partially_paid',
-                amount: billExpected - remainingAmt,
-                datePaid: new Date().toISOString()
-              });
-              remainingAmt = 0;
-          }
+        const billExpected = parseFloat(bill.amount || 0);
+        if (billExpected <= 0) continue;
+
+        if (remainingAmt >= billExpected) {
+          await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
+            status: 'paid',
+            datePaid: new Date().toISOString()
+          });
+          remainingAmt -= billExpected;
+        } else {
+          await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
+            status: 'partially_paid',
+            amount: billExpected - remainingAmt,
+            datePaid: new Date().toISOString()
+          });
+          remainingAmt = 0;
+        }
       }
 
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -512,7 +512,7 @@ export default function BillingScreen({ user, route, navigation }) {
 
       const bill = billId ? bills.find(b => b.id === billId) : null;
       const planStr = bill?.plan || user.plan_price || user.planPrice || user.price || user.monthlyFee || user.plan || '-';
-      
+
       const now = new Date();
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       const bMonth = bill?.period || bill?.billingMonth || `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
@@ -534,28 +534,28 @@ export default function BillingScreen({ user, route, navigation }) {
       });
 
       if (receiptData) {
-          const now = new Date();
-          const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-          const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-          
-          await addDoc(collection(db, "receipts"), {
-              clientName: user.name || 'Unknown',
-              clientAccountNumber: user.accountNumber || 'Unknown',
-              billingMonth: billingMonth,
-              status: "Pending Verification",
-              timestamp: serverTimestamp(),
-              amount: String(receiptData.amount || 'TBD'),
-              referenceNumber: receiptData.referenceNumber || 'TBD',
-              receiverName: receiptData.receiverName || 'TBD',
-              phoneNumber: receiptData.phoneNumber || 'TBD',
-              payerName: receiptData.payerName || 'N/A',
-              datePaid: receiptData.datePaid || 'TBD',
-              timePaid: receiptData.timePaid || 'TBD',
-              expressNotif: receiptData.expressNotif || 'No',
-              formatType: receiptData.formatType || 'UNKNOWN',
-              exifData: receiptData.exifData || 'None',
-              imageHash: "N/A"
-          });
+        const now = new Date();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+        await addDoc(collection(db, "receipts"), {
+          clientName: user.name || 'Unknown',
+          clientAccountNumber: user.accountNumber || 'Unknown',
+          billingMonth: billingMonth,
+          status: "Pending Verification",
+          timestamp: serverTimestamp(),
+          amount: String(receiptData.amount || 'TBD'),
+          referenceNumber: receiptData.referenceNumber || 'TBD',
+          receiverName: receiptData.receiverName || 'TBD',
+          phoneNumber: receiptData.phoneNumber || 'TBD',
+          payerName: receiptData.payerName || 'N/A',
+          datePaid: receiptData.datePaid || 'TBD',
+          timePaid: receiptData.timePaid || 'TBD',
+          expressNotif: receiptData.expressNotif || 'No',
+          formatType: receiptData.formatType || 'UNKNOWN',
+          exifData: receiptData.exifData || 'None',
+          imageHash: "N/A"
+        });
       }
 
       setPaymentModalVisible(false);
@@ -573,7 +573,7 @@ export default function BillingScreen({ user, route, navigation }) {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
@@ -582,16 +582,16 @@ export default function BillingScreen({ user, route, navigation }) {
         {/* 3-Column Hero Grid */}
         <View style={styles.heroGrid}>
           <View style={styles.heroGridItem}>
-             <Text style={styles.heroGridLabel}>Current Plan</Text>
-             <Text style={styles.heroGridValue}>{user.plan || user.Plan || 'N/A'}</Text>
+            <Text style={styles.heroGridLabel}>Current Plan</Text>
+            <Text style={styles.heroGridValue}>{user.plan || user.Plan || 'N/A'}</Text>
           </View>
           <View style={[styles.heroGridItem, styles.heroGridItemCenter]}>
-             <Text style={styles.heroGridLabel}>Outstanding Balance</Text>
-             <Text style={[styles.heroGridValue, {color: '#E53935'}]}>₱{totalBalance}</Text>
+            <Text style={styles.heroGridLabel}>Outstanding Balance</Text>
+            <Text style={[styles.heroGridValue, { color: '#E53935' }]}>₱{totalBalance}</Text>
           </View>
           <View style={styles.heroGridItem}>
-             <Text style={styles.heroGridLabel}>Recorded Payments</Text>
-             <Text style={styles.heroGridValue}>{payments.length}</Text>
+            <Text style={styles.heroGridLabel}>Recorded Payments</Text>
+            <Text style={styles.heroGridValue}>{payments.length}</Text>
           </View>
         </View>
 
@@ -600,7 +600,7 @@ export default function BillingScreen({ user, route, navigation }) {
           const userPlan = user.Plan || user.plan || '';
           const userAmountStr = user.ammount || user.amount || '0';
           let baseAmount = parseFloat(String(userAmountStr).replace(/[^0-9.]/g, '')) || 0;
-          
+
           if (baseAmount === 0 && userPlan) {
             const pStr = userPlan.toLowerCase();
             if (pStr.includes('200mbps') || pStr.includes('200 mbps')) baseAmount = 3500;
@@ -617,8 +617,8 @@ export default function BillingScreen({ user, route, navigation }) {
           );
         })()}
 
-        <TouchableOpacity 
-          style={styles.payButton} 
+        <TouchableOpacity
+          style={styles.payButton}
           onPress={() => mainScrollRef.current?.scrollToEnd({ animated: true })}
         >
           <MaterialCommunityIcons name="credit-card-fast-outline" size={20} color="#fff" />
@@ -626,16 +626,16 @@ export default function BillingScreen({ user, route, navigation }) {
         </TouchableOpacity>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 0 && styles.tabBtnActive]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 0 && styles.tabBtnActive]}
             onPress={() => switchTab(0)}
           >
             <View style={styles.tabContentRow}>
               <Text style={[styles.tabBtnText, activeTab === 0 && styles.tabBtnTextActive]}>My Statements</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 1 && styles.tabBtnActive]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 1 && styles.tabBtnActive]}
             onPress={() => switchTab(1)}
           >
             <View style={styles.tabContentRow}>
@@ -663,32 +663,32 @@ export default function BillingScreen({ user, route, navigation }) {
                       <View key={b.id} style={styles.billCard}>
                         <View style={styles.billHeader}>
                           <View style={{
-                            width: 38, height: 50, 
-                            backgroundColor: '#fff', 
-                            borderRadius: 2, 
+                            width: 38, height: 50,
+                            backgroundColor: '#fff',
+                            borderRadius: 2,
                             marginRight: 15,
                             padding: 4,
                             justifyContent: 'flex-start',
                             borderWidth: 1,
                             borderColor: '#e2e8f0',
-                            shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
+                            shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
                           }}>
-                            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
-                              <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
-                              <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                              <View style={{ width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3 }} />
+                              <View style={{ width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1 }} />
                             </View>
-                            <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
-                            <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
-                            <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
-                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
-                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
-                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                            <View style={{ height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3 }} />
+                            <View style={{ height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2 }} />
+                            <View style={{ height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4 }} />
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+                              <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
+                              <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
                             </View>
-                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
-                              <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
-                              <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <View style={{ height: 2.5, width: '35%', backgroundColor: '#cbd5e1' }} />
+                              <View style={{ height: 2.5, width: '40%', backgroundColor: '#E53935' }} />
                             </View>
-                            <View style={{height: 4, width: '100%', backgroundColor: '#E53935', borderRadius: 1, marginTop: 'auto'}} />
+                            <View style={{ height: 4, width: '100%', backgroundColor: '#E53935', borderRadius: 1, marginTop: 'auto' }} />
                           </View>
                           <View style={styles.billInfo}>
                             <Text style={styles.billMonth}>{new Date(b.dateSent).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -704,8 +704,8 @@ export default function BillingScreen({ user, route, navigation }) {
                           </View>
                         </View>
 
-                        <TouchableOpacity 
-                          style={styles.markPaidBtn} 
+                        <TouchableOpacity
+                          style={styles.markPaidBtn}
                           onPress={() => {
                             setSelectedReceipt(b);
                             setReceiptVisible(true);
@@ -731,32 +731,32 @@ export default function BillingScreen({ user, route, navigation }) {
                       <View key={p.id} style={styles.billCard}>
                         <View style={styles.billHeader}>
                           <View style={{
-                            width: 38, height: 50, 
-                            backgroundColor: '#fff', 
-                            borderRadius: 2, 
+                            width: 38, height: 50,
+                            backgroundColor: '#fff',
+                            borderRadius: 2,
                             marginRight: 15,
                             padding: 4,
                             justifyContent: 'flex-start',
                             borderWidth: 1,
                             borderColor: '#e2e8f0',
-                            shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
+                            shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 1
                           }}>
-                            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
-                              <View style={{width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3}} />
-                              <View style={{width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1}} />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                              <View style={{ width: 6, height: 6, backgroundColor: colors.primary, borderRadius: 1, marginRight: 3 }} />
+                              <View style={{ width: 14, height: 2, backgroundColor: '#94a3b8', borderRadius: 1 }} />
                             </View>
-                            <View style={{height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3}} />
-                            <View style={{height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2}} />
-                            <View style={{height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4}} />
-                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1}}>
-                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
-                              <View style={{height: 1.5, width: '40%', backgroundColor: '#e2e8f0'}} />
+                            <View style={{ height: 1.5, width: '100%', backgroundColor: '#cbd5e1', marginBottom: 3 }} />
+                            <View style={{ height: 2, width: '90%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 2 }} />
+                            <View style={{ height: 2, width: '60%', backgroundColor: '#cbd5e1', borderRadius: 1, marginBottom: 4 }} />
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
+                              <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
+                              <View style={{ height: 1.5, width: '40%', backgroundColor: '#e2e8f0' }} />
                             </View>
-                            <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
-                              <View style={{height: 2.5, width: '35%', backgroundColor: '#cbd5e1'}} />
-                              <View style={{height: 2.5, width: '40%', backgroundColor: '#E53935'}} />
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <View style={{ height: 2.5, width: '35%', backgroundColor: '#cbd5e1' }} />
+                              <View style={{ height: 2.5, width: '40%', backgroundColor: '#E53935' }} />
                             </View>
-                            <View style={{height: 4, width: '100%', backgroundColor: '#10b981', borderRadius: 1, marginTop: 'auto'}} />
+                            <View style={{ height: 4, width: '100%', backgroundColor: '#10b981', borderRadius: 1, marginTop: 'auto' }} />
                           </View>
                           <View style={styles.billInfo}>
                             <Text style={styles.billMonth}>{new Date(p.datePaid || p.date || 0).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
@@ -770,8 +770,8 @@ export default function BillingScreen({ user, route, navigation }) {
                           </View>
                         </View>
 
-                        <TouchableOpacity 
-                          style={styles.markPaidBtn} 
+                        <TouchableOpacity
+                          style={styles.markPaidBtn}
                           onPress={() => {
                             setSelectedReceipt({ ...p, status: 'paid' });
                             setReceiptVisible(true);
@@ -792,7 +792,7 @@ export default function BillingScreen({ user, route, navigation }) {
         <View style={styles.paymentSection}>
           <Text style={styles.paymentSectionTitle}>Preferred payment method</Text>
           <Text style={styles.paymentSectionDesc}>Choose how you would like to pay your monthly bill.</Text>
-          
+
           <TouchableOpacity style={[styles.methodCard, showGcashDropdown && { borderBottomWidth: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, marginBottom: 0 }]} onPress={() => {
             if (showGcashDropdown) {
               setUploadedImage(null);
@@ -809,33 +809,33 @@ export default function BillingScreen({ user, route, navigation }) {
 
           {showGcashDropdown && (
             <View style={{ backgroundColor: colors.card, padding: 20, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: colors.border, alignItems: 'center' }}>
-               <MaterialCommunityIcons name="qrcode-scan" size={100} color={colors.text} style={{ marginBottom: 15 }} />
-               <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 5 }}>Scan to Pay</Text>
-               <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>0912 345 6789</Text>
-               
-               {uploadedImage && (
-                 <View style={{ marginBottom: 15, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                   <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 5 }}>Screenshot Preview</Text>
-                   <Image source={{ uri: uploadedImage }} style={{ width: 140, height: 200, borderRadius: 12, borderWidth: 1, borderColor: colors.border, opacity: isAnalyzing ? 0.3 : 1 }} resizeMode="cover" />
-                   {isAnalyzing && (
-                     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', marginTop: 20 }}>
-                       <ActivityIndicator size="large" color="#10b981" />
-                       <Text style={{ color: '#10b981', marginTop: 10, fontFamily: 'Inter_600SemiBold', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>Analyzing...</Text>
-                     </View>
-                   )}
-                 </View>
-               )}
-               
-               <TouchableOpacity 
-                 style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border }}
-                 onPress={handleUploadImage}
-               >
-                  <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
-               </TouchableOpacity>
+              <MaterialCommunityIcons name="qrcode-scan" size={100} color={colors.text} style={{ marginBottom: 15 }} />
+              <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 5 }}>Scan to Pay</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>0912 345 6789</Text>
+
+              {uploadedImage && (
+                <View style={{ marginBottom: 15, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 5 }}>Screenshot Preview</Text>
+                  <Image source={{ uri: uploadedImage }} style={{ width: 140, height: 200, borderRadius: 12, borderWidth: 1, borderColor: colors.border, opacity: isAnalyzing ? 0.3 : 1 }} resizeMode="cover" />
+                  {isAnalyzing && (
+                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', marginTop: 20 }}>
+                      <ActivityIndicator size="large" color="#10b981" />
+                      <Text style={{ color: '#10b981', marginTop: 10, fontFamily: 'Inter_600SemiBold', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>Analyzing...</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border }}
+                onPress={handleUploadImage}
+              >
+                <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
+              </TouchableOpacity>
             </View>
           )}
 
-          <TouchableOpacity style={styles.methodCard} onPress={() => {}}>
+          <TouchableOpacity style={styles.methodCard} onPress={() => { }}>
             <MaterialCommunityIcons name="bank" size={30} color="#F37021" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>BDO Bank Transfer</Text>
@@ -843,7 +843,7 @@ export default function BillingScreen({ user, route, navigation }) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.methodCard} onPress={() => {}}>
+          <TouchableOpacity style={styles.methodCard} onPress={() => { }}>
             <MaterialCommunityIcons name="bank-transfer" size={30} color="#D7141A" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>BPI Online</Text>
@@ -861,12 +861,12 @@ export default function BillingScreen({ user, route, navigation }) {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
               {selectedReceipt && (() => {
                 const isPaidReceipt = selectedReceipt.status === 'paid' || selectedReceipt.collection === 'payments';
-                
-                const statementDateObj = isPaidReceipt 
+
+                const statementDateObj = isPaidReceipt
                   ? new Date(selectedReceipt.datePaid || selectedReceipt.date || selectedReceipt.dateSent || 0)
                   : new Date(selectedReceipt.dateSent || selectedReceipt.date || 0);
                 const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
+
                 const allPays = [];
                 payments.forEach(p => {
                   allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
@@ -876,15 +876,15 @@ export default function BillingScreen({ user, route, navigation }) {
                     allPays.push({ ...b, isPaidRec: false, sortDate: b.dateSent || b.datePaid || b.date || '' });
                   }
                 });
-                
+
                 allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
-                
+
                 const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
-                
+
                 let baseAmountStr = String(user.amount || user.ammount || user.plan_price || user.planPrice || user.price || user.monthlyFee || 0);
                 let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
-                
+
                 if (baseAmount === 0) {
                   const pStr = String(user.plan || user.Plan || selectedReceipt.plan || '').toLowerCase();
                   if (pStr.includes('200')) baseAmount = 3500;
@@ -894,145 +894,139 @@ export default function BillingScreen({ user, route, navigation }) {
                   else if (pStr.includes('30')) baseAmount = 1000;
                   else baseAmount = amount > 0 ? amount : 0;
                 }
-                
+
                 let prevPaid = true;
                 let prevCharges = 0; // Default to 0 for start of records
                 const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
                 if (currentIdx > 0) {
                   prevPaid = allPays[currentIdx - 1].isPaidRec;
                   if (!prevPaid) {
-                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   } else {
-                     prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
                   }
                 }
-                
+
                 let currentCharges = baseAmount > 0 ? baseAmount : amount;
                 let remainingBalance = prevPaid ? 0 : prevCharges;
-                
+
                 let paymentMade = isPaidReceipt ? amount : 0;
                 let totalAmountDue = currentCharges + remainingBalance - paymentMade;
                 if (totalAmountDue < 0) totalAmountDue = 0;
-                
+
                 if (!isPaidReceipt && selectedReceipt.status === 'partially_paid') {
-                   totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                  totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 }
-                
+
                 let previousCharges = prevCharges;
-                
+
                 let prevPaymentText = prevPaid && prevCharges > 0 ? '₱' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '₱0.00';
-                
+
                 return (
-                <>
-                  <View style={styles.rHeader}>
-                    <View style={styles.rLogoRow}>
-                      <View style={styles.rLogoBox}>
-                        <MaterialCommunityIcons name="wifi" size={24} color="#fff" />
+                  <>
+                    <View style={styles.rHeader}>
+                      <View style={{ width: 200, height: 80 }}>
+                        <Image source={require('../../assets/logo2-removebg-preview.png')} style={{ height: 140, width: 300, resizeMode: 'contain', position: 'absolute', left: -30, top: -30 }} />
                       </View>
-                      <View>
-                        <Text style={styles.rLogoText}><Text style={{color: '#E53935'}}>R</Text>FIBER<Text style={{color: '#E53935'}}>X</Text></Text>
-                        <Text style={styles.rLogoSub}>NETWORK AND DATA SOLUTION</Text>
-                      </View>
+                      <Text style={styles.rPage}>Page 1 of 1</Text>
                     </View>
-                    <Text style={styles.rPage}>Page 1 of 1</Text>
-                  </View>
-                  
-                  <View style={styles.rTitleBox}>
-                    <Text style={styles.rTitle}>STATEMENT OF ACCOUNT</Text>
-                  </View>
-                  
-                  <View style={styles.rInfoRow}>
-                    <View style={{flex: 1, paddingRight: 10}}>
-                      <Text style={styles.rClientName} numberOfLines={2}>{user.name || 'User'}</Text>
-                      <Text style={styles.rClientAddress} numberOfLines={3}>{user.address || 'None'}</Text>
-                      
-                      {(() => {
-                        const currentPlan = user.Plan || user.plan || selectedReceipt.plan || '';
-                        let currentSpeedStr = '';
-                        const match = currentPlan.match(/(\d+)\s*Mbps/i);
-                        if (match) {
-                          currentSpeedStr = `${match[1]}Mbps`;
-                        } else {
-                          const n = currentPlan.toLowerCase();
-                          if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
-                          else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
-                          else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
-                          else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
-                          else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
-                          else currentSpeedStr = currentPlan;
-                        }
-                        return currentSpeedStr ? (
-                          <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
-                            {currentSpeedStr}
-                          </Text>
-                        ) : null;
-                      })()}
+
+                    <View style={styles.rTitleBox}>
+                      <Text style={styles.rTitle}>STATEMENT OF ACCOUNT</Text>
                     </View>
-                    <View style={styles.rSummaryGrid}>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>STATEMENT DATE</Text></View>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
+
+                    <View style={styles.rInfoRow}>
+                      <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Text style={styles.rClientName} numberOfLines={2}>{user.name || 'User'}</Text>
+                        <Text style={styles.rClientAddress} numberOfLines={3}>{user.address || 'None'}</Text>
+
+                        {(() => {
+                          const currentPlan = user.Plan || user.plan || selectedReceipt.plan || '';
+                          let currentSpeedStr = '';
+                          const match = currentPlan.match(/(\d+)\s*Mbps/i);
+                          if (match) {
+                            currentSpeedStr = `${match[1]}Mbps`;
+                          } else {
+                            const n = currentPlan.toLowerCase();
+                            if (n.includes('starter') || n.includes('800') || n.includes('3500')) currentSpeedStr = '30Mbps';
+                            else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
+                            else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
+                            else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
+                            else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
+                            else currentSpeedStr = currentPlan;
+                          }
+                          return currentSpeedStr ? (
+                            <Text style={{ marginTop: 15, fontSize: 24, fontFamily: 'Inter_700Bold', color: '#1f2937' }}>
+                              {currentSpeedStr}
+                            </Text>
+                          ) : null;
+                        })()}
                       </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
-                        <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {fontSize: 8}]}>{selectedReceipt.id}</Text></View>
-                      </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>TOTAL AMOUNT DUE</Text></View>
-                        <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>DUE DATE</Text></View>
-                      </View>
-                      <View style={styles.rGridRow}>
-                        <View style={styles.rGridCell}><Text style={[styles.rGridCellText, {color: '#E53935', fontFamily: 'Inter_700Bold'}]}>₱{totalAmountDue.toFixed(2)}</Text></View>
-                        <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{selectedReceipt.dueDate || '-'}</Text></View>
+                      <View style={styles.rSummaryGrid}>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>STATEMENT DATE</Text></View>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>{isPaidReceipt ? 'PAYMENT ID' : 'BILL ID'}</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
+                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { fontSize: 8 }]}>{selectedReceipt.id}</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>TOTAL AMOUNT DUE</Text></View>
+                          <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>DUE DATE</Text></View>
+                        </View>
+                        <View style={styles.rGridRow}>
+                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { color: '#E53935', fontFamily: 'Inter_700Bold' }]}>₱{totalAmountDue.toFixed(2)}</Text></View>
+                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{selectedReceipt.dueDate || '-'}</Text></View>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  
-                  <Text style={styles.rAcctLine}><Text style={{fontFamily: 'Inter_700Bold'}}>Statement of Account Number:</Text> {user.accountNumber || '-'}</Text>
-                  
-                  <View style={{alignItems: 'center', marginBottom: 15}}>
-                    <Text style={styles.rBillSummaryBadge}>BILL SUMMARY</Text>
-                  </View>
-                  
-                  <View style={styles.rCalculationsBox}>
-                    <Text style={styles.rCalcSectionTitle}>A. Previous Charges</Text>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Balance from Previous Bill</Text>
-                      <Text style={styles.rCalcValue}>₱{previousCharges.toFixed(2)}</Text>
+
+                    <Text style={styles.rAcctLine}><Text style={{ fontFamily: 'Inter_700Bold' }}>Statement of Account Number:</Text> {user.accountNumber || '-'}</Text>
+
+                    <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                      <Text style={styles.rBillSummaryBadge}>BILL SUMMARY</Text>
                     </View>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
-                      <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
-                    </View>
-                    <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
-                      <Text style={[styles.rCalcLabel, {fontFamily: 'Inter_700Bold'}]}>Remaining Balance from Previous Bill</Text>
-                      <Text style={[styles.rCalcValue, {fontFamily: 'Inter_700Bold'}]}>₱{remainingBalance.toFixed(2)}</Text>
-                    </View>
-                    
-                    <Text style={[styles.rCalcSectionTitle, {marginTop: 20}]}>B. Current Charges</Text>
-                    <View style={styles.rCalcRow}>
-                      <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
-                      <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
-                    </View>
-                    {isPaidReceipt && (
+
+                    <View style={styles.rCalculationsBox}>
+                      <Text style={styles.rCalcSectionTitle}>A. Previous Charges</Text>
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Balance from Previous Bill</Text>
+                        <Text style={styles.rCalcValue}>₱{previousCharges.toFixed(2)}</Text>
+                      </View>
                       <View style={styles.rCalcRow}>
                         <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
-                        <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                        <Text style={styles.rCalcValue}>{prevPaymentText}</Text>
                       </View>
-                    )}
-                    
-                    <View style={styles.rTotalBox}>
-                      <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
-                      <Text style={styles.rTotalValue}>₱{totalAmountDue.toFixed(2)}</Text>
+                      <View style={[styles.rCalcRow, { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8, marginTop: 5 }]}>
+                        <Text style={[styles.rCalcLabel, { fontFamily: 'Inter_700Bold' }]}>Remaining Balance from Previous Bill</Text>
+                        <Text style={[styles.rCalcValue, { fontFamily: 'Inter_700Bold' }]}>₱{remainingBalance.toFixed(2)}</Text>
+                      </View>
+
+                      <Text style={[styles.rCalcSectionTitle, { marginTop: 20 }]}>B. Current Charges</Text>
+                      <View style={styles.rCalcRow}>
+                        <Text style={styles.rCalcLabel}>Monthly Service Fee ({selectedReceipt.plan || selectedReceipt.period || selectedReceipt.billingMonth || 'Plan'})</Text>
+                        <Text style={styles.rCalcValue}>₱{currentCharges.toFixed(2)}</Text>
+                      </View>
+                      {isPaidReceipt && (
+                        <View style={styles.rCalcRow}>
+                          <Text style={styles.rCalcLabel}>Less: Payments Received</Text>
+                          <Text style={styles.rCalcValue}>₱{actualCurrentCharges.toFixed(2)}</Text>
+                        </View>
+                      )}
+
+                      <View style={styles.rTotalBox}>
+                        <Text style={styles.rTotalText}>TOTAL AMOUNT DUE</Text>
+                        <Text style={styles.rTotalValue}>₱{totalAmountDue.toFixed(2)}</Text>
+                      </View>
                     </View>
-                  </View>
-                  
-                  <Text style={styles.rThankYou}>Please pay on or before the due date to avoid service interruption.</Text>
-                  
-                  <TouchableOpacity style={styles.rCloseBtn} onPress={() => setReceiptVisible(false)}>
-                    <Text style={styles.rCloseBtnText}>Close Receipt</Text>
-                  </TouchableOpacity>
-                </>
+
+                    <Text style={styles.rThankYou}>Please pay on or before the due date to avoid service interruption.</Text>
+
+                    <TouchableOpacity style={styles.rCloseBtn} onPress={() => setReceiptVisible(false)}>
+                      <Text style={styles.rCloseBtnText}>Close Receipt</Text>
+                    </TouchableOpacity>
+                  </>
                 );
               })()}
             </ScrollView>
@@ -1043,7 +1037,7 @@ export default function BillingScreen({ user, route, navigation }) {
       {/* AI Analysis Real Modal */}
       <Modal visible={showAIModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.9)', justifyContent: 'center', alignItems: 'center' }}>
-          
+
           <View style={{ position: 'absolute', top: 40, right: 30 }}>
             <View style={{ width: 60, height: 60, borderRadius: 30, borderWidth: 3, borderColor: '#10b981', justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ color: '#10b981', fontSize: 20, fontFamily: 'Inter_700Bold' }}>{aiTimer}</Text>
@@ -1056,7 +1050,7 @@ export default function BillingScreen({ user, route, navigation }) {
           </View>
 
           <View style={{ backgroundColor: '#1e293b', width: '90%', borderRadius: 16, padding: 25, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20 }}>
-            
+
             <View style={{ backgroundColor: '#0f172a', padding: 15, borderRadius: 12, marginBottom: 15 }}>
               <Text style={{ color: '#64748b', fontSize: 11, fontFamily: 'Inter_600SemiBold', marginBottom: 5 }}>AMOUNT PAID</Text>
               <Text style={{ color: '#10b981', fontSize: 24, fontFamily: 'Inter_700Bold' }}>{extractedData?.amount}</Text>
@@ -1089,7 +1083,7 @@ export default function BillingScreen({ user, route, navigation }) {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ backgroundColor: '#3b82f6', paddingVertical: 15, borderRadius: 12, alignItems: 'center' }}
               onPress={() => setShowAIModal(false)}
             >
