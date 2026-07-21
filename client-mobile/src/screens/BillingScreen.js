@@ -837,17 +837,17 @@ export default function BillingScreen({ user, route, navigation }) {
 
           <TouchableOpacity style={styles.methodCard} onPress={() => { }}>
             <MaterialCommunityIcons name="bank" size={30} color="#F37021" />
-            <View style={styles.methodInfo}>
+            <View style={[styles.methodInfo, { flex: 1 }]}>
               <Text style={styles.methodName}>BDO Bank Transfer</Text>
-              <Text style={styles.methodDetails}>Acct: 001234567890</Text>
+              <Text style={[styles.methodDetails, { fontSize: 11, fontStyle: 'italic' }]}>This payment method is in progress and not available right now</Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.methodCard} onPress={() => { }}>
             <MaterialCommunityIcons name="bank-transfer" size={30} color="#D7141A" />
-            <View style={styles.methodInfo}>
+            <View style={[styles.methodInfo, { flex: 1 }]}>
               <Text style={styles.methodName}>BPI Online</Text>
-              <Text style={styles.methodDetails}>Acct: 0987654321</Text>
+              <Text style={[styles.methodDetails, { fontSize: 11, fontStyle: 'italic' }]}>This payment method is in progress and not available right now</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -860,11 +860,19 @@ export default function BillingScreen({ user, route, navigation }) {
           <View style={styles.receiptPaper}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
               {selectedReceipt && (() => {
-                const isPaidReceipt = selectedReceipt.status === 'paid' || selectedReceipt.collection === 'payments';
+                let activeRec = selectedReceipt;
+                const pMatch = (payments || []).find(x => x.id === selectedReceipt.id);
+                if (pMatch) activeRec = { ...pMatch, status: 'paid', collection: 'payments' };
+                else {
+                  const bMatch = (bills || []).find(x => x.id === selectedReceipt.id);
+                  if (bMatch) activeRec = bMatch;
+                }
+
+                const isPaidReceipt = activeRec.status === 'paid' || activeRec.collection === 'payments';
 
                 const statementDateObj = isPaidReceipt
-                  ? new Date(selectedReceipt.datePaid || selectedReceipt.date || selectedReceipt.dateSent || 0)
-                  : new Date(selectedReceipt.dateSent || selectedReceipt.date || 0);
+                  ? new Date(activeRec.datePaid || activeRec.date || activeRec.dateSent || 0)
+                  : new Date(activeRec.dateSent || activeRec.date || 0);
                 const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                 const allPays = [];
@@ -879,14 +887,14 @@ export default function BillingScreen({ user, route, navigation }) {
 
                 allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
 
-                const amount = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                const amount = parseFloat(String(activeRec.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
 
                 let baseAmountStr = String(user.amount || user.ammount || user.plan_price || user.planPrice || user.price || user.monthlyFee || 0);
                 let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
 
                 if (baseAmount === 0) {
-                  const pStr = String(user.plan || user.Plan || selectedReceipt.plan || '').toLowerCase();
+                  const pStr = String(user.plan || user.Plan || activeRec.plan || '').toLowerCase();
                   if (pStr.includes('200')) baseAmount = 3500;
                   else if (pStr.includes('100')) baseAmount = 2500;
                   else if (pStr.includes('70')) baseAmount = 2000;
@@ -897,7 +905,7 @@ export default function BillingScreen({ user, route, navigation }) {
 
                 let prevPaid = true;
                 let prevCharges = 0; // Default to 0 for start of records
-                const currentIdx = allPays.findIndex(p => p.id === selectedReceipt.id || p.billId === selectedReceipt.id);
+                const currentIdx = allPays.findIndex(p => p.id === activeRec.id || p.billId === activeRec.id);
                 if (currentIdx > 0) {
                   prevPaid = allPays[currentIdx - 1].isPaidRec;
                   if (!prevPaid) {
@@ -914,8 +922,8 @@ export default function BillingScreen({ user, route, navigation }) {
                 let totalAmountDue = currentCharges + remainingBalance - paymentMade;
                 if (totalAmountDue < 0) totalAmountDue = 0;
 
-                if (!isPaidReceipt && selectedReceipt.status === 'partially_paid') {
-                  totalAmountDue = parseFloat(String(selectedReceipt.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                if (!isPaidReceipt && activeRec.status === 'partially_paid') {
+                  totalAmountDue = parseFloat(String(activeRec.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 }
 
                 let previousCharges = prevCharges;
@@ -941,7 +949,7 @@ export default function BillingScreen({ user, route, navigation }) {
                         <Text style={styles.rClientAddress} numberOfLines={3}>{user.address || 'None'}</Text>
 
                         {(() => {
-                          const currentPlan = user.Plan || user.plan || selectedReceipt.plan || '';
+                          const currentPlan = user.Plan || user.plan || activeRec.plan || '';
                           let currentSpeedStr = '';
                           const match = currentPlan.match(/(\d+)\s*Mbps/i);
                           if (match) {
@@ -969,7 +977,7 @@ export default function BillingScreen({ user, route, navigation }) {
                         </View>
                         <View style={styles.rGridRow}>
                           <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{statementDateStr}</Text></View>
-                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { fontSize: 8 }]}>{selectedReceipt.id}</Text></View>
+                          <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { fontSize: 8 }]}>{activeRec.id}</Text></View>
                         </View>
                         <View style={styles.rGridRow}>
                           <View style={styles.rGridHeader}><Text style={styles.rGridHeaderText}>TOTAL AMOUNT DUE</Text></View>
@@ -977,7 +985,7 @@ export default function BillingScreen({ user, route, navigation }) {
                         </View>
                         <View style={styles.rGridRow}>
                           <View style={styles.rGridCell}><Text style={[styles.rGridCellText, { color: '#E53935', fontFamily: 'Inter_700Bold' }]}>₱{totalAmountDue.toFixed(2)}</Text></View>
-                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{selectedReceipt.dueDate || '-'}</Text></View>
+                          <View style={styles.rGridCell}><Text style={styles.rGridCellText}>{activeRec.dueDate || '-'}</Text></View>
                         </View>
                       </View>
                     </View>

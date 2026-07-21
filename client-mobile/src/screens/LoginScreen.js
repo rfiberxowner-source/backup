@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Image, ScrollView, Modal } from 'react-native';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
@@ -80,6 +80,18 @@ export default function LoginScreen({ onLogin }) {
       });
 
       if (authenticated) {
+        if (userData.activeSessionToken) {
+          setErrorMsg('Account is already logged in on another device. Please sign out from that device first.');
+          setLoading(false);
+          return;
+        }
+
+        const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const userRef = doc(db, "users", userData.id);
+        await updateDoc(userRef, { activeSessionToken: sessionToken });
+        
+        userData.activeSessionToken = sessionToken;
+        await AsyncStorage.setItem('clientSessionToken', sessionToken);
         await AsyncStorage.setItem('clientUser', JSON.stringify(userData));
         onLogin(userData);
       } else {

@@ -32,7 +32,7 @@ export const clientViews = {
         const queryField = isEmail ? 'email' : 'name';
 
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { getFirestore, collection, query, where, getDocs, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
         const firebaseConfig = {
           apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
@@ -59,14 +59,29 @@ export const clientViews = {
         }
 
         let authenticated = false;
-        querySnapshot.forEach((doc) => {
-          if (doc.data().password === password) {
+        let userData = null;
+        querySnapshot.forEach((d) => {
+          if (d.data().password === password) {
             authenticated = true;
-            localStorage.setItem('clientUser', JSON.stringify({ id: doc.id, ...doc.data() }));
+            userData = { id: d.id, ...d.data() };
           }
         });
 
         if (authenticated) {
+          if (userData.activeSessionToken) {
+            errorMsg.textContent = 'Account is already logged in on another device. Please sign out from that device first.';
+            errorMsg.style.display = 'block';
+            submitBtn.innerHTML = 'Sign in &rarr;';
+            submitBtn.disabled = false;
+            return;
+          }
+          
+          const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          await updateDoc(doc(db, "users", userData.id), { activeSessionToken: sessionToken });
+          userData.activeSessionToken = sessionToken;
+          
+          localStorage.setItem('clientSessionToken', sessionToken);
+          localStorage.setItem('clientUser', JSON.stringify(userData));
           window.router.navigate('/dashboard');
         } else {
           errorMsg.textContent = 'Incorrect password. Please try again.';
@@ -214,12 +229,38 @@ export const clientViews = {
       }
     };
 
-    window.logoutClient = function () {
+    window.logoutClient = async function () {
       if (window.clientPortalHeartbeat) {
         clearInterval(window.clientPortalHeartbeat);
         window.clientPortalHeartbeat = null;
       }
+      try {
+        const userStr = localStorage.getItem('clientUser');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const { getFirestore, updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+          const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+          const firebaseConfig = {
+            apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
+            authDomain: "portal-c293a.firebaseapp.com",
+            projectId: "portal-c293a",
+            storageBucket: "portal-c293a.firebasestorage.app",
+            messagingSenderId: "159583415029",
+            appId: "1:159583415029:web:bb5221ff531fa1005a33bc"
+          };
+          let app;
+          try { app = initializeApp(firebaseConfig); } catch (err) { }
+          const db = getFirestore();
+          await updateDoc(doc(db, "users", user.id), { activeSessionToken: "" });
+        }
+      } catch (e) {
+        console.error("Error clearing session", e);
+      }
+      if (window._clientPortalAuthUnsub) {
+        window._clientPortalAuthUnsub();
+      }
       localStorage.removeItem('clientUser');
+      localStorage.removeItem('clientSessionToken');
       window.router.navigate('/clientlogin');
     };
 
@@ -2218,7 +2259,7 @@ If a field is not found, return "TBD".`;
       (async function () {
         try {
           const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-          const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+          const { getFirestore, doc, getDoc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
           const firebaseConfig = {
             apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
@@ -2234,6 +2275,21 @@ If a field is not found, return "TBD".`;
           const db = getFirestore();
 
           if (!user.id) return;
+          
+          if (window._clientPortalAuthUnsub) window._clientPortalAuthUnsub();
+          window._clientPortalAuthUnsub = onSnapshot(doc(db, "users", user.id), (userDoc) => {
+             if (userDoc.exists()) {
+               const data = userDoc.data();
+               const currentToken = localStorage.getItem('clientSessionToken');
+               if (currentToken && data.activeSessionToken && data.activeSessionToken !== currentToken) {
+                 if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
+                 localStorage.removeItem('clientUser');
+                 localStorage.removeItem('clientSessionToken');
+                 window.router.navigate('/clientlogin');
+               }
+             }
+          });
+
           const userDoc = await getDoc(doc(db, "users", user.id));
           if (userDoc.exists()) {
             const data = userDoc.data();

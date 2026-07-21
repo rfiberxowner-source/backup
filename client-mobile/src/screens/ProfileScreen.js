@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -81,6 +81,31 @@ export default function ProfileScreen({ route, user, onLogout }) {
       setNotificationsEnabled(!val); // Revert
     }
   };
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "users", user.id), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (!isEditing) {
+          const parsed = parseName(data.name);
+          setUserData(prev => ({
+            ...prev,
+            name: data.name || '',
+            firstName: parsed.first,
+            middleName: parsed.middle,
+            lastName: parsed.last,
+            email: data.email || '',
+            phone: data.phone || '',
+            address: data.address || '',
+            facebook: data.facebook || '',
+            password: data.password || '',
+            profilePicture: data.profilePicture || null
+          }));
+        }
+      }
+    });
+    return () => unsub();
+  }, [user.id, isEditing]);
 
   useEffect(() => {
     if (route?.params?.showUpdateDetails) {

@@ -2,6 +2,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
   let isAdmin = false;
   let adminRole = 'Minimal';
   let adminName = 'Admin';
+  let adminId = null;
   try {
     const u = localStorage.getItem('adminUser');
     if (u) {
@@ -9,12 +10,37 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       const data = JSON.parse(u);
       adminRole = data.role || 'Minimal';
       adminName = data.name || 'Admin User';
+      adminId = data.id;
     }
   } catch (e) { }
 
   if (!isAdmin) {
     setTimeout(() => window.router.navigate('/RFiberXAdminportal'), 0);
     return '<div style="min-height: 100vh; background: #0b0f19;"></div>';
+  }
+
+  // --- Start Auth Listener for Admin ---
+  if (adminId && adminId !== 'owner-01' && !window._adminAuthUnsub) {
+    (async function() {
+      try {
+        const { db, firestore } = await window._getAdminDb();
+        window._adminAuthUnsub = firestore.onSnapshot(firestore.doc(db, "admin", adminId), (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const currentToken = localStorage.getItem('adminSessionToken');
+            if (currentToken && data.activeSessionToken && data.activeSessionToken !== currentToken) {
+              if (window._adminAuthUnsub) {
+                window._adminAuthUnsub();
+                window._adminAuthUnsub = null;
+              }
+              localStorage.removeItem('adminUser');
+              localStorage.removeItem('adminSessionToken');
+              window.router.navigate('/RFiberXAdminportal');
+            }
+          }
+        });
+      } catch(e) {}
+    })();
   }
 
   // RBAC checks for routing
@@ -873,6 +899,7 @@ export const adminViews = {
                 <option value="100Mbps">100Mbps</option>
                 <option value="200Mbps">200Mbps</option>
               </select>
+              <button id="client-logout-mode-btn" onclick="window.toggleClientLogoutMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-right: 0.5rem;">Enable Force Logout</button>
               <button id="client-delete-mode-btn" onclick="window.toggleClientDeleteMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">Enable Deletion Mode</button>
             </div>
           </div>
@@ -1486,8 +1513,25 @@ window._getAdminDb = async function () {
   return { db: firestore.getFirestore(), firestore };
 };
 
-window.logoutAdminEffect = function () {
+window.logoutAdminEffect = async function () {
+  try {
+    const adminStr = localStorage.getItem('adminUser');
+    if (adminStr) {
+      const admin = JSON.parse(adminStr);
+      if (admin.id && admin.id !== 'owner-01') {
+        const { db, firestore } = await window._getAdminDb();
+        await firestore.updateDoc(firestore.doc(db, "admin", admin.id), { activeSessionToken: "" });
+      }
+    }
+  } catch (e) { console.error(e); }
+  
+  if (window._adminAuthUnsub) {
+    window._adminAuthUnsub();
+    window._adminAuthUnsub = null;
+  }
+  
   localStorage.removeItem('adminUser');
+  localStorage.removeItem('adminSessionToken');
   window.router.navigate('/RFiberXAdminportal');
 };
 
@@ -1527,6 +1571,14 @@ window.handleAdminLogin = async function () {
       throw new Error("Invalid credentials");
     }
 
+    if (data.activeSessionToken) {
+      throw new Error("Account is already logged in on another device/browser. Please log out there first.");
+    }
+    
+    const sessionToken = 'admin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    await firestore.updateDoc(firestore.doc(db, "admin", doc.id), { activeSessionToken: sessionToken });
+
+    localStorage.setItem('adminSessionToken', sessionToken);
     localStorage.setItem('adminUser', JSON.stringify({
       email: data.email,
       role: data.role || 'Minimal',
@@ -2430,8 +2482,26 @@ window.initAdminAccounts = async function () {
 };
 
 window.isClientDeleteMode = false;
+window.isClientLogoutMode = false;
+
+window.toggleClientLogoutMode = function () {
+  window.isClientLogoutMode = !window.isClientLogoutMode;
+  if (window.isClientLogoutMode && window.isClientDeleteMode) {
+    window.toggleClientDeleteMode();
+  }
+  const btn = document.getElementById('client-logout-mode-btn');
+  if (btn) {
+    btn.style.background = window.isClientLogoutMode ? '#f59e0b' : '#0f131f';
+    btn.innerText = window.isClientLogoutMode ? 'Cancel Force Logout' : 'Enable Force Logout';
+  }
+  if (window.renderAdminClientsTable) window.renderAdminClientsTable();
+};
+
 window.toggleClientDeleteMode = function () {
   window.isClientDeleteMode = !window.isClientDeleteMode;
+  if (window.isClientDeleteMode && window.isClientLogoutMode) {
+    window.toggleClientLogoutMode();
+  }
   const btn = document.getElementById('client-delete-mode-btn');
   if (btn) {
     btn.style.background = window.isClientDeleteMode ? '#ef4444' : '#0f131f';
@@ -2460,6 +2530,19 @@ window.confirmAccountDeletion = async function (collection, id) {
       if (window.loadAdminDashboardData) window.loadAdminDashboardData();
     } catch (e) {
       alert("Failed to delete account.");
+      console.error(e);
+    }
+  }
+};
+
+window.confirmForceLogout = async function (id) {
+  if (window.confirm("Are you sure you want to FORCE LOGOUT this account? They will be immediately disconnected from the mobile app.")) {
+    try {
+      const { db, firestore } = await window._getAdminDb();
+      await firestore.updateDoc(firestore.doc(db, "users", id), { activeSessionToken: "" });
+      alert("Account successfully force logged out.");
+    } catch (e) {
+      alert("Failed to force logout account.");
       console.error(e);
     }
   }
@@ -2570,12 +2653,34 @@ window.renderAdminClientsTable = async function () {
       const amtStr = finalAmount !== 'TBD' ? '₱' + parseFloat(String(finalAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString() : 'TBD';
 
       const isDel = window.isClientDeleteMode;
+      const isLog = window.isClientLogoutMode;
+      
+      let rowBg = 'transparent';
+      let rowClick = `window.openAdminClientModal('${d.id}')`;
+      let rowDblClick = '';
+      let hoverBg = 'rgba(255,255,255,0.05)';
+      let hoverOutBg = 'transparent';
+
+      if (isDel) {
+        rowBg = 'rgba(239, 68, 68, 0.2)';
+        hoverBg = 'rgba(239, 68, 68, 0.4)';
+        hoverOutBg = 'rgba(239, 68, 68, 0.2)';
+        rowClick = '';
+        rowDblClick = `window.confirmAccountDeletion('users', '${d.id}')`;
+      } else if (isLog) {
+        rowBg = 'rgba(245, 158, 11, 0.2)';
+        hoverBg = 'rgba(245, 158, 11, 0.4)';
+        hoverOutBg = 'rgba(245, 158, 11, 0.2)';
+        rowClick = '';
+        rowDblClick = `window.confirmForceLogout('${d.id}')`;
+      }
+
       html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer; ${isDel ? 'background: rgba(239, 68, 68, 0.2);' : ''}" 
-            onclick="${isDel ? '' : `window.openAdminClientModal('${d.id}')`}" 
-            ondblclick="${isDel ? `window.confirmAccountDeletion('users', '${d.id}')` : ''}"
-            onmouseover="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'" 
-            onmouseout="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}'; this.style.boxShadow='none'">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer; background: ${rowBg};" 
+            onclick="${rowClick}" 
+            ondblclick="${rowDblClick}"
+            onmouseover="this.style.background='${hoverBg}'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'" 
+            onmouseout="this.style.background='${hoverOutBg}'; this.style.boxShadow='none'">
           <td style="padding: 1rem; vertical-align: middle; font-family: monospace; color: #fff;">${accNum}</td>
           <td style="padding: 1rem; vertical-align: middle; color: #fff;">${fullName}</td>
           <td style="padding: 1rem; vertical-align: middle; color: #94a3b8;">${email}</td>

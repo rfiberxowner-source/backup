@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TextInput, TouchableOpacity, Alert, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, addDoc, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { Picker } from '@react-native-picker/picker';
@@ -45,28 +45,25 @@ export default function SupportScreen({ user, route, navigation }) {
   }, [route.params?.ticketId, tickets]);
 
   const fetchTickets = async () => {
-    try {
-      const q = query(collection(db, "reports"), where("userId", "==", user.id));
-      const repSnap = await getDocs(q);
+    // Real-time listener replaces manual fetch
+  };
+
+  useEffect(() => {
+    const q = query(collection(db, "reports"), where("userId", "==", user.id));
+    const unsub = onSnapshot(q, (repSnap) => {
       const userTickets = [];
       repSnap.forEach(d => {
         userTickets.push({ id: d.id, ...d.data() });
       });
       userTickets.sort((a, b) => new Date(b.date) - new Date(a.date));
       setTickets(userTickets);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchTickets();
-  }, []);
+    });
+    return () => unsub();
+  }, [user.id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchTickets();
-    setRefreshing(false);
+    setTimeout(() => setRefreshing(false), 800);
   };
 
   const submitReport = async () => {
@@ -331,41 +328,44 @@ export default function SupportScreen({ user, route, navigation }) {
       <Modal visible={detailModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {selectedTicketDetail && (
+            {selectedTicketDetail && (() => {
+              const activeRec = tickets.find(t => t.id === selectedTicketDetail.id) || selectedTicketDetail;
+              return (
               <ScrollView style={{ width: '100%', maxHeight: 450 }} showsVerticalScrollIndicator={false}>
                 
                 <View style={styles.detailHeader}>
                   <Text style={styles.modalTitle}>Ticket Details</Text>
-                  <Text style={styles.detailHeaderId}>{selectedTicketDetail.reportId}</Text>
+                  <Text style={styles.detailHeaderId}>{activeRec.reportId}</Text>
                 </View>
                 
                 <View style={{ marginBottom: 20 }}>
                   <View style={styles.detailStatusBadge}>
-                    <Text style={[styles.detailStatusText, { color: selectedTicketDetail.status === 'Fixed' || selectedTicketDetail.status === 'Done' ? '#6366f1' : '#f59e0b' }]}>
-                      STATUS: {selectedTicketDetail.status}
+                    <Text style={[styles.detailStatusText, { color: activeRec.status === 'Fixed' || activeRec.status === 'Done' ? '#6366f1' : activeRec.status === 'Read' ? '#10b981' : '#f59e0b' }]}>
+                      STATUS: {activeRec.status}
                     </Text>
                   </View>
                   
                   <View style={styles.detailRow}>
                     <View style={{ flex: 1, paddingRight: 10 }}>
                       <Text style={styles.detailLabel}>Subject</Text>
-                      <Text style={styles.detailValue}>{selectedTicketDetail.subject}</Text>
+                      <Text style={styles.detailValue}>{activeRec.subject}</Text>
                     </View>
                     <View style={{ flex: 1, paddingLeft: 10 }}>
                       <Text style={styles.detailLabel}>Category</Text>
-                      <Text style={styles.detailValue}>{selectedTicketDetail.category}</Text>
+                      <Text style={styles.detailValue}>{activeRec.category}</Text>
                     </View>
                   </View>
                   
                   <Text style={styles.detailLabel}>Description</Text>
                   <View style={styles.detailDescBox}>
-                    <Text style={styles.detailValueText}>{selectedTicketDetail.description}</Text>
+                    <Text style={styles.detailValueText}>{activeRec.description}</Text>
                   </View>
                   
-                  <Text style={styles.detailDateText}>Date Submitted: {new Date(selectedTicketDetail.date).toLocaleString()}</Text>
+                  <Text style={styles.detailDateText}>Date Submitted: {new Date(activeRec.date).toLocaleString()}</Text>
                 </View>
               </ScrollView>
-            )}
+              );
+            })()}
             <TouchableOpacity style={[styles.btnPrimary, { width: '100%' }]} onPress={() => setDetailModalVisible(false)}>
               <Text style={styles.btnPrimaryText}>Close Details</Text>
             </TouchableOpacity>

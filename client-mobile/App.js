@@ -78,7 +78,18 @@ function MainTabs({ user, setUser }) {
         {props => <SupportScreen {...props} user={user} />}
       </Tab.Screen>
       <Tab.Screen name="Profile">
-        {props => <ProfileScreen {...props} user={user} onLogout={() => setUser(null)} />}
+        {props => <ProfileScreen {...props} user={user} onLogout={async () => {
+           try {
+             const token = await AsyncStorage.getItem('clientSessionToken');
+             if (token && user?.id) {
+               await updateDoc(doc(db, "users", user.id), { activeSessionToken: "" });
+             }
+           } catch (e) {
+             console.error("Error clearing session", e);
+           }
+           await AsyncStorage.clear();
+           setUser(null);
+        }} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
@@ -117,9 +128,22 @@ function RootNavigator() {
     let unsubscribe = null;
     if (user?.id) {
       const userRef = doc(db, "users", user.id);
-      unsubscribe = onSnapshot(userRef, (docSnap) => {
+      unsubscribe = onSnapshot(userRef, async (docSnap) => {
         if (docSnap.exists()) {
           const freshData = { id: docSnap.id, ...docSnap.data() };
+          
+          const currentToken = await AsyncStorage.getItem('clientSessionToken');
+          
+          // If the server has a token, and we have a token, and they don't match, we got kicked out or cleared.
+          // Or if the server has NO token (admin cleared it), we keep them logged in but they will get a new token next time they log in.
+          // Actually, if admin clears it, they can stay logged in locally, allowing someone else to log in later. 
+          // If someone else logs in, freshData will get a NEW token, which won't match currentToken, so we log them out then!
+          if (currentToken && freshData.activeSessionToken && freshData.activeSessionToken !== currentToken) {
+            await AsyncStorage.clear();
+            setUser(null);
+            return;
+          }
+
           setUser(freshData);
           AsyncStorage.setItem('clientUser', JSON.stringify(freshData)).catch(() => {});
         }

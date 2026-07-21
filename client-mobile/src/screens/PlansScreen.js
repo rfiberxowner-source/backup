@@ -12,6 +12,7 @@ const PLANS = [
   { id: 3, name: 'Family RFiberX', price: '1300', features: ['Up to 70 Mbps', 'Unlimited Data', 'Dual-Band Router', 'Great for 10 devices'] },
   { id: 4, name: 'Pro RFiberX', price: '1500', features: ['Up to 100 Mbps', 'Unlimited Data', 'Wi-Fi 6 Router', '4K Streaming & Gaming'] },
   { id: 5, name: 'Extreme RFiberX', price: '2000', features: ['Up to 200 Mbps', 'Unlimited Data', 'Mesh System Included', 'Ultimate Smart Home'] },
+  { id: 6, name: 'Ultra RFiberX', price: '4500', features: ['Dual-Band Router 5G', 'Unlimited Data', 'Up to 50 devices'] },
 ];
 
 export default function PlansScreen({ user, navigation }) {
@@ -34,9 +35,13 @@ export default function PlansScreen({ user, navigation }) {
     else if (n.includes('family') || n.includes('2500')) currentSpeed = 70;
     else if (n.includes('pro') || n.includes('3500')) currentSpeed = 100;
     else if (n.includes('extreme') || n.includes('7499') || n.includes('1 gbps')) currentSpeed = 200;
+    else if (n.includes('ultra') || n.includes('4500')) currentSpeed = 500;
   }
 
   const getPlanSpeed = (plan) => {
+    const pName = plan.name.toLowerCase();
+    if (pName.includes('ultra')) return 500;
+    
     for (const f of plan.features) {
       const m = f.match(/(\d+)\s*Mbps/i);
       if (m) return parseInt(m[1]);
