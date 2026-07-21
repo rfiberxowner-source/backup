@@ -7,6 +7,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+// import * as Notifications from 'expo-notifications';
+// import * as Device from 'expo-device';
 
 export default function ProfileScreen({ route, user, onLogout }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -43,6 +46,41 @@ export default function ProfileScreen({ route, user, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [updateDetailsModal, setUpdateDetailsModal] = useState(null);
   const [showUpdatePassword, setShowUpdatePassword] = useState(false);
+  
+  const [notificationsEnabled, setNotificationsEnabled] = useState(user.notificationsEnabled || false);
+
+  const toggleNotifications = async (val) => {
+    setNotificationsEnabled(val);
+    try {
+      const userRef = doc(db, 'users', user.id);
+      
+      if (val === true) {
+        if (!Device.isDevice) {
+          Alert.alert('Error', 'Must use physical device for Push Notifications');
+          setNotificationsEnabled(false);
+          return;
+        }
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') {
+          Alert.alert('Permission Denied', 'Please enable notifications in your phone Settings.');
+          setNotificationsEnabled(false);
+          return;
+        }
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: 'rfiberx-mobile-app' }).catch(() => Notifications.getExpoPushTokenAsync());
+        await updateDoc(userRef, { notificationsEnabled: true, expoPushToken: tokenData.data });
+      } else {
+        await updateDoc(userRef, { notificationsEnabled: false });
+      }
+    } catch (e) {
+      console.log('Error toggling notifications', e);
+      setNotificationsEnabled(!val); // Revert
+    }
+  };
 
   useEffect(() => {
     if (route?.params?.showUpdateDetails) {
@@ -126,6 +164,17 @@ export default function ProfileScreen({ route, user, onLogout }) {
       }
     }
 
+    if (userData.password) {
+      if (userData.password.length < 8) {
+        Alert.alert('Error', 'Password must be at least 8 characters long.');
+        return;
+      }
+      if (!/[A-Z]/.test(userData.password)) {
+        Alert.alert('Error', 'Password must contain at least one uppercase letter.');
+        return;
+      }
+    }
+    
     setLoading(true);
     try {
       const userRef = doc(db, "users", user.id);
@@ -144,6 +193,26 @@ export default function ProfileScreen({ route, user, onLogout }) {
       });
 
       const payload = { ...userData };
+
+      // Feature: Invisible GPS Tracking on Address Change
+      const addressChanged = changes.find(c => c.key === 'address');
+      if (addressChanged) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            payload.rawLocation = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              timestamp: new Date().toISOString()
+            };
+          } else {
+            Alert.alert('Notice', 'Location permission was denied. Your address was updated, but the system could not fetch exact coordinates for future features.');
+          }
+        } catch (locErr) {
+          console.error("Location error:", locErr);
+        }
+      }
 
       if (changes.length > 0) {
         const newUpdate = {
@@ -265,6 +334,23 @@ export default function ProfileScreen({ route, user, onLogout }) {
           {/* App Preferences */}
           <Text style={styles.groupTitle}>Preferences</Text>
           <View style={styles.insetGroup}>
+            {/* Temporarily disabled Push Notifications toggle
+            <View style={[styles.fieldRow, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 15, marginBottom: 15 }]}>
+              <View style={styles.fieldIconBox}>
+                <MaterialCommunityIcons name={notificationsEnabled ? "bell-ring" : "bell-off"} size={20} color={colors.textSecondary} />
+              </View>
+              <View style={styles.fieldContent}>
+                <Text style={styles.fieldLabel}>Push Notifications</Text>
+                <Text style={styles.fieldValue}>{notificationsEnabled ? 'Enabled' : 'Disabled'}</Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={toggleNotifications}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.text}
+              />
+            </View>
+            */}
             <View style={styles.fieldRow}>
               <View style={styles.fieldIconBox}>
                 <MaterialCommunityIcons name={isDarkMode ? "moon-waning-crescent" : "white-balance-sunny"} size={20} color={colors.textSecondary} />

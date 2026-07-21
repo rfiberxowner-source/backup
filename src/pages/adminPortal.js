@@ -2935,6 +2935,49 @@ window.sendMaintenanceAdvisory = async function () {
       timestamp: firestore.serverTimestamp()
     });
 
+    // Push Notification Blaster
+    try {
+      // 1. Fetch all users who have notificationsEnabled == true
+      const usersRef = firestore.collection(db, 'users');
+      const q = firestore.query(usersRef, firestore.where('notificationsEnabled', '==', true));
+      const querySnapshot = await firestore.getDocs(q);
+      
+      const tokens = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Check if token exists and if the target matches (if target is specific, could filter here in the future)
+        // Currently sending to ALL users who opted in since it's a general advisory
+        if (data.expoPushToken) {
+          tokens.push(data.expoPushToken);
+        }
+      });
+
+      if (tokens.length > 0) {
+        // 2. Prepare payload for Expo Push API
+        const pushPayload = tokens.map(token => ({
+          to: token,
+          sound: 'default',
+          title: `RFiberX Update: ${type}`,
+          body: msg,
+          data: { type, target },
+        }));
+
+        // 3. Fire the HTTP POST request to Expo servers
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pushPayload),
+        });
+        console.log(`Sent push notification to ${tokens.length} devices.`);
+      }
+    } catch (pushErr) {
+      console.error('Error sending push notifications:', pushErr);
+    }
+
     statusEl.innerHTML = '<div style="color: #10b981; margin-top: 0.5rem; font-size: 0.8rem;">Advisory sent successfully via ' + type + ' to ' + target + '.</div>';
     document.getElementById('comm-advisory-msg').value = '';
   } catch (e) {

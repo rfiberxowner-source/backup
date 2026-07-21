@@ -15,7 +15,7 @@ LogBox.ignoreLogs([
 LogBox.ignoreAllLogs(); // Ensures the yellow box is completely hidden for a clean UI
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { SairaCondensed_800ExtraBold, SairaCondensed_800ExtraBold_Italic } from '@expo-google-fonts/saira-condensed';
+import { SairaCondensed_800ExtraBold } from '@expo-google-fonts/saira-condensed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -31,6 +31,7 @@ import SupportScreen from './src/screens/SupportScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+// import PushNotificationHandler from './src/components/PushNotificationHandler';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,6 +43,8 @@ function MainTabs({ user, setUser }) {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        animation: 'shift', // Enables horizontal swipe animation based on tab index
+        sceneStyle: { backgroundColor: colors.background }, // Fixes white flash during animation
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.border,
@@ -89,7 +92,6 @@ function RootNavigator() {
     Inter_600SemiBold,
     Inter_700Bold,
     SairaCondensed_800ExtraBold,
-    SairaCondensed_800ExtraBold_Italic,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -176,6 +178,7 @@ function RootNavigator() {
           </Stack.Screen>
         )}
       </Stack.Navigator>
+      {/* user && <PushNotificationHandler user={user} onUpdateUser={setUser} /> */}
     </NavigationContainer>
   );
 }
