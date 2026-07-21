@@ -566,6 +566,154 @@ function NetworkMap() {
   const [mapAddressStatus, setMapAddressStatus] = useState("");
   const [selectedRoutePoint, setSelectedRoutePoint] = useState(null);
   const [pointAddresses, setPointAddresses] = useState(getStoredPointAddresses);
+  const [leftTab, setLeftTab] = useState("Mapping");
+  const [rawLocationClients, setRawLocationClients] = useState([]);
+  const [isShowingAllPins, setIsShowingAllPins] = useState(false);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        let docs = [];
+        if (window._adminUsersSnap) {
+          docs = window._adminUsersSnap.docs;
+        } else if (window._getAdminDb) {
+          const { db, firestore } = await window._getAdminDb();
+          const snap = await firestore.getDocs(firestore.collection(db, "users"));
+          docs = snap.docs;
+        }
+        const clients = docs.map(d => ({id: d.id, ...d.data()})).filter(c => c.rawLocation && c.rawLocation.latitude);
+        setRawLocationClients(clients);
+      } catch (e) {}
+    };
+    fetchClients();
+  }, []);
+
+  const allClientPinsRef = useRef([]);
+
+  const clearAllClientPins = () => {
+    if (allClientPinsRef.current) {
+      allClientPinsRef.current.forEach(m => m.setMap(null));
+      allClientPinsRef.current = [];
+    }
+  };
+
+  const showAllClientPins = (clients) => {
+    if (!googleMapRef.current || !window.google?.maps) return;
+    
+    if (clientPinRef.current) {
+      clientPinRef.current.setMap(null);
+      clientPinRef.current = null;
+    }
+    mapObjectsRef.current.infoWindow?.close();
+    
+    clearAllClientPins();
+
+    const maps = window.google.maps;
+    const bounds = new maps.LatLngBounds();
+    let hasPins = false;
+
+    clients.forEach(c => {
+      if (c.rawLocation && c.rawLocation.latitude && c.rawLocation.longitude) {
+        const lat = Number(c.rawLocation.latitude);
+        const lng = Number(c.rawLocation.longitude);
+        
+        const marker = new maps.Marker({
+          position: { lat, lng },
+          map: googleMapRef.current,
+          title: c.name || c.fullName || "Client",
+          zIndex: 9998,
+          icon: {
+            path: maps.SymbolPath.CIRCLE,
+            fillColor: "#f59e0b",
+            fillOpacity: 0.9,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+            scale: 8,
+          }
+        });
+
+        marker.addListener("click", () => {
+          panToClient(c);
+        });
+
+        allClientPinsRef.current.push(marker);
+        hasPins = true;
+      }
+    });
+  };
+
+  const toggleAllClientPins = (clients) => {
+    if (isShowingAllPins) {
+      clearAllClientPins();
+      setIsShowingAllPins(false);
+    } else {
+      showAllClientPins(clients);
+      setIsShowingAllPins(true);
+    }
+  };
+
+  const clientPinRef = useRef(null);
+
+  const panToClient = (c) => {
+    clearAllClientPins();
+    setIsShowingAllPins(false);
+    if (c.rawLocation && c.rawLocation.latitude && c.rawLocation.longitude) {
+      const lat = Number(c.rawLocation.latitude);
+      const lng = Number(c.rawLocation.longitude);
+      
+      if (googleMapRef.current && window.google?.maps) {
+        googleMapRef.current.panTo({ lat, lng });
+        googleMapRef.current.setZoom(18);
+
+        if (clientPinRef.current) {
+          clientPinRef.current.setMap(null);
+        }
+
+        const maps = window.google.maps;
+        const marker = new maps.Marker({
+          position: { lat, lng },
+          map: googleMapRef.current,
+          title: c.name || c.fullName || "Client",
+          zIndex: 9999,
+          icon: {
+            path: maps.SymbolPath.CIRCLE,
+            fillColor: "#e53935",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 3,
+            scale: 12,
+          }
+        });
+        
+        clientPinRef.current = marker;
+
+        if (!mapObjectsRef.current.infoWindow) {
+          mapObjectsRef.current.infoWindow = new maps.InfoWindow();
+        }
+        
+        mapObjectsRef.current.infoWindow.setContent(`
+          <div class="network-info-window" style="min-width:150px;max-width:230px;color:#172033;font-family:DM Sans, Manrope, Arial, sans-serif;line-height:1.35;">
+            <strong style="display:block;color:#101828;font-size:14px;font-weight:900;margin:0 0 5px;">Client Location</strong>
+            <span style="display:block;color:#344054;font-size:12px;font-weight:800;margin:0 0 3px;">${c.name || c.fullName}</span>
+            <small style="display:block;color:#667085;font-size:11px;font-weight:700;">Account ID: ${c.accountNumber || c.id}</small>
+          </div>
+        `);
+        
+        setTimeout(() => {
+          mapObjectsRef.current.infoWindow.open({ map: googleMapRef.current, anchor: marker });
+          window.google.maps.event.addListenerOnce(mapObjectsRef.current.infoWindow, 'closeclick', () => {
+            if (clientPinRef.current) {
+              clientPinRef.current.setMap(null);
+              clientPinRef.current = null;
+            }
+          });
+        }, 300);
+      }
+      
+      setMapCenter({ lat, lng });
+      setMapZoom(18);
+    }
+  };
 
   useEffect(() => {
     drawStateRef.current = { isDrawingRoute, isAddingRouteBends, manualRoutePoints };
@@ -745,7 +893,7 @@ function NetworkMap() {
     const selectedMapPosition = mapPositionForItem(selectedItem);
     if (hasValidCoordinates(selectedMapPosition)) {
       map.panTo({ lat: Number(selectedMapPosition.lat), lng: Number(selectedMapPosition.lng) });
-      if (map.getZoom() < 16) map.setZoom(16);
+      map.setZoom(18);
     }
   };
 
@@ -2270,6 +2418,9 @@ function NetworkMap() {
 
   useEffect(() => {
     focusSelectedOnMap();
+    if (selectedId && selectedId !== "headend" && selectedId !== "empty") {
+      setLeftTab("Mapping");
+    }
   }, [selectedId]);
 
   return (
@@ -2279,23 +2430,73 @@ function NetworkMap() {
         <section className="network-workspace real-map-workspace">
           <aside className="network-panel">
             <form className="network-search-card" onSubmit={runSearch}>
-              <span className="network-label">Search</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <span className="network-label" style={{ margin: 0 }}>Search</span>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                  <button 
+                    type="button"
+                    className={`role-action-button compact ${leftTab === 'Mapping' ? '' : 'secondary'}`} 
+                    onClick={() => setLeftTab('Mapping')} 
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem' }}
+                  >Mapping</button>
+                  <button 
+                    type="button"
+                    className={`role-action-button compact ${leftTab === 'Client' ? '' : 'secondary'}`} 
+                    onClick={() => setLeftTab('Client')} 
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.65rem' }}
+                  >Client</button>
+                </div>
+              </div>
               <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Account ID, client name, NAP" />
               <button className="role-action-button compact" type="submit" style={{ display: 'none' }}>Search map</button>
-              <div className="network-search-results" style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                {searchResults.map((result) => (
-                  <button key={result.id} type="button" onClick={() => selectMapItem(result.id)} style={{ width: '100%', textAlign: 'left', display: 'block' }}>
-                    <strong>{result.name}</strong>
-                    <small style={{ color: '#94a3b8' }}>{result.area || result.address || result.category}</small>
-                  </button>
-                ))}
-              </div>
+              
+              {leftTab === 'Mapping' ? (
+                <div className="network-search-results" style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                  {searchResults.map((result) => (
+                    <button key={result.id} type="button" onClick={() => selectMapItem(result.id)} style={{ width: '100%', textAlign: 'left', display: 'block' }}>
+                      <strong>{result.name}</strong>
+                      <small style={{ color: '#94a3b8' }}>{result.area || result.address || result.category}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : (() => {
+                const filteredClients = rawLocationClients.filter(c => {
+                  if (!searchQuery) return true;
+                  const q = searchQuery.toLowerCase();
+                  return (c.name || c.fullName || "").toLowerCase().includes(q) || (c.accountNumber || c.id || "").toLowerCase().includes(q);
+                });
+                return (
+                <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
+                  {filteredClients.length > 0 && (
+                    <button 
+                      type="button" 
+                      className={`role-action-button ${isShowingAllPins ? 'secondary' : ''}`} 
+                      onClick={() => toggleAllClientPins(filteredClients)}
+                      style={{ marginBottom: '0.5rem', width: '100%' }}
+                    >
+                      {isShowingAllPins ? "Remove all pinpoints" : "Show all pinpoints"}
+                    </button>
+                  )}
+                  <div className="network-client-list" style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {filteredClients.map(c => (
+                       <button key={c.id} type="button" onClick={() => panToClient(c)} style={{ width: '100%', textAlign: 'left', display: 'block', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>
+                         <strong style={{ display: 'block', marginBottom: '0.1rem', fontSize: '0.8rem' }}>{c.name || c.fullName}</strong>
+                         <small style={{ color: '#94a3b8', display: 'block', fontSize: '0.7rem' }}>ID: {c.accountNumber || c.id}</small>
+                       </button>
+                    ))}
+                    {filteredClients.length === 0 && (
+                      <div style={{ color: '#64748b', fontSize: '0.75rem', padding: '0.5rem', textAlign: 'center' }}>No clients found matching the search.</div>
+                    )}
+                  </div>
+                </div>
+                );
+              })()}
             </form>
 
             <span className="network-label">Map layers</span>
             <div className="network-filter-row">
               {filters.map((filter) => (
-                <button key={filter} type="button" className={activeFilter === filter ? "active" : ""} onClick={() => setActiveFilter(filter)}>
+                <button key={filter} type="button" className={activeFilter === filter ? "active" : ""} onClick={() => { setActiveFilter(filter); setLeftTab('Mapping'); }}>
                   {filter === "all" ? "All" : filter}
                 </button>
               ))}

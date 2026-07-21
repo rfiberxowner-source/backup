@@ -2438,14 +2438,31 @@ If a field is not found, return "TBD".`;
                   });
                   billingEmails.sort((a, b) => new Date(b.dateSent || 0) - new Date(a.dateSent || 0));
 
-                  // Evaluate dynamic overdue status (8 days)
+                  // Evaluate dynamic overdue status (based on dueDate)
                   billingEmails.forEach(be => {
-                    if (be.status !== 'paid' && be.status !== 'overdue') {
-                      if (Date.now() - new Date(be.dateSent).getTime() > 8 * 24 * 60 * 60 * 1000) {
-                        be.status = 'overdue';
+                    const originalStatus = (be.status || 'pending').toLowerCase();
+                    if (originalStatus !== 'paid' && originalStatus !== 'completed') {
+                      let isOverdue = false;
+                      if (be.dueDate) {
+                        const dueDate = new Date(be.dueDate);
+                        const now = new Date();
+                        now.setHours(0,0,0,0);
+                        dueDate.setHours(0,0,0,0);
+                        if (now > dueDate) {
+                          isOverdue = true;
+                          be.status = 'overdue';
+                        }
+                      }
+                      
+                      // Optionally update in DB
+                      if (isOverdue && originalStatus !== 'overdue') {
+                         import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(fs => {
+                           fs.updateDoc(fs.doc(db, "users", user.id, "billing_emails", be.id), { status: 'Overdue' }).catch(e => console.error(e));
+                         });
                       }
                     }
                   });
+
 
                   // Filter out paid bills from active lists
                   const activeBills = billingEmails.filter(b => b.status !== 'paid');

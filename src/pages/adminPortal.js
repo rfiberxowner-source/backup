@@ -326,8 +326,8 @@ export const adminViews = {
           ${[0, 1, 2, 3, 4, 5].map(i => `
             <div style="display: flex; flex-direction: column; align-items: center; flex: 1; position: relative;">
               <div id="rev-amt-${i}" style="font-size: 0.75rem; color: #fff; font-weight: 600; margin-bottom: 0.5rem;">₱0</div>
-              <div style="width: 40px; height: 220px; display: flex; align-items: flex-end; background: rgba(255,255,255,0.02); border-radius: 6px 6px 0 0;" >
-                <div id="rev-bar-${i}" style="width: 100%; background: linear-gradient(to top, rgba(6,182,212,1) 0%, rgba(6,182,212,0.05) 100%); box-shadow: 0 0 15px rgba(6,182,212,0.5); border-radius: 6px 6px 0 0; transition: height 0.5s ease-out; height: 0%;"></div>
+              <div style="width: 40px; height: 220px; display: flex; align-items: flex-end; background: rgba(255,255,255,0.02); border-radius: 6px 6px 0 0; cursor: pointer;" onmouseover="document.getElementById('rev-bar-${i}').style.boxShadow='0 0 25px rgba(6,182,212,1), 0 0 15px rgba(6,182,212,0.8)'" onmouseout="document.getElementById('rev-bar-${i}').style.boxShadow='0 0 15px rgba(6,182,212,0.5)'">
+                <div id="rev-bar-${i}" style="width: 100%; background: linear-gradient(to top, rgba(6,182,212,1) 0%, rgba(6,182,212,0.05) 100%); box-shadow: 0 0 15px rgba(6,182,212,0.5); border-radius: 6px 6px 0 0; transition: height 0.5s ease-out, box-shadow 0.2s ease-out; height: 0%;"></div>
               </div>
               <div id="rev-label-${i}" style="position: absolute; bottom: -25px; font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Mon</div>
             </div>
@@ -432,6 +432,76 @@ export const adminViews = {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
               <div style="font-size: 0.75rem; color: #64748b;">Submitted: <span id="modal-ticket-date"></span></div>
               <div id="modal-ticket-status-badge"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Revenue Tax Modal -->
+      <div id="admin-revenue-tax-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 400px; max-width: 90%; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+          <!-- Header -->
+          <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(6,182,212,0.1); color: #06b6d4; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
+              <div>
+                <h2 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0; font-family: 'Outfit', sans-serif;">Revenue Breakdown</h2>
+                <div id="tax-modal-month" style="color: #94a3b8; font-size: 0.75rem;">Month</div>
+              </div>
+            </div>
+            <button onclick="window.closeRevenueTaxPopup()" style="background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#64748b'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <!-- Body -->
+          <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+              <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Total Revenue</span>
+              <span id="tax-modal-total" style="color: #fff; font-size: 1.1rem; font-weight: 700;">₱0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+              <span style="color: #E53935; font-size: 0.85rem; font-weight: 500;">Tax Deducted (3%)</span>
+              <span id="tax-modal-tax" style="color: #E53935; font-size: 1.1rem; font-weight: 700;">-₱0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+              <span style="color: #10b981; font-size: 0.95rem; font-weight: 600;">Net Revenue</span>
+              <span id="tax-modal-net" style="color: #10b981; font-size: 1.5rem; font-weight: 800; font-family: 'Outfit', sans-serif;">₱0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Revenue Tax Modal -->
+      <div id="admin-revenue-tax-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 400px; max-width: 90%; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+          <!-- Header -->
+          <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(6,182,212,0.1); color: #06b6d4; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
+              <div>
+                <h2 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0; font-family: 'Outfit', sans-serif;">Revenue Breakdown</h2>
+                <div id="tax-modal-month" style="color: #94a3b8; font-size: 0.75rem;">Month</div>
+              </div>
+            </div>
+            <button onclick="window.closeRevenueTaxPopup()" style="background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#64748b'">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <!-- Body -->
+          <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+              <span style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Total Revenue</span>
+              <span id="tax-modal-total" style="color: #fff; font-size: 1.1rem; font-weight: 700;">₱0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+              <span style="color: #E53935; font-size: 0.85rem; font-weight: 500;">Tax Deducted (3%)</span>
+              <span id="tax-modal-tax" style="color: #E53935; font-size: 1.1rem; font-weight: 700;">-₱0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+              <span style="color: #10b981; font-size: 0.95rem; font-weight: 600;">Net Revenue</span>
+              <span id="tax-modal-net" style="color: #10b981; font-size: 1.5rem; font-weight: 800; font-family: 'Outfit', sans-serif;">₱0</span>
             </div>
           </div>
         </div>
@@ -778,11 +848,13 @@ export const adminViews = {
         <h3 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Add Staff Account</h3>
         <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 1rem;">Create login access for staff dashboard users</p>
         <div id="add-staff-msg" style="display:none; padding:0.5rem; border-radius:4px; font-size:0.8rem; font-weight:600; margin-bottom:1rem;"></div>
-        <div style="display: flex; gap: 0.5rem;">
-          <input type="text" id="add-staff-name" placeholder="Full Name" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
-          <input type="email" id="add-staff-email" placeholder="Email" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
-          <input type="text" id="add-staff-phone" placeholder="Phone Number" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
-          <input type="text" id="add-staff-password" placeholder="Password" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="add-staff-firstname" placeholder="First Name" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; min-width: 130px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+          <input type="text" id="add-staff-middlename" placeholder="Middle Name (opt)" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; min-width: 130px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+          <input type="text" id="add-staff-lastname" placeholder="Last Name" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; min-width: 130px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+          <input type="email" id="add-staff-email" placeholder="Email (e.g. @gmail.com)" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1.5; min-width: 180px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+          <input type="text" id="add-staff-phone" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,11)" placeholder="Phone (09...)" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1; min-width: 130px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+          <input type="text" id="add-staff-password" placeholder="Pass (8+ chars, 1 uppercase)" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1.5; min-width: 180px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
           <button id="add-staff-btn" onclick="window.submitNewStaffAccount()" ${adminRole === 'Technician' ? 'disabled' : ''} style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; width: 120px; ${adminRole === 'Technician' ? 'opacity: 0.5; cursor: not-allowed;' : 'cursor:pointer;'}" ${adminRole !== 'Technician' ? `onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"` : ''}>Add Staff</button>
         </div>
       </div>
@@ -794,7 +866,7 @@ export const adminViews = {
             <div>
               <h3 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Clients</h3>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
               <input type="text" id="admin-clients-search" placeholder="Search by name, email, or acct #..." style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; width: 250px; outline: none;" onkeyup="window.renderAdminClientsTable()">
               <select id="admin-clients-plan-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
                 <option value="All">All Plans</option>
@@ -804,6 +876,7 @@ export const adminViews = {
                 <option value="100Mbps">100Mbps</option>
                 <option value="200Mbps">200Mbps</option>
               </select>
+              <button id="client-delete-mode-btn" onclick="window.toggleClientDeleteMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">Enable Deletion Mode</button>
             </div>
           </div>
           <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
@@ -831,7 +904,10 @@ export const adminViews = {
       </div>
 
       <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
-        <h3 style="font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 1rem;">Technician Management</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="font-size: 1rem; font-weight: 600; color: #fff; margin: 0;">Technician Management</h3>
+          <button id="tech-delete-mode-btn" onclick="window.toggleTechDeleteMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s;">Enable Deletion Mode</button>
+        </div>
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
           <input type="text" id="admin-technician-search" onkeyup="window.filterAdminAccounts()" placeholder="Search Name..." style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.8rem; flex: 1;">
         </div>
@@ -878,9 +954,19 @@ export const adminViews = {
                 <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">ID (Unchangeable)</label>
                 <div id="modal-account-id" style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">-</div>
               </div>
-              <div>
-                <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Technician Name</label>
-                <input type="text" id="modal-account-name" oninput="window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+              <div style="grid-column: span 2; display: flex; gap: 0.5rem;">
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">First Name</label>
+                  <input type="text" id="modal-account-firstname" oninput="window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Middle Name (opt)</label>
+                  <input type="text" id="modal-account-middlename" oninput="window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Last Name</label>
+                  <input type="text" id="modal-account-lastname" oninput="window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                </div>
               </div>
               <div>
                 <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Email</label>
@@ -888,7 +974,7 @@ export const adminViews = {
               </div>
               <div>
                 <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Contact Number</label>
-                <input type="text" id="modal-account-contact" oninput="window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                <input type="text" id="modal-account-contact" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,11); window.checkAdminStaffChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
               </div>
               <div style="grid-column: span 2;">
                 <label style="display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem;">Password</label>
@@ -1607,25 +1693,36 @@ window.initDashboard = async function () {
 
   try {
     const { db, firestore } = await window._getAdminDb();
-    const { collection, collectionGroup, getDocs } = firestore;
+    const { collection, collectionGroup, onSnapshot } = firestore;
 
     const dashClients = document.getElementById('dash-clients');
     const dashOverdue = document.getElementById('dash-overdue');
     const dashRevenue = document.getElementById('dash-revenue');
 
-    // Fetch data in parallel
-    const [usersSnap, billsSnap, paymentsSnap] = await Promise.all([
-      getDocs(collection(db, "users")),
-      getDocs(collectionGroup(db, "billing_emails")),
-      getDocs(collection(db, "payments"))
-    ]);
+    let usersSnap = null;
+    let billsSnap = null;
+    let paymentsSnap = null;
 
-    if (dashClients) dashClients.innerText = usersSnap.size;
+    const updateDashboardUI = () => {
+      if (!usersSnap || !billsSnap || !paymentsSnap) return;
+
+      if (dashClients) dashClients.innerText = usersSnap.size;
 
     const overdueSet = new Set();
     billsSnap.docs.forEach(d => {
       const b = d.data();
-      if (b.status && b.status.toLowerCase() === 'overdue' && b.accountNumber) {
+      let status = (b.status || 'Pending').toLowerCase();
+      if (status === 'unread') status = 'pending';
+      if (status !== 'paid' && status !== 'completed' && b.dueDate) {
+        const dueDate = new Date(b.dueDate);
+        const now = new Date();
+        now.setHours(0,0,0,0);
+        dueDate.setHours(0,0,0,0);
+        if (now > dueDate) {
+          status = 'overdue';
+        }
+      }
+      if (status === 'overdue' && b.accountNumber) {
         overdueSet.add(b.accountNumber);
       }
     });
@@ -1773,7 +1870,17 @@ window.initDashboard = async function () {
       const hPct = mAmt > 0 ? (mAmt / maxRev) : 0;
       // Height for bar graph (percentage based)
       const barH = hPct > 0 ? Math.max(2, Math.round(hPct * 100)) : 0;
-      if (barEl) barEl.style.height = barH + '%';
+      if (barEl) {
+        barEl.style.height = barH + '%';
+        const wrapper = barEl.parentElement;
+        if (wrapper) {
+          wrapper.onclick = () => {
+            if (window.showRevenueTaxPopup) {
+              window.showRevenueTaxPopup(mk, mAmt);
+            }
+          };
+        }
+      }
 
       // Calculate coordinates for the line graph
       const chartHeight = 220; // Matches CSS height of container
@@ -1813,6 +1920,16 @@ window.initDashboard = async function () {
         svgLine.setAttribute('d', newPath);
       });
     }
+    };
+
+    if (window._dashUnsubs) {
+      window._dashUnsubs.forEach(u => u());
+    }
+    window._dashUnsubs = [
+      onSnapshot(collection(db, "users"), snap => { usersSnap = snap; updateDashboardUI(); }),
+      onSnapshot(collectionGroup(db, "billing_emails"), snap => { billsSnap = snap; updateDashboardUI(); }),
+      onSnapshot(collection(db, "payments"), snap => { paymentsSnap = snap; updateDashboardUI(); })
+    ];
 
     if (window.renderDashActivity) {
       window.renderDashActivity();
@@ -1845,32 +1962,82 @@ window.initAdminBanking = async function () {
 
   try {
     const { db, firestore } = await window._getAdminDb();
+    const { collection, collectionGroup, onSnapshot } = firestore;
 
-    // Stats: outstanding balance, total accounts, overdue accounts
-    const [allUsers, bills] = await Promise.all([
-      firestore.getDocs(firestore.collection(db, "users")),
-      firestore.getDocs(firestore.collectionGroup(db, "billing_emails"))
-    ]);
-    document.getElementById('admin-total-accounts').innerText = allUsers.size;
-    let outSum = 0;
-    const outSet = new Set();
-    let overdueCount = 0;
+    if (window._bankUnsubs) {
+      window._bankUnsubs.forEach(u => u());
+    }
+    window._bankUnsubs = [];
+    
+    let allUsersSnap = null;
+    let billsSnap = null;
+    
+    const updateBankingStats = () => {
+      if (!allUsersSnap || !billsSnap) return;
 
-    bills.docs.forEach(d => {
-      const b = d.data();
-      let status = (b.status || 'Pending').toLowerCase();
-      if (status === 'unread') status = 'pending';
+      document.getElementById('admin-total-accounts').innerText = allUsersSnap.size;
+      let outSum = 0;
+      const outSet = new Set();
+      let overdueCount = 0;
 
-      if (status !== 'paid' && status !== 'completed') {
-        outSum += parseFloat(b.amount) || 0;
-        if (b.accountNumber) outSet.add(b.accountNumber);
-      }
-      if (status === 'overdue' && b.accountNumber) overdueCount++;
-    });
+      billsSnap.docs.forEach(d => {
+        const b = d.data();
+        let status = (b.status || 'Pending').toLowerCase();
+        if (status === 'unread') status = 'pending';
 
-    document.getElementById('admin-outstanding-amount').innerText = '₱' + outSum.toLocaleString();
-    document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
-    document.getElementById('admin-overdue-accounts').innerText = overdueCount;
+        let isOverdue = false;
+        if (status !== 'paid' && status !== 'completed') {
+          if (b.dueDate) {
+            const dueDate = new Date(b.dueDate);
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            dueDate.setHours(0,0,0,0);
+            if (now > dueDate) {
+               status = 'overdue';
+               isOverdue = true;
+            }
+          }
+          outSum += parseFloat(b.amount) || 0;
+          if (b.accountNumber) outSet.add(b.accountNumber);
+        }
+        
+        if (isOverdue && (b.status || 'Pending').toLowerCase() !== 'overdue') {
+            const userId = d.ref.parent.parent.id;
+            firestore.updateDoc(firestore.doc(db, "users", userId, "billing_emails", d.id), {
+                status: 'Overdue'
+            }).catch(e => console.error('Failed to update overdue status:', e));
+        }
+
+        if (status === 'overdue' && b.accountNumber) overdueCount++;
+      });
+
+      document.getElementById('admin-outstanding-amount').innerText = '₱' + outSum.toLocaleString();
+      document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
+      document.getElementById('admin-overdue-accounts').innerText = overdueCount;
+    };
+    
+    window._bankUnsubs.push(
+      onSnapshot(collection(db, "users"), snap => {
+        allUsersSnap = snap;
+        updateBankingStats();
+      })
+    );
+
+    window._bankUnsubs.push(
+      onSnapshot(collectionGroup(db, "billing_emails"), snap => {
+        billsSnap = snap;
+        window._adminBillsDocs = [...snap.docs];
+        updateBankingStats();
+        if (window.renderBills) window.renderBills();
+      })
+    );
+    
+    window._bankUnsubs.push(
+      onSnapshot(collection(db, "payments"), snap => {
+        window._adminPaymentsDocs = [...snap.docs];
+        if (window.renderPayments) window.renderPayments();
+      })
+    );
 
     // Attach listeners
     ['bm-search', 'bm-month', 'bm-plan', 'bm-status'].forEach(id => {
@@ -1882,8 +2049,6 @@ window.initAdminBanking = async function () {
       if (el) el.addEventListener(id === 'ph-search' ? 'input' : 'change', window.renderPayments);
     });
 
-    await window.renderBills();
-    await window.renderPayments();
   } catch (err) {
     console.error(err);
   }
@@ -1891,7 +2056,10 @@ window.initAdminBanking = async function () {
 window.renderBills = async function () {
   const tb = document.getElementById('bm-tbody');
   if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="9" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+  if (!window._adminBillsDocs) {
+    tb.innerHTML = '<tr><td colspan="9" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+    return;
+  }
 
   try {
     const s = document.getElementById('bm-search').value.toLowerCase();
@@ -1899,10 +2067,9 @@ window.renderBills = async function () {
     const p = document.getElementById('bm-plan').value;
     const st = document.getElementById('bm-status').value;
 
-    const { db, firestore } = await window._getAdminDb();
-    const bills = await firestore.getDocs(firestore.collectionGroup(db, "billing_emails"));
+    const billsDocs = window._adminBillsDocs;
 
-    const sortedBills = bills.docs.sort((a, b) => {
+    const sortedBills = billsDocs.sort((a, b) => {
       const da = new Date(a.data().dateSent || 0);
       const db = new Date(b.data().dateSent || 0);
       return db - da;
@@ -1915,6 +2082,17 @@ window.renderBills = async function () {
 
       // Map unread to pending
       if (rawStatus === 'unread') rawStatus = 'pending';
+
+      // Dynamic overdue check
+      if (rawStatus !== 'paid' && rawStatus !== 'completed' && b.dueDate) {
+         const dueDate = new Date(b.dueDate);
+         const now = new Date();
+         now.setHours(0,0,0,0);
+         dueDate.setHours(0,0,0,0);
+         if (now > dueDate) {
+            rawStatus = 'overdue';
+         }
+      }
 
       // ONLY SHOW UNPAID/PENDING/OVERDUE bills (not Paid/Completed)
       if (rawStatus === 'paid' || rawStatus === 'completed') return;
@@ -1957,22 +2135,22 @@ window.renderBills = async function () {
 window.renderPayments = async function () {
   const tb = document.getElementById('ph-tbody');
   if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="10" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+  if (!window._adminPaymentsDocs) {
+    tb.innerHTML = '<tr><td colspan="10" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+    return;
+  }
 
   try {
     const s = document.getElementById('ph-search').value.toLowerCase();
     const m = document.getElementById('ph-month').value;
     const p = document.getElementById('ph-plan').value;
 
-    const { db, firestore } = await window._getAdminDb();
-
-    // Fetch from payments collection (representing actual completed payments)
-    const payments = await firestore.getDocs(firestore.collection(db, "payments"));
+    const paymentsDocs = window._adminPaymentsDocs;
 
     let html = '';
 
     // In case some older docs don't have timestamp, we sort manually as fallback
-    const sortedDocs = payments.docs.sort((a, b) => {
+    const sortedDocs = paymentsDocs.sort((a, b) => {
       let da = a.data().datePaid || a.data().date || 0;
       let db = b.data().datePaid || b.data().date || 0;
       if (a.data().timestamp && a.data().timestamp.toDate) da = a.data().timestamp.toDate();
@@ -2029,7 +2207,24 @@ window.renderPayments = async function () {
   } catch (e) { console.error(e); }
 };
 window.initAdminReports = async function () {
-  await window.renderAdminReportsTable();
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    
+    if (window._adminReportsUnsub) window._adminReportsUnsub();
+    if (window._adminRatingsUnsub) window._adminRatingsUnsub();
+
+    window._adminReportsUnsub = firestore.onSnapshot(firestore.collection(db, "reports"), snap => {
+       window._adminReportsSnap = snap;
+       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+    });
+
+    window._adminRatingsUnsub = firestore.onSnapshot(firestore.collectionGroup(db, "ratings"), snap => {
+       window._adminRatingsSnap = snap;
+       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+    });
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 window.renderAdminReportsTable = async function () {
@@ -2041,15 +2236,18 @@ window.renderAdminReportsTable = async function () {
     const s = (document.getElementById('admin-reports-search').value || '').toLowerCase();
     const f = document.getElementById('admin-reports-filter').value;
 
-    // Fetch reports without orderBy because timestamp field doesn't exist!
-    const snap = await firestore.getDocs(firestore.collection(db, "reports"));
+    const snap = window._adminReportsSnap;
+    if (!snap) {
+      tb.innerHTML = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">Loading...</td></tr>';
+      return;
+    }
 
     let html = '';
     let total = snap.size;
     let resolved = 0;
 
     // Sort manually by date
-    const sortedDocs = snap.docs.sort((a, b) => {
+    const sortedDocs = [...snap.docs].sort((a, b) => {
       const da = a.data().date || '';
       const db = b.data().date || '';
       return db.localeCompare(da);
@@ -2058,10 +2256,12 @@ window.renderAdminReportsTable = async function () {
     sortedDocs.forEach(d => {
       const r = d.data();
       let rawStatus = (r.status || 'Pending').toLowerCase();
-
       let displayStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
 
-      if (displayStatus === 'Fixed') resolved++;
+      if (displayStatus === 'Fixed' || displayStatus === 'Resolved') {
+        resolved++;
+        displayStatus = 'Fixed';
+      }
 
       if (f !== 'All' && displayStatus !== f) return;
       if (s && !(r.name || '').toLowerCase().includes(s)) return;
@@ -2080,24 +2280,21 @@ window.renderAdminReportsTable = async function () {
       `;
     });
 
-    // 3. Fetch all ratings using collectionGroup to calculate real average
+    // 3. Calculate average rating directly from reports
     let avgRating = '0.0';
-    try {
-      const ratingsSnap = await firestore.getDocs(firestore.collectionGroup(db, "ratings"));
-      let totalRatingScore = 0;
-      let totalRatingCount = 0;
-      ratingsSnap.forEach(rd => {
-        const ratingVal = Number(rd.data().rating) || 0;
-        if (ratingVal > 0) {
+    let totalRatingScore = 0;
+    let totalRatingCount = 0;
+
+    sortedDocs.forEach(d => {
+       const ratingVal = Number(d.data().rating) || 0;
+       if (ratingVal > 0) {
           totalRatingScore += ratingVal;
           totalRatingCount++;
-        }
-      });
-      if (totalRatingCount > 0) {
-        avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
-      }
-    } catch (err) {
-      console.warn("Could not fetch ratings for average:", err);
+       }
+    });
+
+    if (totalRatingCount > 0) {
+       avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
     }
 
     document.getElementById('admin-total-tickets').innerText = total;
@@ -2179,24 +2376,31 @@ window.openAdminReport = async function (id) {
     const stColor = status === 'Pending' ? '#f59e0b' : (status === 'Read' ? '#3b82f6' : '#10b981');
     document.getElementById('modal-ticket-status-badge').innerHTML = `<div style="color: ${stColor}; background: ${stColor}22; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; border: 1px solid ${stColor}44;">${status}</div>`;
 
-    // Fetch rating subcollection
+    // Show rating if available directly on the report document
     const ratingContainer = document.getElementById('modal-ticket-rating-container');
     document.getElementById('modal-ticket-rating').innerText = '';
     document.getElementById('modal-ticket-feedback').innerText = '';
     ratingContainer.style.display = 'none';
 
-    try {
-      const ratingsSnap = await firestore.getDocs(firestore.collection(db, "reports", id, "ratings"));
-      if (!ratingsSnap.empty) {
-        const ratingDoc = ratingsSnap.docs[0].data();
-        if (ratingDoc.rating) {
-          document.getElementById('modal-ticket-rating').innerText = ratingDoc.rating + ' ★';
-          document.getElementById('modal-ticket-feedback').innerText = ratingDoc.feedback ? `"${ratingDoc.feedback}"` : 'No feedback provided.';
-          ratingContainer.style.display = 'block';
+    if (r.rating) {
+      document.getElementById('modal-ticket-rating').innerText = r.rating + ' ★';
+      document.getElementById('modal-ticket-feedback').innerText = r.feedback ? `"${r.feedback}"` : 'No feedback provided.';
+      ratingContainer.style.display = 'block';
+    } else {
+      // Fallback for legacy ratings stored in subcollection
+      try {
+        const ratingsSnap = await firestore.getDocs(firestore.collection(db, "reports", id, "ratings"));
+        if (!ratingsSnap.empty) {
+          const ratingDoc = ratingsSnap.docs[0].data();
+          if (ratingDoc.rating) {
+            document.getElementById('modal-ticket-rating').innerText = ratingDoc.rating + ' ★';
+            document.getElementById('modal-ticket-feedback').innerText = ratingDoc.feedback ? `"${ratingDoc.feedback}"` : 'No feedback provided.';
+            ratingContainer.style.display = 'block';
+          }
         }
+      } catch (err) {
+        console.warn("Could not fetch ratings for ticket:", err);
       }
-    } catch (err) {
-      console.warn("Could not fetch ratings for ticket:", err);
     }
 
     document.getElementById('admin-ticket-modal').style.display = 'flex';
@@ -2208,8 +2412,60 @@ window.closeAdminReport = function () {
 };
 
 window.initAdminAccounts = async function () {
-  await window.renderAdminClientsTable();
-  await window.filterAdminAccounts();
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    
+    if (window._adminUsersUnsub) window._adminUsersUnsub();
+    if (window._adminStaffUnsub) window._adminStaffUnsub();
+
+    window._adminUsersUnsub = firestore.onSnapshot(firestore.collection(db, "users"), snap => {
+       window._adminUsersSnap = snap;
+       if (window.renderAdminClientsTable) window.renderAdminClientsTable();
+    });
+
+    window._adminStaffUnsub = firestore.onSnapshot(firestore.collection(db, "admin"), snap => {
+       window._adminStaffSnap = snap;
+       if (window.filterAdminAccounts) window.filterAdminAccounts();
+    });
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+window.isClientDeleteMode = false;
+window.toggleClientDeleteMode = function() {
+  window.isClientDeleteMode = !window.isClientDeleteMode;
+  const btn = document.getElementById('client-delete-mode-btn');
+  if (btn) {
+    btn.style.background = window.isClientDeleteMode ? '#ef4444' : '#0f131f';
+    btn.innerText = window.isClientDeleteMode ? 'Cancel Deletion Mode' : 'Enable Deletion Mode';
+  }
+  if (window.renderAdminClientsTable) window.renderAdminClientsTable();
+};
+
+window.isTechDeleteMode = false;
+window.toggleTechDeleteMode = function() {
+  window.isTechDeleteMode = !window.isTechDeleteMode;
+  const btn = document.getElementById('tech-delete-mode-btn');
+  if (btn) {
+    btn.style.background = window.isTechDeleteMode ? '#ef4444' : '#0f131f';
+    btn.innerText = window.isTechDeleteMode ? 'Cancel Deletion Mode' : 'Enable Deletion Mode';
+  }
+  if (window.filterAdminAccounts) window.filterAdminAccounts();
+};
+
+window.confirmAccountDeletion = async function(collection, id) {
+  if (window.confirm("Are you sure you want to delete this account?")) {
+    try {
+      const { db, firestore } = await window._getAdminDb();
+      await firestore.deleteDoc(firestore.doc(db, collection, id));
+      alert("Account deleted.");
+      if (window.loadAdminDashboardData) window.loadAdminDashboardData();
+    } catch (e) {
+      alert("Failed to delete account.");
+      console.error(e);
+    }
+  }
 };
 
 window.renderAdminClientsTable = async function () {
@@ -2221,7 +2477,11 @@ window.renderAdminClientsTable = async function () {
     const s = (document.getElementById('admin-clients-search').value || '').toLowerCase();
     const p = document.getElementById('admin-clients-plan-filter').value;
 
-    const snap = await firestore.getDocs(firestore.collection(db, "users"));
+    const snap = window._adminUsersSnap;
+    if (!snap) {
+      tb.innerHTML = '<tr><td colspan="7" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+      return;
+    }
 
     let html = '';
     const planCounts = {};
@@ -2312,8 +2572,13 @@ window.renderAdminClientsTable = async function () {
 
       const amtStr = finalAmount !== 'TBD' ? '₱' + parseFloat(String(finalAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString() : 'TBD';
 
+      const isDel = window.isClientDeleteMode;
       html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer;" onclick="window.openAdminClientModal('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'; this.style.boxShadow='none'">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer; ${isDel ? 'background: rgba(239, 68, 68, 0.2);' : ''}" 
+            onclick="${isDel ? '' : `window.openAdminClientModal('${d.id}')`}" 
+            ondblclick="${isDel ? `window.confirmAccountDeletion('users', '${d.id}')` : ''}"
+            onmouseover="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'" 
+            onmouseout="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}'; this.style.boxShadow='none'">
           <td style="padding: 1rem; vertical-align: middle; font-family: monospace; color: #fff;">${accNum}</td>
           <td style="padding: 1rem; vertical-align: middle; color: #fff;">${fullName}</td>
           <td style="padding: 1rem; vertical-align: middle; color: #94a3b8;">${email}</td>
@@ -2401,7 +2666,11 @@ window.filterAdminAccounts = async function () {
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-technician-search').value || '').toLowerCase();
 
-    const snap = await firestore.getDocs(firestore.collection(db, "admin"));
+    const snap = window._adminStaffSnap;
+    if (!snap) {
+      tb.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+      return;
+    }
     let html = '';
     let count = 0;
     let counts = { Admin: 0, Technician: 0, OJT: 0, Minimal: 0 };
@@ -2419,8 +2688,13 @@ window.filterAdminAccounts = async function () {
       else if (role === 'Technician') rColor = '#3b82f6';
       else if (role === 'OJT') rColor = '#f59e0b';
 
+      const isDel = window.isTechDeleteMode;
       html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer;" onclick="window.openAdminAccountModal('${d.id}', '${u.name}', '${u.email}', '${u.contact || ''}', '${u.password || ''}', '${role}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer; ${isDel ? 'background: rgba(239, 68, 68, 0.2);' : ''}" 
+            onclick="${isDel ? '' : `window.openAdminAccountModal('${d.id}', '${u.name}', '${u.email}', '${u.contact || ''}', '${u.password || ''}', '${role}')`}" 
+            ondblclick="${isDel ? `window.confirmAccountDeletion('admin', '${d.id}')` : ''}"
+            onmouseover="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.02)'}'" 
+            onmouseout="this.style.background='${isDel ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}'">
           <td style="padding: 1rem; font-family: monospace;">${d.id.substring(0, 8)}</td>
           <td style="padding: 1rem; color: #fff;">${u.name || 'Unknown'}</td>
           <td style="padding: 1rem;">${u.contact || '-'}</td>
@@ -2442,22 +2716,45 @@ window.filterAdminAccounts = async function () {
 };
 
 window.submitNewStaffAccount = async function () {
-  const name = document.getElementById('add-staff-name').value.trim();
-  const email = document.getElementById('add-staff-email').value.trim();
-  const phone = document.getElementById('add-staff-phone').value.trim();
-  let pass = document.getElementById('add-staff-password').value.trim();
+  const fName = (document.getElementById('add-staff-firstname') ? document.getElementById('add-staff-firstname').value.trim() : '');
+  const mName = (document.getElementById('add-staff-middlename') ? document.getElementById('add-staff-middlename').value.trim() : '');
+  const lName = (document.getElementById('add-staff-lastname') ? document.getElementById('add-staff-lastname').value.trim() : '');
+  const email = (document.getElementById('add-staff-email') ? document.getElementById('add-staff-email').value.trim() : '');
+  const phone = (document.getElementById('add-staff-phone') ? document.getElementById('add-staff-phone').value.trim() : '');
+  let pass = (document.getElementById('add-staff-password') ? document.getElementById('add-staff-password').value.trim() : '');
   const msg = document.getElementById('add-staff-msg');
   const btn = document.getElementById('add-staff-btn');
 
-  if (!name || !email || !phone) {
+  const showError = (text) => {
     msg.style.display = 'block';
     msg.style.background = 'rgba(229,57,53,0.1)';
     msg.style.color = '#e53935';
-    msg.innerText = 'Name, Email, and Phone Number are required';
+    msg.innerText = text;
+    setTimeout(() => msg.style.display = 'none', 4000);
+  };
+
+  if (!fName || !lName || !email || !phone || !pass) {
+    showError('First Name, Last Name, Email, Phone, and Password are required.');
     return;
   }
 
-  if (!pass) pass = 'Easypass123';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showError('Please enter a valid email address.');
+    return;
+  }
+
+  if (!/^09\d{9}$/.test(phone)) {
+    showError('Phone number must be exactly 11 digits and start with 09 (e.g. 09123456789).');
+    return;
+  }
+
+  if (pass.length < 8 || !/[A-Z]/.test(pass)) {
+    showError('Password must be at least 8 characters long and contain at least 1 uppercase letter.');
+    return;
+  }
+
+  const name = `${fName} ${mName ? mName + ' ' : ''}${lName}`.trim();
 
   btn.disabled = true;
   btn.innerText = 'Adding...';
@@ -2479,17 +2776,15 @@ window.submitNewStaffAccount = async function () {
     msg.style.color = '#10b981';
     msg.innerText = 'Staff account added successfully! Default role is Minimal.';
 
-    document.getElementById('add-staff-name').value = '';
+    document.getElementById('add-staff-firstname').value = '';
+    document.getElementById('add-staff-middlename').value = '';
+    document.getElementById('add-staff-lastname').value = '';
     document.getElementById('add-staff-email').value = '';
     document.getElementById('add-staff-phone').value = '';
     document.getElementById('add-staff-password').value = '';
 
-    await window.filterAdminAccounts();
   } catch (e) {
-    msg.style.display = 'block';
-    msg.style.background = 'rgba(229,57,53,0.1)';
-    msg.style.color = '#e53935';
-    msg.innerText = e.message;
+    showError(e.message);
   }
 
   btn.disabled = false;
@@ -2500,7 +2795,9 @@ window.submitNewStaffAccount = async function () {
 // Staff Modal Logic
 let currentStaffRole = 'Minimal';
 window.openAdminAccountModal = function (id, name, email, contact, pass, role) {
-  const nameEl = document.getElementById('modal-account-name');
+  const fnameEl = document.getElementById('modal-account-firstname');
+  const mnameEl = document.getElementById('modal-account-middlename');
+  const lnameEl = document.getElementById('modal-account-lastname');
   const emailEl = document.getElementById('modal-account-email');
   const contactEl = document.getElementById('modal-account-contact');
   const passEl = document.getElementById('modal-account-password');
@@ -2509,12 +2806,22 @@ window.openAdminAccountModal = function (id, name, email, contact, pass, role) {
   document.getElementById('modal-account-id-hidden').value = id;
   document.getElementById('modal-account-id').innerText = id;
 
-  nameEl.value = name;
+  const parts = (name || '').trim().split(/\s+/);
+  const fName = parts[0] || '';
+  const lName = parts.length > 1 ? parts.pop() : '';
+  const mName = parts.slice(1).join(' ');
+
+  if(fnameEl) fnameEl.value = fName;
+  if(mnameEl) mnameEl.value = mName;
+  if(lnameEl) lnameEl.value = lName;
+  
   emailEl.value = email;
   contactEl.value = contact;
   passEl.value = pass;
 
-  nameEl.dataset.original = name;
+  if(fnameEl) fnameEl.dataset.original = fName;
+  if(mnameEl) mnameEl.dataset.original = mName;
+  if(lnameEl) lnameEl.dataset.original = lName;
   emailEl.dataset.original = email;
   contactEl.dataset.original = contact;
   passEl.dataset.original = pass;
@@ -2544,7 +2851,9 @@ window.openAdminAccountModal = function (id, name, email, contact, pass, role) {
   try {
     const au = JSON.parse(localStorage.getItem('adminUser'));
     if (au.role === 'Technician') {
-      document.getElementById('modal-account-name').disabled = true;
+      document.getElementById('modal-account-firstname').disabled = true;
+      document.getElementById('modal-account-middlename').disabled = true;
+      document.getElementById('modal-account-lastname').disabled = true;
       document.getElementById('modal-account-email').disabled = true;
       document.getElementById('modal-account-contact').disabled = true;
       document.getElementById('modal-account-password').disabled = true;
@@ -2596,32 +2905,61 @@ window.showAdminConfirm = function (msg, onConfirm) {
 };
 
 window.requestAdminStaffUpdate = async function () {
+  const msg = document.getElementById('modal-account-update-msg');
   const id = document.getElementById('modal-account-id-hidden').value;
-  const nameEl = document.getElementById('modal-account-name');
+  const fnameEl = document.getElementById('modal-account-firstname');
+  const mnameEl = document.getElementById('modal-account-middlename');
+  const lnameEl = document.getElementById('modal-account-lastname');
   const emailEl = document.getElementById('modal-account-email');
   const contactEl = document.getElementById('modal-account-contact');
   const passEl = document.getElementById('modal-account-password');
 
-  const name = nameEl.value;
-  const email = emailEl.value;
-  const contact = contactEl.value;
+  const fName = fnameEl.value.trim();
+  const mName = mnameEl.value.trim();
+  const lName = lnameEl.value.trim();
+  const name = `${fName} ${mName ? mName + ' ' : ''}${lName}`.trim();
+  
+  const email = emailEl.value.trim();
+  const contact = contactEl.value.trim();
   const pass = passEl.value;
   const role = currentStaffRole;
   const originalRole = document.getElementById('admin-account-modal').dataset.originalRole;
 
+  const showError = (text) => {
+    msg.style.display = 'block';
+    msg.style.background = 'rgba(229,57,53,0.1)';
+    msg.style.color = '#e53935';
+    msg.innerText = text;
+    setTimeout(() => msg.style.display = 'none', 4000);
+  };
+
+  if (!fName || !lName || !email || !contact || !pass) {
+    showError('First Name, Last Name, Email, Phone, and Password are required.');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showError('Please enter a valid email address.');
+    return;
+  }
+
+  if (!/^09\d{9}$/.test(contact)) {
+    showError('Phone number must be exactly 11 digits and start with 09.');
+    return;
+  }
+
   let changes = [];
-  if (name !== nameEl.dataset.original) changes.push('Name');
+  if (fName !== fnameEl.dataset.original || mName !== mnameEl.dataset.original || lName !== lnameEl.dataset.original) changes.push('Name');
   if (email !== emailEl.dataset.original) changes.push('Email');
   if (contact !== contactEl.dataset.original) changes.push('Contact Number');
   if (pass !== passEl.dataset.original) changes.push('Password');
   if (role !== originalRole) changes.push('Role');
 
   if (changes.length === 0) {
-    const msg = document.getElementById('modal-account-update-msg');
-    msg.style.display = 'block';
+    showError('No details were changed.');
     msg.style.background = 'rgba(245,158,11,0.1)';
     msg.style.color = '#f59e0b';
-    msg.innerText = 'No details were changed.';
     return;
   }
 
@@ -3491,4 +3829,18 @@ window.toggleAdminSidebar = function () {
       main.style.marginLeft = '0px';
     }
   }
+};
+
+window.showRevenueTaxPopup = function(month, amount) {
+  const tax = amount * 0.03;
+  const net = amount - tax;
+  document.getElementById('tax-modal-month').innerText = month;
+  document.getElementById('tax-modal-total').innerText = '₱' + amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('tax-modal-tax').innerText = '-₱' + tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('tax-modal-net').innerText = '₱' + net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('admin-revenue-tax-modal').style.display = 'flex';
+};
+
+window.closeRevenueTaxPopup = function() {
+  document.getElementById('admin-revenue-tax-modal').style.display = 'none';
 };

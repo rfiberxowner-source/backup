@@ -49,7 +49,29 @@ export default function OverviewScreen({ user, navigation }) {
     // 3. Bills
     const unsubBills = onSnapshot(collection(db, "users", user.id, "billing_emails"), (snap) => {
       const arr = [];
-      snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+      snap.forEach(d => {
+        const b = d.data();
+        let status = (b.status || 'Pending').toLowerCase();
+        if (status === 'unread') status = 'pending';
+        let isOverdue = false;
+        if (status !== 'paid' && status !== 'completed' && b.dueDate) {
+          const dueDate = new Date(b.dueDate);
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          dueDate.setHours(0,0,0,0);
+          if (now > dueDate) {
+             status = 'overdue';
+             isOverdue = true;
+             b.status = 'overdue';
+          }
+        }
+        if (isOverdue && (d.data().status || '').toLowerCase() !== 'overdue') {
+            updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
+                status: 'Overdue'
+            }).catch(e => console.log(e));
+        }
+        arr.push({ id: d.id, ...b });
+      });
       setBillsData(arr);
     });
 

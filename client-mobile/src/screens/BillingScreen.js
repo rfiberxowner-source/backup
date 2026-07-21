@@ -70,7 +70,27 @@ export default function BillingScreen({ user, route, navigation }) {
     const unsubscribeBills = onSnapshot(q, (snap) => {
       const bList = [];
       snap.forEach(d => {
-        bList.push({ id: d.id, ...d.data() });
+        const b = d.data();
+        let status = (b.status || 'Pending').toLowerCase();
+        if (status === 'unread') status = 'pending';
+        let isOverdue = false;
+        if (status !== 'paid' && status !== 'completed' && b.dueDate) {
+          const dueDate = new Date(b.dueDate);
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          dueDate.setHours(0,0,0,0);
+          if (now > dueDate) {
+             status = 'overdue';
+             isOverdue = true;
+             b.status = 'overdue';
+          }
+        }
+        if (isOverdue && (d.data().status || '').toLowerCase() !== 'overdue') {
+            updateDoc(doc(db, "users", user.id, "billing_emails", d.id), {
+                status: 'Overdue'
+            }).catch(e => console.log(e));
+        }
+        bList.push({ id: d.id, ...b });
       });
       bList.sort((a, b) => new Date(b.dateSent || 0) - new Date(a.dateSent || 0));
       setBills(bList);
