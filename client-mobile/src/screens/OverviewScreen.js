@@ -284,7 +284,8 @@ export default function OverviewScreen({ user, navigation }) {
 
   const currentPlan = userData.Plan || userData.plan || 'No Plan';
   const currentAcct = userData.accountNumber || userData.account || '-';
-  const currentEmail = userData.email || '-';
+  const currentEmail = userData.email || 'Add Email Address';
+  const isProfileComplete = userData.email && userData.phone && userData.address;
   const fullName = userData.name || 'User';
 
   const unreadRecentCount = recentUpdates.filter(i => !i.isRead).length;
@@ -326,6 +327,18 @@ export default function OverviewScreen({ user, navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
+        {!isProfileComplete && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#FEF3C7', padding: 15, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center' }}
+            onPress={() => navigation.navigate('Profile', { highlightMissing: Date.now() })}
+          >
+            <MaterialCommunityIcons name="alert" size={24} color="#D97706" style={{ marginRight: 10 }} />
+            <Text style={{ color: '#92400E', fontSize: 13, fontFamily: 'Inter_500Medium', flex: 1 }}>
+              Missing required details. You must input your Email, Phone Number, and Address in your Profile to pay bills and submit requests.
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#D97706" />
+          </TouchableOpacity>
+        )}
         {/* Box 1: Profile Hero Card */}
         <View style={styles.profileCard}>
           <View style={styles.cardDecoration1} />
@@ -616,7 +629,7 @@ export default function OverviewScreen({ user, navigation }) {
                       </View>
                     </View>
 
-                    <Text style={styles.rAcctLine}><Text style={{ fontFamily: 'Inter_700Bold' }}>Statement of Account Number:</Text> {userData.accountNumber || '-'}</Text>
+                    <Text style={styles.rAcctLine}><Text style={{ fontFamily: 'Inter_700Bold' }}>Account Number of Statement:</Text> {userData.accountNumber || '-'}</Text>
 
                     <View style={{ alignItems: 'center', marginBottom: 15 }}>
                       <Text style={styles.rBillSummaryBadge}>BILL SUMMARY</Text>

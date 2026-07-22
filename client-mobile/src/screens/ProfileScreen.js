@@ -46,6 +46,7 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [updateDetailsModal, setUpdateDetailsModal] = useState(null);
   const [showUpdatePassword, setShowUpdatePassword] = useState(false);
+  const [highlightedFields, setHighlightedFields] = useState({});
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(user.notificationsEnabled || false);
 
@@ -267,16 +268,17 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
   };
 
   const renderField = (icon, label, key, keyboardType = 'default', autoCapitalize = 'sentences', isPassword = false, forceReadonly = false, maxLength = undefined) => {
+    const isHighlighted = highlightedFields[key];
     return (
-      <View style={styles.fieldRow}>
+      <View style={[styles.fieldRow, isHighlighted && !isEditing && { backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 8 }]}>
         <View style={styles.fieldIconBox}>
-          <MaterialCommunityIcons name={icon} size={20} color={colors.textSecondary} />
+          <MaterialCommunityIcons name={icon} size={20} color={isHighlighted ? '#ef4444' : colors.textSecondary} />
         </View>
         <View style={styles.fieldContent}>
-          <Text style={styles.fieldLabel}>{label}</Text>
+          <Text style={[styles.fieldLabel, isHighlighted && { color: '#ef4444' }]}>{label}</Text>
           {isEditing && !forceReadonly ? (
             <TextInput
-              style={styles.fieldInput}
+              style={[styles.fieldInput, isHighlighted && { borderBottomColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', paddingHorizontal: 5 }]}
               value={userData[key]}
               onChangeText={(val) => handleChange(key, val)}
               keyboardType={keyboardType}
@@ -337,7 +339,9 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
 
     const subFocus = navigation.addListener('focus', () => {
       setTimeout(() => {
-        if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: false });
+        if (!route.params?.highlightMissing) {
+          if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: false });
+        }
       }, 50);
     });
 
@@ -352,7 +356,24 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
       subFocus();
       subBlur();
     };
-  }, [navigation, isEditing, hasChanges, userData]);
+  }, [navigation, isEditing, hasChanges, userData, route.params?.highlightMissing]);
+
+  useEffect(() => {
+    if (route.params?.highlightMissing) {
+      const missing = {};
+      if (!user.email) missing.email = true;
+      if (!user.phone) missing.phone = true;
+      if (!user.address) missing.address = true;
+      setHighlightedFields(missing);
+
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTo({ y: 350, animated: true });
+      }, 100);
+      
+      setTimeout(() => setHighlightedFields({}), 2000);
+      navigation.setParams({ highlightMissing: undefined });
+    }
+  }, [route.params?.highlightMissing, user]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

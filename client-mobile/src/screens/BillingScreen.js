@@ -839,11 +839,11 @@ export default function BillingScreen({ user, route, navigation }) {
               )}
 
               <TouchableOpacity
-                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border, opacity: bills.filter(b => b.status !== 'paid').length === 0 ? 0.5 : 1 }}
+                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border, opacity: (bills.filter(b => b.status !== 'paid').length === 0 || !(user.email && user.phone && user.address)) ? 0.5 : 1 }}
                 onPress={handleUploadImage}
-                disabled={bills.filter(b => b.status !== 'paid').length === 0}
+                disabled={bills.filter(b => b.status !== 'paid').length === 0 || !(user.email && user.phone && user.address)}
               >
-                <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
+                <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>{!(user.email && user.phone && user.address) ? 'Missing Profile Details' : 'Upload Payment Screenshot'}</Text>
               </TouchableOpacity>
             </View>
           )}

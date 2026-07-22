@@ -3187,7 +3187,7 @@ window.handleAdminClientPlanChange = function () {
   let finalAmount = '';
   if (plan === '30Mbps') finalAmount = '800';
   else if (plan === '50Mbps') finalAmount = '1000';
-  else if (plan === '70Mbps') finalAmount = '1000';
+  else if (plan === '70Mbps') finalAmount = '1300';
   else if (plan === '100Mbps') finalAmount = '1500';
   else if (plan === '200Mbps') finalAmount = '2000';
 
@@ -3439,7 +3439,10 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
       const q = firestore.query(firestore.collectionGroup(db, 'billing_emails'));
       const snap = await firestore.getDocs(q);
       snap.docs.forEach(d => {
-        if (d.id === paymentId || d.data().billId === paymentId) pm = d.data();
+        if (d.id === paymentId || d.data().billId === paymentId) {
+          pm = d.data();
+          pm.id = d.id;
+        }
       });
       if (!pm) {
         alert("Pending bill record not found.");
@@ -3452,6 +3455,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
         return;
       }
       pm = docSnap.data();
+      pm.id = docSnap.id;
     }
 
     let address = 'N/A';
@@ -3490,33 +3494,40 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     let prevPaid = true;
     try {
       if (pm.accountNumber && pm.accountNumber !== 'N/A') {
+        const uq = firestore.query(firestore.collection(db, "users"), firestore.where("accountNumber", "==", pm.accountNumber));
+        const uSnap = await firestore.getDocs(uq);
+        let billsData = [];
+        if (!uSnap.empty) {
+          const uDoc = uSnap.docs[0];
+          const billsSnap = await firestore.getDocs(firestore.collection(db, "users", uDoc.id, "billing_emails"));
+          billsSnap.forEach(d => { billsData.push({ id: d.id, ...d.data() }); });
+        }
+
         const paymentsQ = firestore.query(firestore.collection(db, "payments"), firestore.where("accountNumber", "==", pm.accountNumber));
         const allPaySnap = await firestore.getDocs(paymentsQ);
         const allPays = [];
         allPaySnap.forEach(d => {
           const pd = d.data();
-          allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: pd.datePaid || pd.dateSent || '' });
+          let origDateSent = pd.dateSent || pd.date || pd.datePaid || '';
+          if (pd.billId) {
+            const bMatch = billsData.find(b => b.id === pd.billId);
+            if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
+          }
+          allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: origDateSent });
         });
 
-        const uq = firestore.query(firestore.collection(db, "users"), firestore.where("accountNumber", "==", pm.accountNumber));
-        const uSnap = await firestore.getDocs(uq);
-        if (!uSnap.empty) {
-          const uDoc = uSnap.docs[0];
-          const billsSnap = await firestore.getDocs(firestore.collection(db, "users", uDoc.id, "billing_emails"));
-          billsSnap.forEach(d => {
-            const bd = d.data();
-            if (bd.status !== 'paid') {
-              allPays.push({ id: d.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || '' });
-            }
-          });
-        }
+        billsData.forEach(bd => {
+          if (bd.status !== 'paid') {
+            allPays.push({ id: bd.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || bd.datePaid || bd.date || '' });
+          }
+        });
 
         allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
 
         const currentIdx = allPays.findIndex(p => p.id === paymentId || p.billId === paymentId);
         if (currentIdx > 0) {
-          prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
           prevPaid = allPays[currentIdx - 1].isPaidRec;
+          prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
         }
       }
     } catch (e) { console.warn('Could not fetch previous charges:', e); }
@@ -3533,11 +3544,27 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     else if (pm.date) pDate = new Date(pm.date);
 
     const dateStr = pDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const dueStr = new Date(pDate.getTime() + (5 * 86400000)).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); // +5 days for due date on receipt display
+    
+    let due = new Date(pDate);
+    due.setDate(7);
+    const dueStr = due.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     const customerName = pm.customerName || pm.name || 'Unknown';
     const acct = pm.accountNumber || 'N/A';
     const plan = pm.plan || 'N/A';
+    let currentSpeedStr = plan;
+    const match = plan.match(/(\d+)\s*Mbps/i);
+    if (match) {
+      currentSpeedStr = `${match[1]}Mbps`;
+    } else {
+      const n = plan.toLowerCase();
+      if (n.includes('starter') || n.includes('800')) currentSpeedStr = '30Mbps';
+      else if (n.includes('value') || n.includes('1000')) currentSpeedStr = '50Mbps';
+      else if (n.includes('family') || n.includes('1300')) currentSpeedStr = '70Mbps';
+      else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
+      else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
+    }
+    
     let payMethod = pm.paymentMethod || 'Online payment';
     if (payMethod === 'Instant Payment' || payMethod === 'Digital Payment') payMethod = 'Online payment';
 
@@ -3577,7 +3604,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
           .admin-receipt-wrapper .cust-addr { font-size: 0.85rem; color: #666; margin: 0; }
           
           .admin-receipt-wrapper .stat-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-          .admin-receipt-wrapper .stat-table th, .admin-receipt-wrapper .stat-table td { border: 1px solid #000; padding: 0.75rem; text-align: left; }
+          .admin-receipt-wrapper .stat-table th, .admin-receipt-wrapper .stat-table td { border: 1px solid #000; padding: 0.75rem; text-align: center; }
           .admin-receipt-wrapper .stat-table th { background: #111; color: #fff; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; border-color: #111; }
           
           .admin-receipt-wrapper .bill-summary { border: 1px solid #eee; padding: 1.5rem; margin-top: 1.5rem; }
@@ -3633,19 +3660,20 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
             <div>
               <p class="cust-name">${customerName}</p>
               <p class="cust-addr">${address}</p>
+              ${currentSpeedStr && currentSpeedStr !== 'N/A' ? `<p class="cust-plan" style="margin-top: 5px; font-size: 32px; font-weight: 700; color: #1f2937; letter-spacing: -1px;">${currentSpeedStr}</p>` : ''}
             </div>
             <div>
               <table class="stat-table">
                 <thead>
                   <tr>
                     <th>STATEMENT DATE</th>
-                    <th>ACCOUNT NO.</th>
+                    <th>${isPending ? 'BILL ID' : 'PAYMENT ID'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>${dateStr}</td>
-                    <td style="font-family: monospace;">${acct}</td>
+                    <td style="font-family: monospace;">${pm.id}</td>
                   </tr>
                   <tr>
                     <th style="background: #111; color: #fff;">TOTAL AMOUNT DUE</th>
@@ -3660,7 +3688,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
             </div>
           </div>
           
-          <div style="font-size: 0.85rem; font-weight: 600;">Statement of Account Number: <span style="font-weight: 400; font-family: monospace;">${paymentId}</span></div>
+          <div style="font-size: 0.85rem; font-weight: 600;">Account Number of Statement: <span style="font-weight: 400; font-family: monospace;">${acct}</span></div>
           
           <div class="bill-summary">
             <div class="bs-title">BILL SUMMARY</div>
@@ -3728,7 +3756,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
             </div>
           </div>
           
-          <div style="text-align: center; font-size: 0.7rem; color: #aaa; margin-top: 3rem;">Payment ID: ${paymentId}</div>
+          <div style="text-align: center; font-size: 0.7rem; color: #aaa; margin-top: 3rem;">${isPending ? 'Bill ID' : 'Payment ID'}: ${pm.id}</div>
         </div>
       </div>
     `;
@@ -3764,11 +3792,18 @@ window.renderDashActivity = async function () {
     const s = document.getElementById('dash-activity-search').value.toLowerCase();
     const { db, firestore } = await window._getAdminDb();
 
-    // Fetch from payments (Paid Bills) and reports (Reports) in parallel
-    const [paymentsSnap, reportsSnap] = await Promise.all([
+    // Fetch from payments (Paid Bills), reports (Reports), and users (for plan lookup) in parallel
+    const [paymentsSnap, reportsSnap, usersSnap] = await Promise.all([
       firestore.getDocs(firestore.collection(db, "payments")),
-      firestore.getDocs(firestore.collection(db, "reports"))
+      firestore.getDocs(firestore.collection(db, "reports")),
+      firestore.getDocs(firestore.collection(db, "users"))
     ]);
+
+    const userPlans = {};
+    usersSnap.docs.forEach(d => {
+      const u = d.data();
+      if (u.accountNumber) userPlans[u.accountNumber] = u.plan || u.Plan || '-';
+    });
 
     let combined = [];
 
@@ -3779,7 +3814,7 @@ window.renderDashActivity = async function () {
         type: 'Bill',
         name: b.customerName || b.name || 'Unknown',
         accountNumber: b.accountNumber || '-',
-        plan: b.plan || '-',
+        plan: (b.plan && b.plan !== '-') ? b.plan : (userPlans[b.accountNumber] || '-'),
         amount: b.amount ? '₱' + parseFloat(String(b.amount).replace(/[^0-9.]/g, '')).toLocaleString() : '-',
         status: b.status || 'Paid',
         receiptUrl: b.receiptUrl || '',
@@ -3794,7 +3829,7 @@ window.renderDashActivity = async function () {
         type: 'Report',
         name: r.name || r.fullName || 'Unknown',
         accountNumber: r.accountNumber || '-',
-        plan: r.plan || '-',
+        plan: (r.plan && r.plan !== '-') ? r.plan : (userPlans[r.accountNumber] || '-'),
         amount: '-', // Reports don't have amounts
         status: r.status || 'Pending',
         receiptUrl: '',
