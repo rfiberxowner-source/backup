@@ -127,6 +127,18 @@ export default function BillingScreen({ user, route, navigation }) {
     return () => clearInterval(interval);
   }, [showAIModal, aiTimer]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setShowGcashDropdown(false);
+      setActiveTab(0);
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ x: 0, animated: false });
+        mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+      }, 50);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const processReceiptImage = async (asset) => {
     setIsAnalyzing(true);
     setIsFraud(false);
@@ -827,8 +839,9 @@ export default function BillingScreen({ user, route, navigation }) {
               )}
 
               <TouchableOpacity
-                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border }}
+                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border, opacity: bills.filter(b => b.status !== 'paid').length === 0 ? 0.5 : 1 }}
                 onPress={handleUploadImage}
+                disabled={bills.filter(b => b.status !== 'paid').length === 0}
               >
                 <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>Upload Payment Screenshot</Text>
               </TouchableOpacity>
@@ -862,7 +875,18 @@ export default function BillingScreen({ user, route, navigation }) {
               {selectedReceipt && (() => {
                 let activeRec = selectedReceipt;
                 const pMatch = (payments || []).find(x => x.id === selectedReceipt.id);
-                if (pMatch) activeRec = { ...pMatch, status: 'paid', collection: 'payments' };
+                if (pMatch) {
+                  let dDate = pMatch.dueDate;
+                  if (!dDate && pMatch.billId) {
+                    const bMatched = (bills || []).find(b => b.id === pMatch.billId);
+                    if (bMatched) dDate = bMatched.dueDate;
+                  }
+                  if (!dDate && pMatch.billingMonth) {
+                    const bMatched = (bills || []).find(b => (b.billingMonth === pMatch.billingMonth) || (b.period === pMatch.billingMonth));
+                    if (bMatched) dDate = bMatched.dueDate;
+                  }
+                  activeRec = { ...pMatch, status: 'paid', collection: 'payments', dueDate: dDate || '' };
+                }
                 else {
                   const bMatch = (bills || []).find(x => x.id === selectedReceipt.id);
                   if (bMatch) activeRec = bMatch;
@@ -877,7 +901,12 @@ export default function BillingScreen({ user, route, navigation }) {
 
                 const allPays = [];
                 payments.forEach(p => {
-                  allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
+                  let origDateSent = p.dateSent || p.date || p.datePaid || '';
+                  if (p.billId) {
+                    const bMatch = (bills || []).find(b => b.id === p.billId);
+                    if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
+                  }
+                  allPays.push({ ...p, isPaidRec: true, sortDate: origDateSent });
                 });
                 bills.forEach(b => {
                   if (b.status !== 'paid') {

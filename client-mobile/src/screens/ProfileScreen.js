@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image, Modal, KeyboardAvoidingView, Platform, DeviceEventEmitter } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -11,7 +11,7 @@ import * as Location from 'expo-location';
 // import * as Notifications from 'expo-notifications';
 // import * as Device from 'expo-device';
 
-export default function ProfileScreen({ route, user, onLogout }) {
+export default function ProfileScreen({ navigation, route, user, onLogout }) {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const styles = createStyles(colors, isDarkMode);
 
@@ -314,6 +314,45 @@ export default function ProfileScreen({ route, user, onLogout }) {
       profilePicture: user.profilePicture || null
     });
   };
+  const hasChanges = isEditing && (
+    (userData.firstName || '') !== (initialParsed.first || '') ||
+    (userData.lastName || '') !== (initialParsed.last || '') ||
+    (userData.middleName || '') !== (initialParsed.middle || '') ||
+    (userData.phone || '') !== (user.phone || '') ||
+    (userData.address || '') !== (user.address || '') ||
+    (userData.facebook || '') !== (user.facebook || '') ||
+    (userData.password || '') !== (user.password || '')
+  );
+
+  useEffect(() => {
+    DeviceEventEmitter.emit('profileDirty', hasChanges);
+  }, [hasChanges]);
+
+  const scrollRef = React.useRef(null);
+
+  useEffect(() => {
+    const subCancel = DeviceEventEmitter.addListener('forceCancelProfileEdit', () => {
+      handleCancelEdit();
+    });
+
+    const subFocus = navigation.addListener('focus', () => {
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: false });
+      }, 50);
+    });
+
+    const subBlur = navigation.addListener('blur', () => {
+      if (isEditing && !hasChanges) {
+        handleCancelEdit();
+      }
+    });
+
+    return () => {
+      subCancel.remove();
+      subFocus();
+      subBlur();
+    };
+  }, [navigation, isEditing, hasChanges, userData]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -339,7 +378,7 @@ export default function ProfileScreen({ route, user, onLogout }) {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={[styles.scrollContent, isEditing && { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView ref={scrollRef} contentContainerStyle={[styles.scrollContent, isEditing && { paddingBottom: 250 }]} showsVerticalScrollIndicator={false}>
 
           {/* Profile Avatar Header */}
           <View style={styles.profileHero}>

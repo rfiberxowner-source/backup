@@ -34,6 +34,16 @@ export default function SupportScreen({ user, route, navigation }) {
   }, [route.params?.prefillCategory, route.params?.timestamp]);
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // If we didn't just come from a route parameter prefill, reset to tickets
+      if (!route.params?.prefillCategory && !route.params?.ticketId) {
+        setActiveTab('tickets');
+      }
+    });
+    return unsubscribe;
+  }, [navigation, route.params]);
+
+  useEffect(() => {
     if (route.params?.ticketId && tickets.length > 0) {
       const t = tickets.find(x => x.id === route.params.ticketId);
       if (t) {

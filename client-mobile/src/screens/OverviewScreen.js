@@ -179,6 +179,17 @@ export default function OverviewScreen({ user, navigation }) {
     setRecentUpdates(recentList);
   }, [reportsData, billsData, paymentsData, globalAnnData, userData.recentProfileUpdates]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({ y: 0, animated: false });
+        }
+      }, 50);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
   const onRefresh = () => {
     // With real-time listeners, pull-to-refresh is mostly visual
     setRefreshing(true);
@@ -378,7 +389,7 @@ export default function OverviewScreen({ user, navigation }) {
               <Text style={styles.emptyText}>Nothing recent to show.</Text>
             </View>
           ) : (
-            <ScrollView style={{ maxHeight: 350 }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+            <ScrollView ref={scrollRef} style={{ maxHeight: 350 }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
               {recentUpdates.map((item, index) => (
                 <TouchableOpacity key={item.id + index} style={[styles.feedItem, !item.isRead && styles.feedItemUnread]} onPress={() => handlePressItem(item)}>
                   <View style={[styles.feedIconBox, { backgroundColor: item.color + '20' }]}>
@@ -461,7 +472,18 @@ export default function OverviewScreen({ user, navigation }) {
               {selectedReceipt && (() => {
                 let activeRec = selectedReceipt;
                 const pMatch = (paymentsData || []).find(x => x.id === selectedReceipt.id);
-                if (pMatch) activeRec = { ...pMatch, status: 'paid', collection: 'payments' };
+                if (pMatch) {
+                  let dDate = pMatch.dueDate;
+                  if (!dDate && pMatch.billId) {
+                    const bMatched = (billsData || []).find(b => b.id === pMatch.billId);
+                    if (bMatched) dDate = bMatched.dueDate;
+                  }
+                  if (!dDate && pMatch.billingMonth) {
+                    const bMatched = (billsData || []).find(b => (b.billingMonth === pMatch.billingMonth) || (b.period === pMatch.billingMonth));
+                    if (bMatched) dDate = bMatched.dueDate;
+                  }
+                  activeRec = { ...pMatch, status: 'paid', collection: 'payments', dueDate: dDate || '' };
+                }
                 else {
                   const bMatch = (billsData || []).find(x => x.id === selectedReceipt.id);
                   if (bMatch) activeRec = bMatch;
@@ -476,7 +498,12 @@ export default function OverviewScreen({ user, navigation }) {
 
                 const allPays = [];
                 (typeof paymentsData !== 'undefined' ? paymentsData : []).forEach(p => {
-                  allPays.push({ ...p, isPaidRec: true, sortDate: p.datePaid || p.dateSent || p.date || '' });
+                  let origDateSent = p.dateSent || p.date || p.datePaid || '';
+                  if (p.billId) {
+                    const bMatch = (typeof billsData !== 'undefined' ? billsData : []).find(b => b.id === p.billId);
+                    if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
+                  }
+                  allPays.push({ ...p, isPaidRec: true, sortDate: origDateSent });
                 });
                 (typeof billsData !== 'undefined' ? billsData : []).forEach(b => {
                   if (b.status !== 'paid') {

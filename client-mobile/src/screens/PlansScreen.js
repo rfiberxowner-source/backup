@@ -1,18 +1,18 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Linking } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Linking, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
+import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 const PLANS = [
-  { id: 1, name: 'Starter RFiberX', price: '800', features: ['Up to 30 Mbps', 'Unlimited Data', 'Standard Router', 'Good for 10 devices'] },
-  { id: 2, name: 'Value RFiberX', price: '1000', features: ['Up to 50 Mbps', 'Unlimited Data', 'Standard Router', 'HD Streaming Ready'] },
-  { id: 3, name: 'Family RFiberX', price: '1300', features: ['Up to 70 Mbps', 'Unlimited Data', 'Dual-Band Router', 'Great for 10 devices'] },
-  { id: 4, name: 'Pro RFiberX', price: '1500', features: ['Up to 100 Mbps', 'Unlimited Data', 'Wi-Fi 6 Router', '4K Streaming & Gaming'] },
-  { id: 5, name: 'Extreme RFiberX', price: '2000', features: ['Up to 200 Mbps', 'Unlimited Data', 'Mesh System Included', 'Ultimate Smart Home'] },
-  { id: 6, name: 'Ultra RFiberX', price: '4500', features: ['Dual-Band Router 5G', 'Unlimited Data', 'Up to 50 devices'] },
+  { id: 1, name: 'Starter RFiberX', price: '800', features: ['Up to 30 Mbps', 'Unlimited Data', 'Standard Router', 'Good for 8 devices'], image: require('../../assets/starter.jpg') },
+  { id: 2, name: 'Value RFiberX', price: '1000', features: ['Up to 50 Mbps', 'Unlimited Data', 'Standard Router', 'Good for 12 devices'], image: require('../../assets/value.jpg') },
+  { id: 3, name: 'Family RFiberX', price: '1300', features: ['Up to 70 Mbps', 'Unlimited Data', 'Dual-Band Router', 'Great for 15 devices'], image: require('../../assets/families.jpg') },
+  { id: 4, name: 'Pro RFiberX', price: '1500', features: ['Up to 100 Mbps', 'Unlimited Data', 'Wi-Fi 6 Router', 'Up to 20 devices'], image: require('../../assets/pro.jpg') },
+  { id: 5, name: 'Extreme RFiberX', price: '2000', features: ['Up to 200 Mbps', 'Unlimited Data', 'Up to 30 devices'], image: require('../../assets/extreme.jpg') },
+  { id: 6, name: 'Ultra RFiberX', price: '4500', features: ['Dual-Band Router 5G', 'Unlimited Data', 'Up to 50 devices'], image: null },
 ];
 
 export default function PlansScreen({ user, navigation }) {
@@ -22,7 +22,7 @@ export default function PlansScreen({ user, navigation }) {
   const scrollViewRef = useRef(null);
 
   const currentPlan = user.Plan || user.plan || 'No Plan';
-  
+
   let currentSpeed = 0;
   const match = currentPlan.match(/(\d+)\s*Mbps/i);
   if (match) {
@@ -41,13 +41,25 @@ export default function PlansScreen({ user, navigation }) {
   const getPlanSpeed = (plan) => {
     const pName = plan.name.toLowerCase();
     if (pName.includes('ultra')) return 500;
-    
+
     for (const f of plan.features) {
       const m = f.match(/(\d+)\s*Mbps/i);
       if (m) return parseInt(m[1]);
     }
     return 0;
   };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setActiveIndex(0);
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollTo({ x: 0, animated: false });
+        }
+      }, 50);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const handleScroll = (event) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -67,10 +79,10 @@ export default function PlansScreen({ user, navigation }) {
 
   let accountAgeMonths = 0;
   if (user.dateInstalled || user.dateCreated || user.createdAt) {
-      const start = new Date(user.dateInstalled || user.dateCreated || user.createdAt);
-      if (!isNaN(start.getTime())) {
-          accountAgeMonths = (new Date() - start) / (1000 * 60 * 60 * 24 * 30.44);
-      }
+    const start = new Date(user.dateInstalled || user.dateCreated || user.createdAt);
+    if (!isNaN(start.getTime())) {
+      accountAgeMonths = (new Date() - start) / (1000 * 60 * 60 * 24 * 30.44);
+    }
   }
   const isEligibleForChange = accountAgeMonths >= 6;
 
@@ -113,43 +125,50 @@ export default function PlansScreen({ user, navigation }) {
             {PLANS.map((plan, index) => {
               const targetSpeed = getPlanSpeed(plan);
               const isCurrent = currentSpeed > 0 && targetSpeed === currentSpeed;
-              
+              const CardContainer = plan.image ? ImageBackground : View;
+
               return (
                 <View key={plan.id} style={styles.slide}>
-                  <View style={[styles.planCard, isCurrent && styles.planCardCurrent]}>
-                    {isCurrent && (
-                      <View style={styles.currentBadge}>
-                        <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
-                      </View>
-                    )}
-
-                    <View style={styles.planHeader}>
-                      <Text style={styles.planName}>{plan.name}</Text>
-                      <Text style={styles.planPrice}>
-                        ₱{plan.price}<Text style={styles.planPeriod}> /mo</Text>
-                      </Text>
-                    </View>
-
-                    <View style={styles.planDetails}>
-                      {plan.features.map((feature, i) => (
-                        <View key={i} style={styles.featureRow}>
-                          <Text style={styles.planDesc}>{feature}</Text>
+                  <CardContainer 
+                    source={plan.image}
+                    style={[styles.planCard, isCurrent && styles.planCardCurrent, { overflow: 'hidden' }]}
+                    imageStyle={{ opacity: 0.15, resizeMode: 'cover' }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      {isCurrent && (
+                        <View style={styles.currentBadge}>
+                          <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
                         </View>
-                      ))}
-                    </View>
+                      )}
 
-                    {!isCurrent ? (
-                      <TouchableOpacity style={styles.actionBtn} onPress={() => onRequestChange(plan)}>
-                        <Text style={styles.actionBtnText}>
-                          {targetSpeed < currentSpeed ? 'Downgrade' : 'Upgrade'}
+                      <View style={styles.planHeader}>
+                        <Text style={styles.planName}>{plan.name}</Text>
+                        <Text style={styles.planPrice}>
+                          ₱{plan.price}<Text style={styles.planPeriod}> /mo</Text>
                         </Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={[styles.actionBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
-                        <Text style={[styles.actionBtnText, { color: colors.text }]}>Current Plan</Text>
                       </View>
-                    )}
-                  </View>
+
+                      <View style={styles.planDetails}>
+                        {plan.features.map((feature, i) => (
+                          <View key={i} style={styles.featureRow}>
+                            <Text style={styles.planDesc}>{feature}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {!isCurrent ? (
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => onRequestChange(plan)}>
+                          <Text style={styles.actionBtnText}>
+                            {targetSpeed < currentSpeed ? 'Downgrade' : 'Upgrade'}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[styles.actionBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
+                          <Text style={[styles.actionBtnText, { color: colors.text }]}>Current Plan</Text>
+                        </View>
+                      )}
+                    </View>
+                  </CardContainer>
                 </View>
               );
             })}
@@ -230,10 +249,10 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   planCard: {
     backgroundColor: colors.card,
     borderRadius: 24,
-    padding: 30,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 400,
+    height: 380,
   },
   planCardCurrent: { borderColor: colors.primary, borderWidth: 2 },
   currentBadge: {
@@ -246,11 +265,11 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     borderRadius: 12,
   },
   currentBadgeText: { color: colors.text, fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1 },
-  planHeader: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 20, marginBottom: 20, alignItems: 'center' },
-  planName: { color: colors.text, fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 10 },
-  planPrice: { color: colors.primary, fontSize: 32, fontFamily: 'Inter_700Bold' },
-  planPeriod: { color: colors.textMuted, fontSize: 16, fontFamily: 'Inter_500Medium' },
-  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  planHeader: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12, marginBottom: 15, alignItems: 'center' },
+  planName: { color: colors.text, fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 4 },
+  planPrice: { color: colors.primary, fontSize: 28, fontFamily: 'Inter_700Bold' },
+  planPeriod: { color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   planDetails: { flex: 1, justifyContent: 'center' },
   planSpeed: { color: colors.text, fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 5, textAlign: 'center' },
   planDesc: { color: colors.textSecondary, fontSize: 14, fontFamily: 'Inter_400Regular' },
@@ -259,11 +278,11 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.primary,
-    marginTop: 20,
+    marginTop: 10,
   },
   actionBtnText: { color: colors.primary, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   pagination: { flexDirection: 'row', justifyContent: 'center', position: 'absolute', bottom: 20, width: '100%' },

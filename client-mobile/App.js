@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, AppState, LogBox } from 'react-native';
+import { ActivityIndicator, View, AppState, LogBox, DeviceEventEmitter, Alert } from 'react-native';
 
 // Suppress harmless React Native warnings related to Firebase and Clipboard
 LogBox.ignoreLogs([
@@ -39,8 +39,41 @@ const Tab = createBottomTabNavigator();
 function MainTabs({ user, setUser }) {
   const { colors } = useTheme();
   
+  const [isProfileDirty, setIsProfileDirty] = useState(false);
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('profileDirty', (dirty) => {
+      setIsProfileDirty(dirty);
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
     <Tab.Navigator
+      screenListeners={({ navigation, route }) => ({
+        tabPress: (e) => {
+          const state = navigation.getState();
+          const currentRoute = state.routes[state.index].name;
+          
+          if (currentRoute === 'Profile' && isProfileDirty && route.name !== 'Profile') {
+            e.preventDefault();
+            Alert.alert(
+              'Discard changes?',
+              'Are you sure you want to switch section without saving your new details?',
+              [
+                { text: 'No', style: 'cancel' },
+                {
+                  text: 'Yes',
+                  style: 'destructive',
+                  onPress: () => {
+                    DeviceEventEmitter.emit('forceCancelProfileEdit');
+                    navigation.navigate(route.name);
+                  }
+                }
+              ]
+            );
+          }
+        },
+      })}
       screenOptions={({ route }) => ({
         headerShown: false,
         animation: 'shift', // Enables horizontal swipe animation based on tab index
