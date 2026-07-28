@@ -21,7 +21,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
 
   // --- Start Auth Listener for Admin ---
   if (adminId && adminId !== 'owner-01' && !window._adminAuthUnsub) {
-    (async function() {
+    (async function () {
       try {
         const { db, firestore } = await window._getAdminDb();
         window._adminAuthUnsub = firestore.onSnapshot(firestore.doc(db, "admin", adminId), (docSnap) => {
@@ -39,7 +39,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
             }
           }
         });
-      } catch(e) {}
+      } catch (e) { }
     })();
   }
 
@@ -82,10 +82,8 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <style>#admin-sidebar::-webkit-scrollbar { display: none; } #admin-sidebar { -ms-overflow-style: none; scrollbar-width: none; }</style>
       <div id="admin-sidebar" style="width: 260px; background: #0f131f; border-right: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; bottom: 0; left: 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(0);">
         
-        <div style="height: 70px; padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 75px; width: auto;" />
-          </div>
+        <div style="height: 70px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1rem;">
+          <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
         </div>
 
         <div style="flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
@@ -137,8 +135,8 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto; transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
         
         <!-- Header -->
-        <header class="dashboard-topbar" style="height: 70px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;">
-          <h2 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+        <header class="dashboard-topbar" style="height: 70px; box-sizing: border-box; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;">
+          <div style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: auto 0; display: flex; align-items: center; gap: 0.75rem; padding: 0;">
             ${activeRoute === 'mapping' ? `
             <button onclick="window.history.back()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; padding: 0.5rem 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; transition: all 0.2s; font-size: 0.85rem; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#94a3b8'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -146,8 +144,8 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
             </button>
             ` : ''}
             ${pageTitle}
-          </h2>
-          <div style="display: flex; align-items: center; gap: 1.5rem;">
+          </div>
+          <div style="display: flex; align-items: center; gap: 1.5rem; margin: auto 0;">
             <div style="color: #64748b; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.02); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
               ${currDate}
@@ -449,6 +447,15 @@ export const adminViews = {
                   <div id="modal-ticket-subject" style="color: #fff; font-size: 1rem; font-weight: 600; line-height: 1.4;"></div>
                 </div>
                 <div id="modal-ticket-desc" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
+              </div>
+            </div>
+            
+            <!-- Rating Details -->
+            <div id="modal-ticket-rating-container" style="display: none; margin-bottom: 1rem;">
+              <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Client Rating</div>
+              <div style="background: rgba(251,191,36,0.05); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(251,191,36,0.1);">
+                <div id="modal-ticket-rating" style="color: #fbbf24; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;"></div>
+                <div id="modal-ticket-feedback" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; font-style: italic;"></div>
               </div>
             </div>
             
@@ -1128,7 +1135,69 @@ export const adminViews = {
   },
 
   '/RFiberXAdminportal-communications': () => {
-    // Send billing email function
+    window.sendPushNotification = async function(expoPushToken, title, body, data = {}) {
+      if (!expoPushToken) return;
+      const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data };
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Accept-encoding': 'gzip, deflate', 'Content-Type': 'application/json' },
+          body: JSON.stringify(message),
+        });
+      } catch (error) { console.error('Error sending push notification:', error); }
+    };
+    window.sendDailyReminders = async function () {
+      const btn = document.getElementById('comm-reminder-btn');
+      const statusEl = document.getElementById('comm-reminder-status');
+      btn.disabled = true;
+      btn.innerHTML = 'Scanning...';
+      statusEl.innerHTML = '';
+      
+      try {
+        const { db, firestore } = await window._getAdminDb();
+        const usersSnap = await firestore.getDocs(firestore.collection(db, "users"));
+        
+        const currentDay = new Date().getDate();
+        let sentCount = 0;
+        
+        for (const uDoc of usersSnap.docs) {
+          const uData = uDoc.data();
+          if (!uData.expoPushToken) continue;
+          
+          const billsSnap = await firestore.getDocs(
+            firestore.query(firestore.collection(db, "users", uDoc.id, "billing_emails"), firestore.orderBy("timestamp", "desc"), firestore.limit(1))
+          );
+          
+          if (billsSnap.empty) continue;
+          const latestBill = billsSnap.docs[0].data();
+          const bStatus = (latestBill.status || '').toLowerCase();
+          
+          if (bStatus === 'unpaid' || bStatus === 'pending') {
+            if (currentDay >= 1 && currentDay <= 5) {
+              await window.sendPushNotification(uData.expoPushToken, "New Billing Statement", "You have a new unpaid bill. Please check your portal for details.", { type: 'billing_unpaid' });
+              sentCount++;
+            } else if (currentDay === 6) {
+              await window.sendPushNotification(uData.expoPushToken, "Bill Almost Overdue", "Your internet bill is due tomorrow! Pay now to avoid disconnection.", { type: 'billing_almost_due' });
+              sentCount++;
+            } else if (currentDay >= 8) {
+              await window.sendPushNotification(uData.expoPushToken, "Overdue Notice", "Your account is past due. Please settle your balance immediately.", { type: 'billing_overdue' });
+              sentCount++;
+            }
+          } else if (bStatus === 'overdue' && currentDay >= 8) {
+            await window.sendPushNotification(uData.expoPushToken, "Overdue Notice", "Your account is past due. Please settle your balance immediately.", { type: 'billing_overdue' });
+            sentCount++;
+          }
+        }
+        
+        statusEl.innerHTML = `<div style="color: #10b981;">Successfully sent ${sentCount} reminders!</div>`;
+      } catch (e) {
+        console.error(e);
+        statusEl.innerHTML = `<div style="color: #e53935;">Error: ${e.message}</div>`;
+      }
+      
+      btn.disabled = false;
+      btn.innerHTML = 'Send Daily Reminders';
+    };
     window.sendBillingEmail = async function () {
       const acctInput = document.getElementById('comm-acct-number');
       const statusEl = document.getElementById('comm-status');
@@ -1161,7 +1230,6 @@ export const adminViews = {
         try { app = initializeApp(firebaseConfig); } catch (e) { }
         const db = getFirestore();
 
-        // Query the users collection by accountNumber
         const q = query(collection(db, "users"), where("accountNumber", "==", accountNumber));
         const snapshot = await getDocs(q);
 
@@ -1172,7 +1240,6 @@ export const adminViews = {
           return;
         }
 
-        // Get the first matching user
         let userId = null;
         let userData = null;
         snapshot.forEach(docSnap => {
@@ -1184,7 +1251,7 @@ export const adminViews = {
 
         const now = new Date();
         const billingMonth = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7); // 7th day of the current month
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7); 
         const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         let newBillId = '';
@@ -1193,7 +1260,6 @@ export const adminViews = {
         }
         if (newBillId.charAt(0) === '0') newBillId = (Math.floor(Math.random() * 9) + 1).toString() + newBillId.substring(1);
 
-        // Create a billing email document inside the user's billing_emails sub-collection
         const billingEmailData = {
           billId: newBillId,
           accountNumber: userData.accountNumber || accountNumber,
@@ -1211,13 +1277,11 @@ export const adminViews = {
           type: 'billing_statement'
         };
 
-        // Add to sub-collection: users/{userId}/billing_emails
         const billingRef = collection(db, "users", userId, "billing_emails");
         await addDoc(billingRef, billingEmailData);
 
         statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Billing statement sent to <strong>' + (userData.name || accountNumber) + '</strong> (₱' + billingEmailData.amount + ' - ' + billingMonth + ')</div>';
 
-        // Append to the sent log table
         const logBody = document.getElementById('comm-log-body');
         if (logBody) {
           const noRowsMsg = logBody.querySelector('.no-rows');
@@ -1344,7 +1408,6 @@ export const adminViews = {
         const { db, firestore } = await window._getAdminDb();
         let deletedCount = 0;
 
-        // Delete all billing_emails for all users
         const usersSnapshot = await firestore.getDocs(firestore.collection(db, "users"));
         for (const userDoc of usersSnapshot.docs) {
           const billingRef = firestore.collection(db, "users", userDoc.id, "billing_emails");
@@ -1356,7 +1419,6 @@ export const adminViews = {
           }
         }
 
-        // Delete all paid bills from the payments collection
         const paymentsSnap = await firestore.getDocs(firestore.collection(db, "payments"));
         for (const paymentDoc of paymentsSnap.docs) {
           await firestore.deleteDoc(firestore.doc(db, "payments", paymentDoc.id));
@@ -1378,6 +1440,24 @@ export const adminViews = {
         <p style="color: #64748b; font-size: 0.9rem; margin-top: 0.25rem;">Send billing statements directly to client accounts. Statements will appear in their portal dashboard.</p>
       </div>
 
+        <!-- Automated Push Notifications Scanner Section -->
+        <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <div style="width: 36px; height: 36px; background: rgba(16,185,129,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10b981;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"></path></svg>
+            </div>
+            <div>
+              <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Automated Billing Reminders</h3>
+              <p style="color: #64748b; font-size: 0.8rem; margin: 0;">Scan database and send push notifications to clients (Unpaid/Overdue)</p>
+            </div>
+          </div>
+          <button id="comm-reminder-btn" onclick="window.sendDailyReminders()" style="background: #10b981; color: #fff; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Send Daily Reminders
+          </button>
+          <div id="comm-reminder-status" style="margin-top: 1rem;"></div>
+        </div>
+
       <!-- Send Billing Email Section -->
       <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
@@ -1393,7 +1473,7 @@ export const adminViews = {
         <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
           <div style="flex: 1; min-width: 250px;">
             <label style="display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Account Number</label>
-            <input type="text" id="comm-acct-number" value="lWKJ-opsJ-N3iD" placeholder="e.g. lWKJ-opsJ-N3iD" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-family: 'JetBrains Mono', monospace, 'Inter', sans-serif; letter-spacing: 0.5px;" onfocus="this.style.borderColor='#E53935'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+            <input type="text" id="comm-acct-number" value="312017" placeholder="e.g. 312017" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-family: 'JetBrains Mono', monospace, 'Inter', sans-serif; letter-spacing: 0.5px;" onfocus="this.style.borderColor='#E53935'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
           </div>
           <button id="comm-send-btn" onclick="window.sendBillingEmail()" style="background: #E53935; color: #fff; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(229,57,53,0.3); white-space: nowrap; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#E53935'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -1524,12 +1604,12 @@ window.logoutAdminEffect = async function () {
       }
     }
   } catch (e) { console.error(e); }
-  
+
   if (window._adminAuthUnsub) {
     window._adminAuthUnsub();
     window._adminAuthUnsub = null;
   }
-  
+
   localStorage.removeItem('adminUser');
   localStorage.removeItem('adminSessionToken');
   window.router.navigate('/RFiberXAdminportal');
@@ -1574,7 +1654,7 @@ window.handleAdminLogin = async function () {
     if (data.activeSessionToken) {
       throw new Error("Account is already logged in on another device/browser. Please log out there first.");
     }
-    
+
     const sessionToken = 'admin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     await firestore.updateDoc(firestore.doc(db, "admin", doc.id), { activeSessionToken: sessionToken });
 
@@ -2397,6 +2477,19 @@ window.openAdminReport = async function (id) {
       try {
         await firestore.updateDoc(firestore.doc(db, "reports", id), { status: 'Read' });
         r.status = 'Read';
+        
+        // Notify client that their ticket was read
+        if (r.userId) {
+          const uDoc = await firestore.getDoc(firestore.doc(db, "users", r.userId));
+          if (uDoc.exists() && uDoc.data().expoPushToken) {
+            await window.sendPushNotification(
+              uDoc.data().expoPushToken,
+              "Ticket Update",
+              "An admin has read and is reviewing your support ticket.",
+              { ticketId: id, type: 'ticket_read' }
+            );
+          }
+        }
       } catch (err) {
         console.warn("Could not update report status to Read:", err);
       }
@@ -2427,28 +2520,33 @@ window.openAdminReport = async function (id) {
 
     // Show rating if available directly on the report document
     const ratingContainer = document.getElementById('modal-ticket-rating-container');
-    document.getElementById('modal-ticket-rating').innerText = '';
-    document.getElementById('modal-ticket-feedback').innerText = '';
-    ratingContainer.style.display = 'none';
+    const rLabel = document.getElementById('modal-ticket-rating');
+    const fLabel = document.getElementById('modal-ticket-feedback');
 
-    if (r.rating) {
-      document.getElementById('modal-ticket-rating').innerText = r.rating + ' ★';
-      document.getElementById('modal-ticket-feedback').innerText = r.feedback ? `"${r.feedback}"` : 'No feedback provided.';
-      ratingContainer.style.display = 'block';
-    } else {
-      // Fallback for legacy ratings stored in subcollection
-      try {
-        const ratingsSnap = await firestore.getDocs(firestore.collection(db, "reports", id, "ratings"));
-        if (!ratingsSnap.empty) {
-          const ratingDoc = ratingsSnap.docs[0].data();
-          if (ratingDoc.rating) {
-            document.getElementById('modal-ticket-rating').innerText = ratingDoc.rating + ' ★';
-            document.getElementById('modal-ticket-feedback').innerText = ratingDoc.feedback ? `"${ratingDoc.feedback}"` : 'No feedback provided.';
-            ratingContainer.style.display = 'block';
+    if (ratingContainer && rLabel && fLabel) {
+      rLabel.innerText = '';
+      fLabel.innerText = '';
+      ratingContainer.style.display = 'none';
+
+      if (r.rating) {
+        rLabel.innerText = r.rating + ' ★';
+        fLabel.innerText = r.feedback ? `"${r.feedback}"` : 'No feedback provided.';
+        ratingContainer.style.display = 'block';
+      } else {
+        // Fallback for legacy ratings stored in subcollection
+        try {
+          const ratingsSnap = await firestore.getDocs(firestore.collection(db, "reports", id, "ratings"));
+          if (!ratingsSnap.empty) {
+            const ratingDoc = ratingsSnap.docs[0].data();
+            if (ratingDoc.rating) {
+              rLabel.innerText = ratingDoc.rating + ' ★';
+              fLabel.innerText = ratingDoc.feedback ? `"${ratingDoc.feedback}"` : 'No feedback provided.';
+              ratingContainer.style.display = 'block';
+            }
           }
+        } catch (err) {
+          console.warn("Could not fetch ratings for ticket:", err);
         }
-      } catch (err) {
-        console.warn("Could not fetch ratings for ticket:", err);
       }
     }
 
@@ -2654,7 +2752,7 @@ window.renderAdminClientsTable = async function () {
 
       const isDel = window.isClientDeleteMode;
       const isLog = window.isClientLogoutMode;
-      
+
       let rowBg = 'transparent';
       let rowClick = `window.openAdminClientModal('${d.id}')`;
       let rowDblClick = '';
@@ -3544,7 +3642,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     else if (pm.date) pDate = new Date(pm.date);
 
     const dateStr = pDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    
+
     let due = new Date(pDate);
     due.setDate(7);
     const dueStr = due.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -3564,7 +3662,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
       else if (n.includes('pro') || n.includes('1500')) currentSpeedStr = '100Mbps';
       else if (n.includes('extreme') || n.includes('2000')) currentSpeedStr = '200Mbps';
     }
-    
+
     let payMethod = pm.paymentMethod || 'Online payment';
     if (payMethod === 'Instant Payment' || payMethod === 'Digital Payment') payMethod = 'Online payment';
 
@@ -3728,7 +3826,6 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
           </div>
           
           <div class="footer-text">Thank you for keeping your account current. We value your continued patronage.</div>
-          <div class="footer-tax">THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX</div>
           
           <div class="cut-line">
             <div class="cut-dot"></div>
@@ -3906,8 +4003,6 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     const { db, firestore } = await window._getAdminDb();
     const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
 
-    await firestore.updateDoc(billDocRef, { status: 'paid' });
-
     const now = new Date();
     const payData = {
       userId: customerId,
@@ -3924,6 +4019,7 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     };
 
     await firestore.addDoc(firestore.collection(db, "payments"), payData);
+    await firestore.deleteDoc(billDocRef);
 
     if (window.renderBills) await window.renderBills();
     if (window.renderPayments) await window.renderPayments();

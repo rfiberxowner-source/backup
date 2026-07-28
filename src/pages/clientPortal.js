@@ -19,7 +19,7 @@ export const clientViews = {
       errorMsg.style.display = 'none';
 
       if (!identifier || !password) {
-        errorMsg.textContent = 'Please enter both email/name and password.';
+        errorMsg.textContent = 'Please enter both Account Number and Last Name.';
         errorMsg.style.display = 'block';
         return;
       }
@@ -28,9 +28,6 @@ export const clientViews = {
       submitBtn.disabled = true;
 
       try {
-        const isEmail = identifier.includes('@');
-        const queryField = isEmail ? 'email' : 'name';
-
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
         const { getFirestore, collection, query, where, getDocs, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
@@ -47,7 +44,7 @@ export const clientViews = {
         try { app = initializeApp(firebaseConfig); } catch (err) { }
         const db = getFirestore();
 
-        const q = query(collection(db, "users"), where(queryField, "==", identifier));
+        const q = query(collection(db, "users"), where("accountNumber", "==", identifier));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -61,9 +58,10 @@ export const clientViews = {
         let authenticated = false;
         let userData = null;
         querySnapshot.forEach((d) => {
-          if (d.data().password === password) {
+          const data = d.data();
+          if (data.password && data.password.trim().toLowerCase() === password.trim().toLowerCase()) {
             authenticated = true;
-            userData = { id: d.id, ...d.data() };
+            userData = { id: d.id, ...data };
           }
         });
 
@@ -75,16 +73,16 @@ export const clientViews = {
             submitBtn.disabled = false;
             return;
           }
-          
+
           const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           await updateDoc(doc(db, "users", userData.id), { activeSessionToken: sessionToken });
           userData.activeSessionToken = sessionToken;
-          
+
           localStorage.setItem('clientSessionToken', sessionToken);
           localStorage.setItem('clientUser', JSON.stringify(userData));
           window.router.navigate('/dashboard');
         } else {
-          errorMsg.textContent = 'Incorrect password. Please try again.';
+          errorMsg.textContent = 'Incorrect Last Name. Please try again.';
           errorMsg.style.display = 'block';
           submitBtn.innerHTML = 'Sign in &rarr;';
           submitBtn.disabled = false;
@@ -99,19 +97,19 @@ export const clientViews = {
     };
 
     return `
-      <div class="split-layout" style="height: 100vh; background: #0b0f19; display: flex; font-family: 'Inter', sans-serif;">
+      <div class="split-layout" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b0f19; display: flex; font-family: 'Inter', sans-serif; z-index: 9999;">
         <!-- Left Side -->
-        <div class="split-layout-hide-mobile" style="flex: 1; position: relative; background: #1a202c; display: flex; flex-direction: column; justify-content: space-between; padding: 4rem;">
+        <div class="split-layout-hide-mobile" style="flex: 65; position: relative; background: #1a202c; display: flex; flex-direction: column; padding: 4rem;">
           
+          <!-- Background layers -->
           <div style="position: absolute; top: 0; left: 0; bottom: 0; right: 0; overflow: hidden; pointer-events: none;">
-            <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: 80%; height: 80%; background: radial-gradient(circle, rgba(229,57,53,0.15) 0%, rgba(26,32,44,0) 70%); filter: blur(60px);"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; width: 100%; display: flex; justify-content: center; z-index: 0;">
+              <img src="/logo3-removebg-preview.png" alt="" style="width: 70%; max-width: 600px; height: auto;" />
+            </div>
+            <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: 80%; height: 80%; background: radial-gradient(circle, rgba(229,57,53,0.15) 0%, rgba(26,32,44,0) 70%); filter: blur(60px); z-index: 0;"></div>
           </div>
           
-          <div style="position: relative; z-index: 1;">
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: inline-block; margin-bottom: 4rem;">
-              <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 55px; width: auto;" />
-            </div>
-            
+          <div style="position: relative; z-index: 1; margin: auto 0;">
             <div style="color: #E53935; font-size: 0.8rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 1rem;">JOIN R-FIBER</div>
             <h1 style="color: #fff; font-size: 4rem; font-weight: 800; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 1.5rem;">Better internet<br>starts here.</h1>
             <p style="color: #cbd5e1; font-size: 1.1rem; line-height: 1.6; max-width: 400px;">Access your portal account and stay in control from day one.</p>
@@ -123,11 +121,7 @@ export const clientViews = {
         </div>
 
         <!-- Right Side -->
-        <div style="flex: 1; background: #0b0f19; display: flex; flex-direction: column; padding: 3rem 4rem; position: relative;">
-          
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem;">
-            <a href="#" onclick="event.preventDefault(); window.router.navigate('/');" style="color: #94a3b8; text-decoration: none; font-size: 0.85rem; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">Back to home</a>
-          </div>
+        <div style="flex: 35; background: #0b0f19; display: flex; flex-direction: column; padding: 3rem 2rem; position: relative;">
 
           <div style="max-width: 420px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; justify-content: center;">
             <div style="color: #E53935; font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 1rem; text-transform: uppercase;">Portal Login</div>
@@ -136,13 +130,13 @@ export const clientViews = {
             
             <form onsubmit="window.submitClientLogin(event)">
               <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Email or Full Name</label>
-                <input type="text" id="loginIdentifier" placeholder="you@example.com" style="width: 100%; background: #1a202c; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 0.85rem 1rem; border-radius: 6px; font-size: 0.95rem; outline: none; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#E53935'; this.style.background='#2d3748'" onblur="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='#1a202c'">
+                <label style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">6-Digit Account Number</label>
+                <input type="text" id="loginIdentifier" placeholder="e.g. 123456" maxlength="6" style="width: 100%; background: #1a202c; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 0.85rem 1rem; border-radius: 6px; font-size: 0.95rem; outline: none; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#E53935'; this.style.background='#2d3748'" onblur="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='#1a202c'">
               </div>
               
               <div style="margin-bottom: 2rem;">
-                <label style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Password</label>
-                <input type="password" id="loginPassword" placeholder="At least 6 characters" style="width: 100%; background: #1a202c; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 0.85rem 1rem; border-radius: 6px; font-size: 0.95rem; outline: none; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#E53935'; this.style.background='#2d3748'" onblur="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='#1a202c'">
+                <label style="display: block; color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Last Name</label>
+                <input type="text" id="loginPassword" placeholder="e.g. Dela Cruz" style="width: 100%; background: #1a202c; border: 1px solid rgba(255,255,255,0.05); color: #fff; padding: 0.85rem 1rem; border-radius: 6px; font-size: 0.95rem; outline: none; transition: all 0.2s; font-family: inherit;" onfocus="this.style.borderColor='#E53935'; this.style.background='#2d3748'" onblur="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='#1a202c'">
               </div>
               
               <div id="loginErrorMsg" style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; font-size: 0.85rem; padding: 0.75rem; border-radius: 6px; margin-bottom: 1.5rem; display: none;"></div>
@@ -857,15 +851,13 @@ export const clientViews = {
 
       try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, updateDoc, addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { getFirestore, doc, updateDoc, addDoc, collection, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const db = getFirestore();
         const userStr = localStorage.getItem('clientUser');
         const userObj = JSON.parse(userStr);
         const userId = userObj.id || userObj.uid;
 
-        // 1. Update the billing email document to 'paid'
         const billDocRef = doc(db, "users", userId, "billing_emails", billId);
-        await updateDoc(billDocRef, { status: 'paid' });
 
         // 2. Add to global payments collection for admin
         const now = new Date();
@@ -873,7 +865,7 @@ export const clientViews = {
           userId: userId,
           accountNumber: userObj.accountNumber || userObj.account || '',
           name: userObj.name || '',
-          amount: Number(balanceAmt),
+          amount: Number(amountStr),
           plan: billPlan || '',
           billingMonth: billMonth || '',
           dueDate: billDueDate || '',
@@ -882,6 +874,8 @@ export const clientViews = {
           datePaid: now.toISOString(),
           status: 'Completed'
         });
+        
+        await deleteDoc(billDocRef);
 
         // Show success, then reload
         btn.innerHTML = '<span style="color: #10b981;">Paid ✓</span>';
@@ -1015,8 +1009,23 @@ export const clientViews = {
         const clientAddress = userObj.address || 'None';
         const accountNumber = pay.accountNumber || userObj.accountNumber || 'N/A';
         const datePaidStr = pay.datePaid ? new Date(pay.datePaid).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : (isPaid ? 'N/A' : 'UNPAID');
-        const dueDate = pay.dueDate || '-';
-        const plan = pay.plan || '-';
+        let pDate = pay.dateSent ? new Date(pay.dateSent) : (pay.datePaid ? new Date(pay.datePaid) : new Date());
+        let due = new Date(pDate);
+        due.setDate(7);
+        const dueDate = due.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const rawPlan = pay.plan || '-';
+        let plan = rawPlan;
+        const match = rawPlan.match(/(\d+)\s*Mbps/i);
+        if (match) {
+          plan = `${match[1]}Mbps`;
+        } else {
+          const n = rawPlan.toLowerCase();
+          if (n.includes('starter') || n.includes('800')) plan = '30Mbps';
+          else if (n.includes('value') || n.includes('1000')) plan = '50Mbps';
+          else if (n.includes('family') || n.includes('1300')) plan = '70Mbps';
+          else if (n.includes('pro') || n.includes('1500')) plan = '100Mbps';
+          else if (n.includes('extreme') || n.includes('2000')) plan = '200Mbps';
+        }
         const amount = parseFloat(String(pay.amount).replace(/,/g, '')) || 0;
         const billingPeriod = pay.period || pay.billingMonth || '-';
         let paymentMethod = pay.method || (isPaid ? 'Online payment' : 'N/A');
@@ -1039,31 +1048,38 @@ export const clientViews = {
         let prevCharges = 0; // Default to 0 for start of records
         try {
           if (accountNumber && accountNumber !== 'N/A') {
+            const userId = userObj.id || userObj.uid;
+            let billsData = [];
+            if (userId) {
+              const billsSnap = await getDocs(collection(db, "users", userId, "billing_emails"));
+              billsSnap.forEach(d => { billsData.push({ id: d.id, ...d.data() }); });
+            }
+
             const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
             const allPaySnap = await getDocs(paymentsQ);
             const allPays = [];
             allPaySnap.forEach(d => {
               const pd = d.data();
-              allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: pd.datePaid || pd.dateSent || '' });
+              let origDateSent = pd.dateSent || pd.date || pd.datePaid || '';
+              if (pd.billId) {
+                const bMatch = billsData.find(b => b.id === pd.billId);
+                if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
+              }
+              allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: origDateSent });
             });
 
-            const userId = userObj.id || userObj.uid;
-            if (userId) {
-              const billsSnap = await getDocs(collection(db, "users", userId, "billing_emails"));
-              billsSnap.forEach(d => {
-                const bd = d.data();
-                if (bd.status !== 'paid') {
-                  allPays.push({ id: d.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || '' });
-                }
-              });
-            }
+            billsData.forEach(bd => {
+              if (bd.status !== 'paid') {
+                allPays.push({ id: bd.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || bd.datePaid || bd.date || '' });
+              }
+            });
 
             allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
 
             const currentIdx = allPays.findIndex(p => p.id === paymentDocId || p.billId === paymentDocId);
             if (currentIdx > 0) {
-              prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || 0;
               prevPaid = allPays[currentIdx - 1].isPaidRec;
+              prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
             }
           }
         } catch (e) { console.warn('Could not fetch previous charges:', e); }
@@ -1111,7 +1127,7 @@ export const clientViews = {
                 <div>
                   <div style="font-size: 1rem; font-weight: 700; color: #1a1a1a; text-transform: uppercase; margin-bottom: 0.25rem;">${clientName}</div>
                   <div style="font-size: 0.85rem; color: #555; max-width: 280px;">${clientAddress}</div>
-                  <div style="font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin-top: 0.75rem; letter-spacing: -0.5px;">${plan}</div>
+                  <div style="font-size: 32px; font-weight: 800; color: #1a1a1a; margin-top: 5px; letter-spacing: -1px;">${plan}</div>
                 </div>
                 <div style="border: 2px solid #1a1a1a; min-width: 280px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; font-size: 0.7rem; font-weight: 700;">
@@ -1129,7 +1145,7 @@ export const clientViews = {
 
               <!-- Account Number -->
               <div style="font-size: 0.85rem; color: #333; margin-bottom: 1.5rem;">
-                <strong>Statement of Account Number:</strong> ${accountNumber}
+                <strong>Account Number of Statement:</strong> ${accountNumber}
               </div>
 
               <!-- Bill Summary -->
@@ -1184,9 +1200,6 @@ export const clientViews = {
               <!-- Thank you message -->
               <div style="text-align: center; font-style: italic; color: #555; font-size: 0.85rem; margin-bottom: 1rem;">
                 Thank you for keeping your account current. We value your continued patronage.
-              </div>
-              <div style="text-align: center; font-size: 0.7rem; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2rem;">
-                This document is not valid for claim of input tax
               </div>
 
               <!-- Divider -->
@@ -1462,34 +1475,7 @@ export const clientViews = {
           if (input.files && input.files[0]) {
             const file = input.files[0];
 
-            // --- Aspect Ratio & Dimension Check ---
-            const checkDimensions = (imgFile) => {
-              return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => {
-                  const ratio = img.width / img.height;
-
-                  // Standard modern phone portrait screenshot ratio falls between 0.42 and 0.57
-                  if (ratio < 0.40 || ratio > 0.60) {
-                    reject(`Invalid dimensions (${img.width}x${img.height}). Aspect ratio: ${ratio.toFixed(2)}`);
-                  } else {
-                    resolve(true);
-                  }
-                };
-                img.onerror = () => reject('Invalid image');
-                const r = new FileReader();
-                r.onload = (e) => { img.src = e.target.result; };
-                r.readAsDataURL(imgFile);
-              });
-            };
-
-            try {
-              await checkDimensions(file);
-            } catch (err) {
-              alert(`🚨 FRAUD DETECTED 🚨\\n\\nImage format rejected. The uploaded receipt does not match the standard dimensions of a mobile phone screenshot.\\n\\nOnly raw, uncropped 1-to-1 screenshots are allowed.`);
-              input.value = ''; // Clear input
-              return;
-            }
+            // Aspect ratio check removed per user request
 
             // --- Error Level Analysis (ELA) ---
             const runErrorLevelAnalysis = (imageFile) => {
@@ -1714,7 +1700,7 @@ I need you to scan this GCash receipt image and extract text for these specific 
 1. "REF NO." (Reference number digits)
 2. "AMOUNT" (Transacted amount)
 3. "NAME" (Recipient or sender name)
-4. "FIRST DATE AND TIME" (Full timestamp)
+4. "FIRST DATE AND TIME" (Full timestamp. MUST be perfectly formatted as "Month DD, YYYY HH:MM AM/PM". ALWAYS include the full year. If year is missing on receipt, infer current year.)
 5. "NUMBER" (Mobile number)
 
 Return a JSON with exactly this structure and no markdown formatting:
@@ -1731,7 +1717,7 @@ If a field is not found, return "TBD".`;
                     contents: [{ parts: [{ inlineData: { mimeType: file.type, data: base64Content } }, { text: prompt }] }],
                     generationConfig: { responseMimeType: "application/json" }
                   };
-                  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                   });
                   if (!res.ok) throw new Error(await res.text());
@@ -2144,28 +2130,16 @@ If a field is not found, return "TBD".`;
         html = `
           <div style="display: flex; gap: 2rem; align-items: stretch; flex-wrap: wrap;">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; flex-shrink: 0;">
-              <div style="width: 140px; height: 140px; background: #fff; padding: 0.75rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                 <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
-                   <rect width="100" height="100" fill="#fff"/>
-                   <rect x="10" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                   <rect x="68" y="10" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                   <rect x="10" y="68" width="22" height="22" fill="none" stroke="#007DFE" stroke-width="4" rx="2"/>
-                   <rect x="15" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
-                   <rect x="73" y="15" width="12" height="12" fill="#007DFE" rx="1"/>
-                   <rect x="15" y="73" width="12" height="12" fill="#007DFE" rx="1"/>
-                   <path d="M45 10h15v10H45zM10 45h20v10H10zM70 45h20v10H70zM40 40h20v20H40zM40 70h30v10H40zM80 70h10v20H80zM60 85h10v10H60zM45 25h10v10H45zM80 40h10v10H80z" fill="#000"/>
-                 </svg>
+              <div style="width: 280px; height: 280px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.1);">
+                <img src="/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg" alt="GCash QR Code" style="width: 220%; height: 220%; object-fit: cover; object-position: center 55%; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
               </div>
-              <button onclick="window.showAIAnalysisPopup()" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#cbd5e1'">
-                View AI Analysis Preview
-              </button>
             </div>
             <div style="flex: 1; min-width: 250px;">
               <div style="color: #fff; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                 <span style="color: #007DFE;">GCash</span> Transfer
               </div>
               <div style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 0.5rem;">Scan this QR code using your GCash app to pay instantly.</div>
-              <div style="color: #cbd5e1; font-size: 0.9rem;">Or send manually to: <strong style="color: #fff; letter-spacing: 1px; font-size: 1.1rem; margin-left: 0.25rem;">0917-123-4567</strong></div>
+              <div style="color: #cbd5e1; font-size: 0.9rem;">Or send manually to: <strong style="color: #fff; letter-spacing: 1px; font-size: 1.1rem; margin-left: 0.25rem;">09058395471</strong></div>
               <div style="margin-top: 1.25rem; padding: 0.6rem 1rem; background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); border-radius: 8px; display: inline-block; color: #E53935; font-size: 0.8rem; font-weight: 600;">
                 <i style="margin-right:0.25rem">⚠️</i> Please include your Account Number in the message!
               </div>
@@ -2275,19 +2249,19 @@ If a field is not found, return "TBD".`;
           const db = getFirestore();
 
           if (!user.id) return;
-          
+
           if (window._clientPortalAuthUnsub) window._clientPortalAuthUnsub();
           window._clientPortalAuthUnsub = onSnapshot(doc(db, "users", user.id), (userDoc) => {
-             if (userDoc.exists()) {
-               const data = userDoc.data();
-               const currentToken = localStorage.getItem('clientSessionToken');
-               if (currentToken && data.activeSessionToken && data.activeSessionToken !== currentToken) {
-                 if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
-                 localStorage.removeItem('clientUser');
-                 localStorage.removeItem('clientSessionToken');
-                 window.router.navigate('/clientlogin');
-               }
-             }
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              const currentToken = localStorage.getItem('clientSessionToken');
+              if (currentToken && data.activeSessionToken && data.activeSessionToken !== currentToken) {
+                if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
+                localStorage.removeItem('clientUser');
+                localStorage.removeItem('clientSessionToken');
+                window.router.navigate('/clientlogin');
+              }
+            }
           });
 
           const userDoc = await getDoc(doc(db, "users", user.id));
@@ -2434,7 +2408,8 @@ If a field is not found, return "TBD".`;
               { id: 'btn-plan-50', speed: 50, badgeId: 'badge-plan-50' },
               { id: 'btn-plan-70', speed: 70, badgeId: 'badge-plan-70' },
               { id: 'btn-plan-100', speed: 100, badgeId: 'badge-plan-100' },
-              { id: 'btn-plan-200', speed: 200, badgeId: 'badge-plan-200' }
+              { id: 'btn-plan-200', speed: 200, badgeId: 'badge-plan-200' },
+              { id: 'btn-plan-500', speed: 500, badgeId: 'badge-plan-500' }
             ];
 
             planCards.forEach(pc => {
@@ -2482,6 +2457,20 @@ If a field is not found, return "TBD".`;
                 }
               }
             });
+
+            const supportCategory = document.getElementById('support-category');
+            if (supportCategory) {
+              const minSpeed = Math.min(...planCards.map(p => p.speed));
+              const maxSpeed = Math.max(...planCards.map(p => p.speed));
+              Array.from(supportCategory.options).forEach(opt => {
+                if (opt.text === 'Upgrade internet') {
+                  opt.disabled = (currentSpeed >= maxSpeed || currentSpeed === 0);
+                }
+                if (opt.text === 'Downgrade internet') {
+                  opt.disabled = (currentSpeed <= minSpeed || currentSpeed === 0);
+                }
+              });
+            }
 
             // ===== CLEAR DASHBOARD FEEDS FOR NEW ACCOUNT =====
             window.clientActiveBills = [];
@@ -2659,7 +2648,6 @@ If a field is not found, return "TBD".`;
 
     const sidebarItem = (id, iconCode, title) => `
       <div id="tab-${id}" class="dashboard-tab" onclick="window.scrollToSection('${id}')" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; margin-bottom: 0.5rem; transition: all 0.2s; color: #cbd5e1;">
-        <div style="font-weight: 700; font-size: 0.85rem; color: #E53935; width: 20px;">${iconCode}</div>
         <div style="font-weight: 500; font-size: 0.95rem;">${title}</div>
       </div>
     `;
@@ -2704,8 +2692,8 @@ If a field is not found, return "TBD".`;
         
         <!-- Sidebar -->
         <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
-          <div style="margin-bottom: 3rem;">
-            <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 60px; width: auto;" />
+          <div style="height: 70px; display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 2rem -1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <img src="/logo3-removebg-preview.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
           </div>
           
           <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase;">My Account</div>
@@ -2719,7 +2707,6 @@ If a field is not found, return "TBD".`;
           </div>
           
           <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem;">
-            <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem; font-size: 0.9rem;">?</div>
             <div style="font-weight: 600; color: #fff; margin-bottom: 0.5rem; font-size: 0.85rem;">Need a hand?</div>
             <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 1rem; line-height: 1.4;">Our support team is ready to help with your connection.</div>
             <a href="#" onclick="event.preventDefault(); window.scrollToSection('support')" style="color: #E53935; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Get support &rarr;</a>
@@ -2736,10 +2723,7 @@ If a field is not found, return "TBD".`;
             </button>
             <div style="display: flex; align-items: center; gap: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <div>
-                  <div id="ui-topbar-name" style="color: #fff; font-size: 0.85rem; font-weight: 600;">${name}</div>
-                  <div style="color: #64748b; font-size: 0.7rem;">Customer</div>
-                </div>
+                <div id="ui-topbar-name" style="color: #fff; font-size: 0.85rem; font-weight: 600;">${name}</div>
               </div>
               <button onclick="window.logoutClient()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=\'transparent\'">
                 Sign out
@@ -2926,7 +2910,7 @@ If a field is not found, return "TBD".`;
                   <span style="color: #cbd5e1;">Requests for upgrades or downgrades will be queued for admin approval. Clients cannot upgrade or downgrade if they haven't been subscribed for at least 6 months on their current plan.</span>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
                   <!-- Plan 1 -->
                   <div class="plan-card" style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
                     <div id="badge-plan-30" class="plan-badge">Current Plan</div>
@@ -2937,7 +2921,7 @@ If a field is not found, return "TBD".`;
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Up to 30 Mbps</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Standard Router</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem;">Good for 10 devices</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Good for 8 devices</li>
                     </ul>
                     <button id="btn-plan-30" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
                   </div>
@@ -2952,7 +2936,7 @@ If a field is not found, return "TBD".`;
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Up to 50 Mbps</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Standard Router</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem;">HD Streaming Ready</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Good for 12 devices</li>
                     </ul>
                     <button id="btn-plan-50" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
                   </div>
@@ -2966,8 +2950,8 @@ If a field is not found, return "TBD".`;
                     <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; flex: 1;">
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Up to 70 Mbps</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Dual-Band Router</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem;">Great for 10 devices</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Dual-Band Router 5G</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Great for 15 devices</li>
                     </ul>
                     <button id="btn-plan-70" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
                   </div>
@@ -2981,8 +2965,8 @@ If a field is not found, return "TBD".`;
                     <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; flex: 1;">
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Up to 100 Mbps</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Wi-Fi 6 Router</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem;">4K Streaming & Gaming</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Dual-Band Router 5G</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Up to 20 devices</li>
                     </ul>
                     <button id="btn-plan-100" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
                   </div>
@@ -2996,10 +2980,23 @@ If a field is not found, return "TBD".`;
                     <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; flex: 1;">
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Up to 200 Mbps</li>
                       <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Mesh System Included</li>
-                      <li style="color: #cbd5e1; font-size: 0.8rem;">Ultimate Smart Home</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Up to 30 devices</li>
                     </ul>
                     <button id="btn-plan-200" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
+                  </div>
+
+                  <!-- Plan 6 -->
+                  <div class="plan-card" style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+                    <div id="badge-plan-500" class="plan-badge">Current Plan</div>
+                    <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700; margin: 0 0 1.5rem 0;">Ultra RFiberX</h3>
+                    <div style="color: #E53935; font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 1.5rem; letter-spacing:-1px;">₱4500<span style="font-size: 0.85rem; font-weight: 500; color: #64748b; letter-spacing:0;"> /mo</span></div>
+                    
+                    <ul style="list-style: none; padding: 0; margin: 0 0 1.5rem 0; flex: 1;">
+                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Dual-Band Router 5G</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem; margin-bottom: 0.75rem;">Unlimited Data</li>
+                      <li style="color: #cbd5e1; font-size: 0.8rem;">Up to 50 devices</li>
+                    </ul>
+                    <button id="btn-plan-500" style="width: 100%; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">Select Plan</button>
                   </div>
                 </div>
               </div>
@@ -3073,86 +3070,6 @@ If a field is not found, return "TBD".`;
                   </div>
                 </div>
                 
-                <!-- Rating Modal -->
-                <div id="rating-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
-                  <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 400px; padding: 2rem; display: flex; flex-direction: column; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-                    <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">Rate Your Experience</h2>
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">How would you rate the service provided?</p>
-                    
-                    <div id="rating-stars" style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-                      <span data-star="1" onclick="window.setRating(1)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
-                      <span data-star="2" onclick="window.setRating(2)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
-                      <span data-star="3" onclick="window.setRating(3)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
-                      <span data-star="4" onclick="window.setRating(4)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
-                      <span data-star="5" onclick="window.setRating(5)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
-                    </div>
-                    
-                    <textarea id="rating-feedback" placeholder="Optional feedback..." rows="3" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; outline: none; resize: none; margin-bottom: 1.5rem;"></textarea>
-                    
-                    <div style="display: flex; gap: 1rem; justify-content: center;">
-                      <button id="btn-submit-rating" onclick="window.submitRating()" disabled style="background: #3b82f6; color: #fff; border: none; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: not-allowed; opacity: 0.5; transition: all 0.2s;">Rate</button>
-                      <button onclick="window.skipRating()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">Skip</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Client Ticket Details Modal -->
-                <div id="client-ticket-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
-                  <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-                    <!-- Header -->
-                    <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: #151a27;">
-                      <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0;">Ticket Details</h2>
-                        <span id="client-modal-ticket-id" style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; color: #94a3b8; font-family: monospace; font-size: 0.75rem;"></span>
-                      </div>
-                      <button onclick="window.closeClientReport()" style="background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">&times;</button>
-                    </div>
-                    <!-- Body -->
-                    <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
-                      <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem;">
-                        <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Customer Details</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                          <div>
-                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Name & Account</div>
-                            <div id="client-modal-name" style="color: #fff; font-weight: 600; font-size: 0.95rem;"></div>
-                            <div id="client-modal-account" style="color: #cbd5e1; font-size: 0.85rem;"></div>
-                          </div>
-                          <div>
-                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Contact Info</div>
-                            <div id="client-modal-phone" style="color: #fff; font-size: 0.85rem;"></div>
-                            <div id="client-modal-fb" style="color: #cbd5e1; font-size: 0.85rem;"></div>
-                          </div>
-                          <div>
-                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Plan</div>
-                            <div id="client-modal-plan" style="color: #fff; font-size: 0.85rem;"></div>
-                          </div>
-                          <div>
-                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Location</div>
-                            <div id="client-modal-address" style="color: #fff; font-size: 0.85rem; line-height: 1.4;"></div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Issue Details -->
-                      <div style="margin-bottom: 1rem;">
-                        <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Issue Details</div>
-                        <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                          <div style="display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem;">
-                            <span id="client-modal-category" style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; white-space: nowrap;"></span>
-                            <div id="client-modal-subject" style="color: #fff; font-size: 1rem; font-weight: 600; line-height: 1.4;"></div>
-                          </div>
-                          <div id="client-modal-desc" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
-                        </div>
-                      </div>
-                      
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
-                        <div style="font-size: 0.75rem; color: #64748b;">Submitted: <span id="client-modal-date"></span></div>
-                        <div id="client-modal-status-badge"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
 
               <!-- MY PROFILE SECTION -->
@@ -3301,6 +3218,86 @@ If a field is not found, return "TBD".`;
             </div>
           </div>
         </div>
+
+                <!-- Rating Modal -->
+                <div id="rating-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+                  <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 400px; padding: 2rem; display: flex; flex-direction: column; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                    <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">Rate Your Experience</h2>
+                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.5rem;">How would you rate the service provided?</p>
+                    
+                    <div id="rating-stars" style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                      <span data-star="1" onclick="window.setRating(1)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
+                      <span data-star="2" onclick="window.setRating(2)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
+                      <span data-star="3" onclick="window.setRating(3)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
+                      <span data-star="4" onclick="window.setRating(4)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
+                      <span data-star="5" onclick="window.setRating(5)" style="font-size: 2rem; color: #334155; cursor: pointer; transition: color 0.2s;">★</span>
+                    </div>
+                    
+                    <textarea id="rating-feedback" placeholder="Optional feedback..." rows="3" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; outline: none; resize: none; margin-bottom: 1.5rem;"></textarea>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                      <button id="btn-submit-rating" onclick="window.submitRating()" disabled style="background: #3b82f6; color: #fff; border: none; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: not-allowed; opacity: 0.5; transition: all 0.2s;">Rate</button>
+                      <button onclick="window.skipRating()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">Skip</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Client Ticket Details Modal -->
+                <div id="client-ticket-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+                  <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                    <!-- Header -->
+                    <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: #151a27;">
+                      <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0;">Ticket Details</h2>
+                        <span id="client-modal-ticket-id" style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; color: #94a3b8; font-family: monospace; font-size: 0.75rem;"></span>
+                      </div>
+                      <button onclick="window.closeClientReport()" style="background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">&times;</button>
+                    </div>
+                    <!-- Body -->
+                    <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+                      <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem;">
+                        <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Customer Details</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                          <div>
+                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Name & Account</div>
+                            <div id="client-modal-name" style="color: #fff; font-weight: 600; font-size: 0.95rem;"></div>
+                            <div id="client-modal-account" style="color: #cbd5e1; font-size: 0.85rem;"></div>
+                          </div>
+                          <div>
+                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Contact Info</div>
+                            <div id="client-modal-phone" style="color: #fff; font-size: 0.85rem;"></div>
+                            <div id="client-modal-fb" style="color: #cbd5e1; font-size: 0.85rem;"></div>
+                          </div>
+                          <div>
+                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Plan</div>
+                            <div id="client-modal-plan" style="color: #fff; font-size: 0.85rem;"></div>
+                          </div>
+                          <div>
+                            <div style="color: #94a3b8; font-size: 0.75rem; margin-bottom: 0.25rem;">Location</div>
+                            <div id="client-modal-address" style="color: #fff; font-size: 0.85rem; line-height: 1.4;"></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Issue Details -->
+                      <div style="margin-bottom: 1rem;">
+                        <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 0.5rem;">Issue Details</div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                          <div style="display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1rem;">
+                            <span id="client-modal-category" style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; white-space: nowrap;"></span>
+                            <div id="client-modal-subject" style="color: #fff; font-size: 1rem; font-weight: 600; line-height: 1.4;"></div>
+                          </div>
+                          <div id="client-modal-desc" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;"></div>
+                        </div>
+                      </div>
+                      
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                        <div style="font-size: 0.75rem; color: #64748b;">Submitted: <span id="client-modal-date"></span></div>
+                        <div id="client-modal-status-badge"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
         <!-- Confirmation Modal -->
         <div id="save-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center;">

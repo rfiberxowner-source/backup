@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "7182732b-a028-4731-9522-e331f7378dc7"
+      }
+    },
+    "android": {
+      "package": "com.lyntester2000.portal"
+    }
+  }
+}

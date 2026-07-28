@@ -12,7 +12,7 @@ const PLANS = [
   { id: 3, name: 'Family RFiberX', price: '1300', features: ['Up to 70 Mbps', 'Unlimited Data', 'Dual-Band Router', 'Great for 15 devices'], image: require('../../assets/families.jpg') },
   { id: 4, name: 'Pro RFiberX', price: '1500', features: ['Up to 100 Mbps', 'Unlimited Data', 'Wi-Fi 6 Router', 'Up to 20 devices'], image: require('../../assets/pro.jpg') },
   { id: 5, name: 'Extreme RFiberX', price: '2000', features: ['Up to 200 Mbps', 'Unlimited Data', 'Up to 30 devices'], image: require('../../assets/extreme.jpg') },
-  { id: 6, name: 'Ultra RFiberX', price: '4500', features: ['Dual-Band Router 5G', 'Unlimited Data', 'Up to 50 devices'], image: null },
+  { id: 6, name: 'Ultra RFiberX', price: '4500', features: ['Dual-Band Router 5G', 'Unlimited Data', 'Up to 50 devices'], image: require('../../assets/file_000000006a5c81fa8485eb88e1b807b9.png') },
 ];
 
 export default function PlansScreen({ user, navigation }) {

@@ -8,8 +8,8 @@ import { useTheme } from '../context/ThemeContext';
 export default function LoginScreen({ onLogin }) {
   const { colors, isDarkMode } = useTheme();
   const styles = createStyles(colors, isDarkMode);
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [lastName, setLastName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef(null);
@@ -40,27 +40,14 @@ export default function LoginScreen({ onLogin }) {
 
   const handleLogin = async () => {
     setErrorMsg('');
-    if (!identifier || !password) {
-      setErrorMsg('Please enter both email/name and password.');
-      return;
-    }
-
-    if (password.length < 8) {
-      setErrorMsg('Password must be at least 8 characters long.');
-      return;
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      setErrorMsg('Password must contain at least one uppercase letter.');
+    if (!accountNumber || !lastName) {
+      setErrorMsg('Please enter both Account Number and Last Name.');
       return;
     }
 
     setLoading(true);
     try {
-      const isEmail = identifier.includes('@');
-      const queryField = isEmail ? 'email' : 'name';
-
-      const q = query(collection(db, "users"), where(queryField, "==", identifier.trim()));
+      const q = query(collection(db, "users"), where("accountNumber", "==", accountNumber.trim()));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -73,9 +60,10 @@ export default function LoginScreen({ onLogin }) {
       let userData = null;
 
       querySnapshot.forEach((doc) => {
-        if (doc.data().password === password) {
+        const data = doc.data();
+        if (data.password && data.password.trim().toLowerCase() === lastName.trim().toLowerCase()) {
           authenticated = true;
-          userData = { id: doc.id, ...doc.data() };
+          userData = { id: doc.id, ...data };
         }
       });
 
@@ -95,7 +83,7 @@ export default function LoginScreen({ onLogin }) {
         await AsyncStorage.setItem('clientUser', JSON.stringify(userData));
         onLogin(userData);
       } else {
-        setErrorMsg('Incorrect password. Please try again.');
+        setErrorMsg('Incorrect Last Name. Please try again.');
       }
     } catch (err) {
       console.error(err);
@@ -120,25 +108,27 @@ export default function LoginScreen({ onLogin }) {
         <Text style={styles.subtitle}>Access your portal account and stay in control from day one.</Text>
 
         <View style={styles.formContainer}>
-          <Text style={styles.label}>EMAIL OR FULL NAME</Text>
+          <Text style={styles.label}>6-DIGIT ACCOUNT NUMBER</Text>
           <TextInput
             style={styles.input}
-            placeholder="you@example.com"
+            placeholder="e.g. 123456"
             placeholderTextColor={colors.textMuted}
-            value={identifier}
-            onChangeText={setIdentifier}
+            value={accountNumber}
+            onChangeText={setAccountNumber}
+            keyboardType="numeric"
+            maxLength={6}
             autoCapitalize="none"
             onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           />
 
-          <Text style={styles.label}>PASSWORD</Text>
+          <Text style={styles.label}>LAST NAME</Text>
           <TextInput
             style={styles.input}
-            placeholder="Min 8 chars, 1 uppercase"
+            placeholder="e.g. Dela Cruz"
             placeholderTextColor={colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
             onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           />
 
@@ -174,7 +164,7 @@ export default function LoginScreen({ onLogin }) {
 
             <Text style={styles.consentSectionTitle}>What Credentials We Need & Why</Text>
             <Text style={styles.consentText}>
-              To provide a secure and personalized experience, we require your login credentials (Email/Name and Password) which were securely generated for you upon subscribing to our network.
+              To provide a secure and personalized experience, we require your login credentials (Account Number and Last Name) which were generated for you upon subscribing to our network.
             </Text>
 
             <Text style={styles.consentSectionTitle}>What Data We Have & How It Is Used</Text>

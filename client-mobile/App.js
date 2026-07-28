@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, AppState, LogBox, DeviceEventEmitter, Alert } from 'react-native';
@@ -32,7 +32,9 @@ import ProfileScreen from './src/screens/ProfileScreen';
 
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 // import PushNotificationHandler from './src/components/PushNotificationHandler';
+import TutorialOverlay from './src/components/TutorialOverlay';
 
+export const navigationRef = createNavigationContainerRef();
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -120,7 +122,7 @@ function MainTabs({ user, setUser }) {
            } catch (e) {
              console.error("Error clearing session", e);
            }
-           await AsyncStorage.clear();
+           await AsyncStorage.multiRemove(['clientUser', 'clientSessionToken']);
            setUser(null);
         }} />}
       </Tab.Screen>
@@ -172,7 +174,7 @@ function RootNavigator() {
           // Actually, if admin clears it, they can stay logged in locally, allowing someone else to log in later. 
           // If someone else logs in, freshData will get a NEW token, which won't match currentToken, so we log them out then!
           if (currentToken && freshData.activeSessionToken && freshData.activeSessionToken !== currentToken) {
-            await AsyncStorage.clear();
+            await AsyncStorage.multiRemove(['clientUser', 'clientSessionToken']);
             setUser(null);
             return;
           }
@@ -219,7 +221,7 @@ function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
         {user ? (
@@ -236,6 +238,7 @@ function RootNavigator() {
         )}
       </Stack.Navigator>
       {/* user && <PushNotificationHandler user={user} onUpdateUser={setUser} /> */}
+      {user && <TutorialOverlay user={user} />}
     </NavigationContainer>
   );
 }

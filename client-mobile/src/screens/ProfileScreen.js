@@ -56,24 +56,8 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
       const userRef = doc(db, 'users', user.id);
       
       if (val === true) {
-        if (!Device.isDevice) {
-          Alert.alert('Error', 'Must use physical device for Push Notifications');
-          setNotificationsEnabled(false);
-          return;
-        }
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync();
-          finalStatus = status;
-        }
-        if (finalStatus !== 'granted') {
-          Alert.alert('Permission Denied', 'Please enable notifications in your phone Settings.');
-          setNotificationsEnabled(false);
-          return;
-        }
-        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: 'rfiberx-mobile-app' }).catch(() => Notifications.getExpoPushTokenAsync());
-        await updateDoc(userRef, { notificationsEnabled: true, expoPushToken: tokenData.data });
+        Alert.alert('Push Notifications', 'This feature will request permissions and be fully active once compiled into the final APK.');
+        await updateDoc(userRef, { notificationsEnabled: true });
       } else {
         await updateDoc(userRef, { notificationsEnabled: false });
       }
@@ -419,7 +403,6 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
           {/* App Preferences */}
           <Text style={styles.groupTitle}>Preferences</Text>
           <View style={styles.insetGroup}>
-            {/* Temporarily disabled Push Notifications toggle
             <View style={[styles.fieldRow, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 15, marginBottom: 15 }]}>
               <View style={styles.fieldIconBox}>
                 <MaterialCommunityIcons name={notificationsEnabled ? "bell-ring" : "bell-off"} size={20} color={colors.textSecondary} />
@@ -435,7 +418,6 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
                 thumbColor={colors.text}
               />
             </View>
-            */}
             <View style={styles.fieldRow}>
               <View style={styles.fieldIconBox}>
                 <MaterialCommunityIcons name={isDarkMode ? "moon-waning-crescent" : "white-balance-sunny"} size={20} color={colors.textSecondary} />

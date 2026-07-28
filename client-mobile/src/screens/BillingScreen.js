@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions, Alert, ActivityIndicator, Animated, Easing, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, query, where, doc, updateDoc, addDoc, onSnapshot, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, updateDoc, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,6 +24,7 @@ export default function BillingScreen({ user, route, navigation }) {
   const [activeTab, setActiveTab] = useState(0);
   const [showGcashDropdown, setShowGcashDropdown] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   // AI Scanner States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -31,6 +35,120 @@ export default function BillingScreen({ user, route, navigation }) {
 
   const scrollRef = React.useRef(null);
   const mainScrollRef = React.useRef(null);
+  const laserAnim = React.useRef(new Animated.Value(0)).current;
+  const lastTap = React.useRef(null);
+  const tapTimeout = React.useRef(null);
+  const [showFullQRModal, setShowFullQRModal] = useState(false);
+
+  const [showScreenshotRules, setShowScreenshotRules] = useState(false);
+  const screenshotRulesAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = onSnapshot(doc(db, "users", user.id), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Only show if they HAVE completed the onboarding tutorial, to prevent interrupting the tutorial flow
+        if ((data.hasSeenBillingScreenshotRules === undefined || data.hasSeenBillingScreenshotRules === false) && data.hasSeenTutorial === true) {
+          setShowScreenshotRules(true);
+          Animated.spring(screenshotRulesAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }).start();
+        }
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  const closeScreenshotRules = async () => {
+    Animated.timing(screenshotRulesAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(async () => {
+      setShowScreenshotRules(false);
+      try {
+        if (user?.id) {
+          await updateDoc(doc(db, "users", user.id), { hasSeenBillingScreenshotRules: true });
+        }
+      } catch (e) {
+        console.error("Error updating rules status:", e);
+      }
+    });
+  };
+
+  const openScreenshotRules = () => {
+    setShowScreenshotRules(true);
+    screenshotRulesAnim.setValue(0);
+    Animated.spring(screenshotRulesAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }).start();
+  };
+
+  const handleSaveToGallery = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    try {
+      const asset = Asset.fromModule(require('../../assets/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg'));
+      await asset.downloadAsync();
+      const localUri = asset.localUri || asset.uri;
+      if (!localUri) {
+        setIsSharing(false);
+        return;
+      }
+
+      const Sharing = require('expo-sharing');
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, { 
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Download GCash QR Code',
+          UTI: 'public.jpeg'
+        });
+      } else {
+        Alert.alert('Unavailable', 'Saving is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      if (error && error.message && error.message.includes('Another share request is being processed')) {
+        // Ignore this specific error
+      } else {
+        Alert.alert('Error', 'Failed to download the image.');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleQRTap = () => {
+    const now = Date.now();
+    const DOUBLE_PRESS_DELAY = 300;
+    if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
+      clearTimeout(tapTimeout.current);
+      lastTap.current = null;
+      handleSaveToGallery();
+    } else {
+      lastTap.current = now;
+      tapTimeout.current = setTimeout(() => {
+        lastTap.current = null;
+        setShowFullQRModal(true);
+      }, DOUBLE_PRESS_DELAY);
+    }
+  };
+
+  useEffect(() => {
+    if (isAnalyzing) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(laserAnim, {
+            toValue: 1,
+            duration: 2500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          }),
+          Animated.timing(laserAnim, {
+            toValue: 0,
+            duration: 2500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: false,
+          })
+        ])
+      ).start();
+    } else {
+      laserAnim.setValue(0);
+    }
+  }, [isAnalyzing, laserAnim]);
 
   const handleUploadImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -131,6 +249,9 @@ export default function BillingScreen({ user, route, navigation }) {
     const unsubscribe = navigation.addListener('focus', () => {
       setShowGcashDropdown(false);
       setActiveTab(0);
+      setUploadedImage(null);
+      setExtractedData(null);
+      setIsFraud(false);
       setTimeout(() => {
         scrollRef.current?.scrollTo({ x: 0, animated: false });
         mainScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -143,20 +264,9 @@ export default function BillingScreen({ user, route, navigation }) {
     setIsAnalyzing(true);
     setIsFraud(false);
 
-    // --- 1. Fraud Detection (Aspect Ratio & EXIF) ---
-    const width = asset.width || 1;
-    const height = asset.height || 1;
-    const ratio = width / height;
-    const safeZoneMin = 0.40;
-    const safeZoneMax = 0.60;
-
+    // --- 1. Fraud Detection (EXIF Metadata) ---
     let isForged = false;
     let fraudReason = '';
-
-    if (ratio < safeZoneMin || ratio > safeZoneMax) {
-      isForged = true;
-      fraudReason = `Suspicious Aspect Ratio (${ratio.toFixed(3)}). Real screenshots are typically between 0.40 and 0.60.`;
-    }
 
     if (asset.exif) {
       if (asset.exif.Software && asset.exif.Software.trim() !== '') {
@@ -185,174 +295,76 @@ export default function BillingScreen({ user, route, navigation }) {
       return;
     }
 
-    // --- 2. Cloud OCR Extraction ---
+    // --- 2. Gemini AI Visual Extraction & Forensics ---
     try {
-      const formData = new FormData();
-      formData.append('base64Image', `data:image/jpeg;base64,${asset.base64}`);
-      formData.append('language', 'eng');
-      formData.append('isOverlayRequired', 'false');
+      let apiKey = '';
+      try {
+        const apiKeyDoc = await getDoc(doc(db, 'settings', 'apiKeys'));
+        if (apiKeyDoc.exists() && apiKeyDoc.data().gemini) apiKey = apiKeyDoc.data().gemini;
+      } catch (dbErr) { console.warn("Could not fetch API key", dbErr); }
 
-      const response = await fetch('https://api.ocr.space/parse/image', {
+      if (!apiKey) throw new Error('Gemini API Key missing');
+
+      const prompt = `You are an expert computer vision, document forensics, and OCR data extraction model.
+I need you to scan this GCash receipt image and do two things:
+
+TASK 1 - FORENSIC ANALYSIS:
+Look closely at the fonts, the spacing between words, and the background color behind the numbers. Does the font perfectly match a standard GCash font? Does it look like someone pasted text over the original? Does the alignment look slightly off? If you see clear signs of visual editing or mismatched fonts, set isForged to true and explain why in forgeryReason. If it looks like a clean, unedited screenshot, set isForged to false.
+
+TASK 2 - DATA EXTRACTION:
+Extract text for these specific fields:
+1. "referenceNumber": The 13-digit Reference No.
+2. "amount": Transacted amount (e.g. "PHP 500.00")
+3. "payerName": Sender name (or "N/A" if missing)
+4. "receiverName": Recipient name
+5. "datePaid": Date. MUST be perfectly formatted as "Month DD, YYYY" (e.g., "January 05, 2026"). ALWAYS include the full year. If year is missing on receipt, infer current year.
+6. "timePaid": Time (e.g. "03:53 PM"). MUST include AM/PM.
+7. "phoneNumber": Mobile number
+8. "rawTimestamp": The exact date and time formatted strictly in ISO 8601 format (e.g., "2026-01-05T15:53:00"). This is required for system math.
+
+Return a JSON with exactly this structure and no markdown formatting:
+{
+  "isForged": false,
+  "forgeryReason": "",
+  "referenceNumber": "...",
+  "amount": "...",
+  "payerName": "...",
+  "receiverName": "...",
+  "datePaid": "...",
+  "timePaid": "...",
+  "phoneNumber": "...",
+  "rawTimestamp": "..."
+}
+If a field is not found, return "TBD".`;
+
+      const payload = {
+        contents: [{
+          parts: [
+            { inlineData: { mimeType: 'image/jpeg', data: asset.base64 } },
+            { text: prompt }
+          ]
+        }],
+        generationConfig: { responseMimeType: "application/json" }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
         method: 'POST',
-        headers: {
-          'apikey': 'K85296838388957',
-        },
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      const json = await response.json();
+      if (!response.ok) throw new Error(await response.text());
+      const jsonRes = await response.json();
 
-      if (json.IsErroredOnProcessing || !json.ParsedResults || json.ParsedResults.length === 0) {
-        throw new Error(json.ErrorMessage?.[0] || 'OCR failed');
-      }
-
-      // Clean up the OCR text from the Cloud API (remove all newlines and carriage returns, normalize spaces)
-      const singleLineText = String(json.ParsedResults[0].ParsedText).replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-      // --- 3. Multi-Format Regex Routing ---
-      let formatType = 'UNKNOWN';
-      if (singleLineText.match(/Express\s+Send\s+Notification/i) || singleLineText.match(/successfully\s+received/i) || singleLineText.match(/Your\s+new\s+balance/i)) {
-        formatType = 'FORMAT_A';
-      } else if (singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver/i) || singleLineText.match(/Amount\s+sent/i) || singleLineText.match(/Date\s+and\s+time/i) || singleLineText.match(/Sent\s+via\s+GCash/i)) {
-        formatType = 'FORMAT_B';
-      } else {
-        formatType = 'FORMAT_A';
-      }
-
-      const extractedDataObj = {};
-      extractedDataObj.formatType = formatType;
+      const extractedDataObj = JSON.parse(jsonRes.candidates[0].content.parts[0].text);
       extractedDataObj.exifData = asset.exif ? JSON.stringify(asset.exif) : 'None';
 
-      // 1. Reference Number
-      extractedDataObj.referenceNumber = 'TBD';
-      if (formatType === 'FORMAT_A') {
-        const refFullMatch = singleLineText.match(/Ref\.?\s*No\.?\s*([\d\sOoSs]+)/i);
-        if (refFullMatch) {
-          const cleanRef = refFullMatch[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-          if (cleanRef.length >= 13) {
-            extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
-          } else if (cleanRef.length >= 8) {
-            extractedDataObj.referenceNumber = cleanRef;
-          }
-        }
-      } else {
-        const refFullMatchB = singleLineText.match(/(?:Ref\.?\s*No[,\.]?|Reference\s*Number)\s*([\d\sOoSs]{13,25})/i);
-        if (refFullMatchB) {
-          const cleanRef = refFullMatchB[1].replace(/[\sOo]/g, '').replace(/[Ss]/g, '5');
-          if (cleanRef.length >= 10) {
-            extractedDataObj.referenceNumber = cleanRef.substring(0, 13);
-          }
-        } else {
-          const fallbackRef = singleLineText.match(/\b(?:\d\s*){13}\b/);
-          if (fallbackRef) {
-            extractedDataObj.referenceNumber = fallbackRef[0].replace(/\s+/g, '');
-          }
-        }
-      }
-
-      // 2. Amount
-      extractedDataObj.amount = 'TBD';
-      if (formatType === 'FORMAT_A') {
-        const amountMatch = singleLineText.match(/PHP\s*\d+(?:\.\d{2})?/i) || singleLineText.match(/₱\s*\d+(?:\.\d{2})?/i);
-        if (amountMatch) {
-          extractedDataObj.amount = amountMatch[0];
-        }
-      } else {
-        const amountMatchB = singleLineText.match(/Amount\s+sent\s*PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
-          singleLineText.match(/Total\s+Amount\s+Sent\s*[₱P]?\s*([\d,]+(?:\.\d{2})?)/i) ||
-          singleLineText.match(/Amount\s*([\d,]+(?:\.\d{2})?)/i) ||
-          singleLineText.match(/PHP\s*([\d,]+(?:\.\d{2})?)/i) ||
-          singleLineText.match(/₱\s*([\d,]+(?:\.\d{2})?)/i);
-        if (amountMatchB) {
-          extractedDataObj.amount = `PHP ${amountMatchB[1]}`;
-        }
-      }
-
-      // 3. Phone Number
-      extractedDataObj.phoneNumber = 'TBD';
-      const numberMatch = singleLineText.match(/(?:\+?63|0)\s*9\d{2}\s*\d{3}\s*\d{4}/) || singleLineText.match(/\d{4}\s*\*\*\*\s*\d{4}/);
-      if (numberMatch) {
-        extractedDataObj.phoneNumber = numberMatch[0].replace(/\s+/g, '');
-      }
-
-      // EXPRESS NOTIF FLAG
-      extractedDataObj.expressNotif = 'No';
-      if (formatType === 'FORMAT_A') {
-        extractedDataObj.expressNotif = 'Yes';
-      } else {
-        if (singleLineText.match(/Sent\s+via\s+GCash/i)) {
-          extractedDataObj.expressNotif = 'Sent via GCash';
-        } else if (singleLineText.match(/Express\s+Send/i)) {
-          extractedDataObj.expressNotif = 'Yes';
-        }
-      }
-
-      // 4. Date and Time
-      extractedDataObj.datePaid = 'TBD';
-      extractedDataObj.timePaid = 'TBD';
-      if (formatType === 'FORMAT_A') {
-        const secondDateTimeMatch = singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}\s*(?:AM|PM)/i) || singleLineText.match(/\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}/i);
-        if (secondDateTimeMatch) {
-          const fullSnippet = secondDateTimeMatch[0];
-          const secondDateMatch = fullSnippet.match(/\d{2}-\d{2}-\d{4}/);
-          if (secondDateMatch) extractedDataObj.datePaid = secondDateMatch[0];
-          const secondTimeMatch = fullSnippet.match(/\d{2}:\d{2}\s*(?:AM|PM)/i) || fullSnippet.match(/\d{2}:\d{2}/);
-          if (secondTimeMatch) extractedDataObj.timePaid = secondTimeMatch[0];
-        } else {
-          const todayMatch = singleLineText.match(/Today,\s*\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-          if (todayMatch) {
-            extractedDataObj.datePaid = "Today";
-            const timeMatch = todayMatch[0].match(/\d{1,2}:\d{2}\s*(?:AM|PM)?/i);
-            if (timeMatch) extractedDataObj.timePaid = timeMatch[0];
-          }
-        }
-      } else {
-        // Handles "07-16-2026 01:17 PM" OR "Mar 01, 2026 10:17 AM" OR "January 25, 2026"
-        const dateDetailsMatch = singleLineText.match(/(?:Date\s+and\s+time\s+)?([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{2}-\d{2}-\d{4})(?:\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?/i);
-        if (dateDetailsMatch) {
-          extractedDataObj.datePaid = dateDetailsMatch[1];
-          if (dateDetailsMatch[2]) {
-            extractedDataObj.timePaid = dateDetailsMatch[2];
-          }
-        }
-      }
-
-      // 5. Names (Payer and Receiver)
-      extractedDataObj.receiverName = 'TBD';
-      extractedDataObj.payerName = 'TBD';
-
-      if (formatType === 'FORMAT_A') {
-        const nameToMatch = singleLineText.match(/to\s+([A-Za-z\*\s•\.]+?)\s+(?:on|\+|PHP|₱|\d|Today)/i) ||
-          singleLineText.match(/to\s+([A-Za-z\*\s•]+?\.?)\s/i);
-        if (nameToMatch) {
-          extractedDataObj.receiverName = nameToMatch[1].replace(/[^A-Za-z\*\s•\.]/g, '').trim();
-        }
-        const msgNameMatch = singleLineText.match(/MSG:\s*([^\.]+)\./i) || singleLineText.match(/MSG:\s*([^Your]+)/i);
-        if (msgNameMatch) {
-          const cleanMsg = msgNameMatch[1].replace(/MSG:/i).replace(/rfiber/i).trim();
-          if (cleanMsg) extractedDataObj.payerName = cleanMsg;
-        }
-      } else {
-        const receiverMatch = singleLineText.match(/Name\s+of\s+(?:the\s+)?receiver\s+([A-Za-z\s\*•\.]+?)\s+(?:Phone|Number|Date|Amount)/i);
-        if (receiverMatch) {
-          extractedDataObj.receiverName = receiverMatch[1].replace(/Amount/i, '').trim();
-        } else {
-          const expressSendMatch = singleLineText.match(/Express\s+Send\s+(.+?)\s+(?:\+?63|0)\s*9/i) ||
-            singleLineText.match(/Express\s+Send\s+(.+?)\s+0?9/i);
-          let rawName = '';
-          if (expressSendMatch) {
-            rawName = expressSendMatch[1];
-          } else {
-            const beforePhone = singleLineText.match(/([A-Za-z]{2}[^\+0-9]{2,30}?)\s+(?:\+?63|0)\s*9/i);
-            if (beforePhone) rawName = beforePhone[1].replace(/Express\s+Send/i, '');
-          }
-          if (rawName) {
-            let cleanName = rawName.split(/[^A-Za-z\.\-\*•\s']/).pop().trim();
-            cleanName = cleanName.replace(/^[\.\-\*•\s]+/, '').replace(/Amount/i, '').trim();
-            if (cleanName) extractedDataObj.receiverName = cleanName;
-          }
-        }
-        extractedDataObj.payerName = "N/A";
+      // Check Visual AI Fraud Flag
+      if (extractedDataObj.isForged) {
+        setIsAnalyzing(false);
+        setUploadedImage(null);
+        Alert.alert("🚨 FRAUD DETECTED 🚨", `Visual Forensics Analysis failed:\n\n${extractedDataObj.forgeryReason}\n\nThis transaction has been blocked.`);
+        return;
       }
 
       // Validation (receiverName temporarily disabled per user request)
@@ -366,22 +378,23 @@ export default function BillingScreen({ user, route, navigation }) {
         return;
       }
 
-      // --- 4. Receiver Name Fraud Check (Temporarily Disabled for Testing) ---
-      /*
+      // --- 4. Receiver Name Fraud Check ---
       if (extractedDataObj.receiverName !== 'TBD' && !extractedDataObj.receiverName.match(/^RE[\.\*•]+L\s*B\.?$/i)) {
-         Alert.alert("🚨 FRAUD DETECTED 🚨", `This receipt was sent to an unauthorized receiver: "${extractedDataObj.receiverName}". All payments must be sent to the official company GCash account (RE****L B.).`);
-         setIsAnalyzing(false);
-         setUploadedImage(null);
-         return;
+        Alert.alert("🚨 FRAUD DETECTED 🚨", `This receipt was sent to an unauthorized receiver: "${extractedDataObj.receiverName}". All payments must be sent to the official company GCash account (RE****L B.).`);
+        setIsAnalyzing(false);
+        setUploadedImage(null);
+        return;
       }
-      */
 
       // --- 5. Time Proximity Fraud Check (24-Hour Rule) ---
-      if (extractedDataObj.datePaid && extractedDataObj.datePaid !== 'TBD' && extractedDataObj.datePaid.toLowerCase() !== 'today') {
-        let dateToParse = extractedDataObj.datePaid;
+      let dateToParse = extractedDataObj.rawTimestamp;
+      if (!dateToParse && extractedDataObj.datePaid && extractedDataObj.datePaid !== 'TBD' && extractedDataObj.datePaid.toLowerCase() !== 'today') {
+        dateToParse = extractedDataObj.datePaid;
         if (extractedDataObj.timePaid && extractedDataObj.timePaid !== 'TBD') {
           dateToParse += ' ' + extractedDataObj.timePaid;
         }
+      }
+      if (dateToParse) {
         const parsedDate = new Date(dateToParse);
         if (!isNaN(parsedDate.getTime())) {
           const diffHours = (new Date() - parsedDate) / (1000 * 60 * 60);
@@ -391,6 +404,8 @@ export default function BillingScreen({ user, route, navigation }) {
             setUploadedImage(null);
             return;
           }
+        } else {
+          console.warn("Could not parse timestamp for 24-hour check:", dateToParse);
         }
       }
 
@@ -474,12 +489,18 @@ export default function BillingScreen({ user, route, navigation }) {
 
   const switchTab = (index) => {
     setActiveTab(index);
+    setUploadedImage(null);
+    setExtractedData(null);
+    setIsFraud(false);
     scrollRef.current?.scrollTo({ x: index * width, animated: true });
   };
 
   const handleScrollEnd = (e) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
     setActiveTab(index);
+    setUploadedImage(null);
+    setExtractedData(null);
+    setIsFraud(false);
   };
 
   const onRefresh = () => {
@@ -489,33 +510,6 @@ export default function BillingScreen({ user, route, navigation }) {
 
   const markAsPaid = async (billId, amount, receiptData = null) => {
     try {
-      const paidAmt = parseFloat(amount);
-      let remainingAmt = paidAmt;
-      const unpaidBillsList = bills.filter(b => b.status !== 'paid');
-      unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
-
-      for (const bill of unpaidBillsList) {
-        if (remainingAmt <= 0) break;
-
-        const billExpected = parseFloat(bill.amount || 0);
-        if (billExpected <= 0) continue;
-
-        if (remainingAmt >= billExpected) {
-          await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
-            status: 'paid',
-            datePaid: new Date().toISOString()
-          });
-          remainingAmt -= billExpected;
-        } else {
-          await updateDoc(doc(db, "users", user.id, "billing_emails", bill.id), {
-            status: 'partially_paid',
-            amount: billExpected - remainingAmt,
-            datePaid: new Date().toISOString()
-          });
-          remainingAmt = 0;
-        }
-      }
-
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let refId = 'REF-';
       for (let i = 0; i < 8; i++) {
@@ -529,6 +523,7 @@ export default function BillingScreen({ user, route, navigation }) {
       const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       const bMonth = bill?.period || bill?.billingMonth || `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
+      // 1. Add to payments collection first
       await addDoc(collection(db, "payments"), {
         userId: user.id,
         accountNumber: user.accountNumber || '-',
@@ -545,15 +540,12 @@ export default function BillingScreen({ user, route, navigation }) {
         status: 'Completed'
       });
 
+      // 2. Add to receipts collection if applicable
       if (receiptData) {
-        const now = new Date();
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-
         await addDoc(collection(db, "receipts"), {
           clientName: user.name || 'Unknown',
           clientAccountNumber: user.accountNumber || 'Unknown',
-          billingMonth: billingMonth,
+          billingMonth: bMonth,
           status: "Pending Verification",
           timestamp: serverTimestamp(),
           amount: String(receiptData.amount || 'TBD'),
@@ -568,6 +560,33 @@ export default function BillingScreen({ user, route, navigation }) {
           exifData: receiptData.exifData || 'None',
           imageHash: "N/A"
         });
+      }
+
+      // 3. Process unpaid bills (delete if fully paid)
+      const paidAmt = parseFloat(amount);
+      let remainingAmt = paidAmt;
+      const unpaidBillsList = bills.filter(b => b.status !== 'paid');
+      unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
+
+      for (const unpaidBill of unpaidBillsList) {
+        if (remainingAmt <= 0) break;
+
+        const billExpected = parseFloat(unpaidBill.amount || 0);
+        if (billExpected <= 0) continue;
+
+        if (remainingAmt >= billExpected) {
+          // Fully paid: Delete the document from billing_emails
+          await deleteDoc(doc(db, "users", user.id, "billing_emails", unpaidBill.id));
+          remainingAmt -= billExpected;
+        } else {
+          // Partially paid: Update amount
+          await updateDoc(doc(db, "users", user.id, "billing_emails", unpaidBill.id), {
+            status: 'partially_paid',
+            amount: billExpected - remainingAmt,
+            datePaid: new Date().toISOString()
+          });
+          remainingAmt = 0;
+        }
       }
 
       setPaymentModalVisible(false);
@@ -814,27 +833,27 @@ export default function BillingScreen({ user, route, navigation }) {
             <MaterialCommunityIcons name="cellphone" size={30} color="#005EEA" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>GCash</Text>
-              <Text style={styles.methodDetails}>0912 345 6789 (Fiber X)</Text>
+              <Text style={styles.methodDetails}>09058395471 (Fiber X)</Text>
             </View>
             <MaterialCommunityIcons name={showGcashDropdown ? "chevron-up" : "chevron-down"} size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
           {showGcashDropdown && (
             <View style={{ backgroundColor: colors.card, padding: 20, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: colors.border, alignItems: 'center' }}>
-              <MaterialCommunityIcons name="qrcode-scan" size={100} color={colors.text} style={{ marginBottom: 15 }} />
-              <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 5 }}>Scan to Pay</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>0912 345 6789</Text>
+              <TouchableOpacity activeOpacity={0.8} onPress={handleQRTap}>
+                <View style={{ width: 180, height: 180, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: colors.border, marginBottom: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                  <Image source={require('../../assets/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg')} style={{ width: '240%', height: '240%', transform: [{ translateY: -50 }] }} resizeMode="cover" />
+                </View>
+              </TouchableOpacity>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 20, textAlign: 'center' }}>Tap to enlarge • Double-tap to save</Text>
+              <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>Scan to Pay</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 5 }}>Or manually input the number:</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>09058395471</Text>
 
-              {uploadedImage && (
+              {uploadedImage && !isAnalyzing && (
                 <View style={{ marginBottom: 15, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 5 }}>Screenshot Preview</Text>
-                  <Image source={{ uri: uploadedImage }} style={{ width: 140, height: 200, borderRadius: 12, borderWidth: 1, borderColor: colors.border, opacity: isAnalyzing ? 0.3 : 1 }} resizeMode="cover" />
-                  {isAnalyzing && (
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', marginTop: 20 }}>
-                      <ActivityIndicator size="large" color="#10b981" />
-                      <Text style={{ color: '#10b981', marginTop: 10, fontFamily: 'Inter_600SemiBold', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>Analyzing...</Text>
-                    </View>
-                  )}
+                  <Image source={{ uri: uploadedImage }} style={{ width: 140, height: 200, borderRadius: 12, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" />
                 </View>
               )}
 
@@ -863,6 +882,12 @@ export default function BillingScreen({ user, route, navigation }) {
               <Text style={[styles.methodDetails, { fontSize: 11, fontStyle: 'italic' }]}>This payment method is in progress and not available right now</Text>
             </View>
           </TouchableOpacity>
+        </View>
+
+        <View style={{ marginTop: 30, paddingHorizontal: 10, alignItems: 'center' }}>
+          <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 18 }}>
+            Encountering issues with the AI receipt scanner? Please contact our <Text style={{ color: colors.primary, fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://www.facebook.com/RFiber1')}>Facebook Page</Text> and submit your receipt directly to customer support so we can manually process your payment.
+          </Text>
         </View>
 
       </ScrollView>
@@ -1131,6 +1156,122 @@ export default function BillingScreen({ user, route, navigation }) {
         </View>
       </Modal>
 
+      {/* Analyzing Full Screen Modal */}
+      <Modal visible={isAnalyzing && !!uploadedImage} transparent={true} animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <ActivityIndicator size="small" color="#3b82f6" style={{ marginRight: 10 }} />
+            <Text style={{ color: '#ffffff', fontSize: 16, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5 }}>Analyzing document...</Text>
+          </View>
+          <View style={{ width: '85%', height: '60%', borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(15,23,42,0.5)' }}>
+            <Image source={{ uri: uploadedImage }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+            <Animated.View style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              height: 2,
+              backgroundColor: 'rgba(96, 165, 250, 0.8)',
+              shadowColor: '#60a5fa',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 5,
+              elevation: 3,
+              top: laserAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%']
+              })
+            }} />
+          </View>
+          <Text style={{ color: '#94a3b8', fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 15 }}>Please wait while our AI runs security and data checks.</Text>
+        </View>
+      </Modal>
+
+      {/* Full Size QR Modal */}
+      <Modal visible={showFullQRModal} transparent={true} animationType="fade" onRequestClose={() => setShowFullQRModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 50, right: 20, padding: 10, zIndex: 10 }}
+            onPress={() => setShowFullQRModal(false)}
+          >
+            <MaterialCommunityIcons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+
+          <View style={{ width: '90%', height: '70%', borderRadius: 16, overflow: 'hidden', backgroundColor: '#fff' }}>
+            <Image
+              source={require('../../assets/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg')}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={{ marginTop: 30, backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+            onPress={handleSaveToGallery}
+          >
+            <MaterialCommunityIcons name="download" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' }}>Save to Gallery</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+        {/* Floating Action Button for Rules */}
+        <TouchableOpacity 
+          style={styles.fabRules}
+          onPress={openScreenshotRules}
+        >
+          <MaterialCommunityIcons name="receipt" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Screenshot Guidelines Modal */}
+        {showScreenshotRules && (
+          <Modal visible={true} transparent={true} animationType="none" hardwareAccelerated>
+            <View style={styles.rulesModalOverlay}>
+              <Animated.View style={[
+                styles.rulesModalContent, 
+                { 
+                  backgroundColor: colors.card,
+                  transform: [{ scale: screenshotRulesAnim }],
+                  opacity: screenshotRulesAnim
+                }
+              ]}>
+                <Text style={styles.rulesModalTitle}>Billing Screenshot Guidelines</Text>
+                
+                <View style={styles.rulesImageContainer}>
+                  <Image 
+                    source={require('../../assets/tutorial/standard.jpg')}
+                    style={styles.rulesImage}
+                  />
+                </View>
+
+                <View style={styles.rulesTextContainer}>
+                  <View style={styles.ruleItem}>
+                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> alter the image details or block the details.</Text>
+                  </View>
+                  <View style={styles.ruleItem}>
+                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> take a picture of another phone.</Text>
+                  </View>
+                  <View style={styles.ruleItem}>
+                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> crop the image.</Text>
+                  </View>
+                  
+                  <View style={styles.rulesAlertBox}>
+                    <MaterialCommunityIcons name="shield-alert" size={20} color="#ef4444" style={{ marginRight: 8, marginTop: 2 }} />
+                    <Text style={styles.rulesAlertText}>
+                      Failure to upload a clean, standard screenshot will cause our AI and Admin security system to flag the transaction as fraud. Strict compliance ensures fast, error-free processing and protects against automated scams.
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.rulesAcceptBtn} onPress={closeScreenshotRules}>
+                  <Text style={styles.rulesAcceptBtnText}>I Understand</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
+          </Modal>
+        )}
     </SafeAreaView>
   );
 }
@@ -1353,4 +1494,106 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   tabBtnTextActive: {
     color: colors.text,
   },
+  fabRules: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#0ea5e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 99,
+  },
+  rulesModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  rulesModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  rulesModalTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  rulesImageContainer: {
+    width: '100%',
+    height: 250,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  rulesImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  rulesTextContainer: {
+    marginBottom: 24,
+  },
+  ruleItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  ruleIcon: {
+    marginTop: 2,
+    marginRight: 8,
+  },
+  ruleText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    lineHeight: 20,
+  },
+  rulesAlertBox: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  rulesAlertText: {
+    flex: 1,
+    color: '#ef4444',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 18,
+  },
+  rulesAcceptBtn: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rulesAcceptBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  }
 });
