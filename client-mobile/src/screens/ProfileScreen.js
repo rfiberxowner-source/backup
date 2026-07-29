@@ -8,7 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-// import * as Notifications from 'expo-notifications';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 // import * as Device from 'expo-device';
 
 export default function ProfileScreen({ navigation, route, user, onLogout }) {
@@ -56,8 +57,27 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
       const userRef = doc(db, 'users', user.id);
       
       if (val === true) {
-        Alert.alert('Push Notifications', 'This feature will request permissions and be fully active once compiled into the final APK.');
-        await updateDoc(userRef, { notificationsEnabled: true });
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+          Alert.alert('Permission Denied', 'Please enable notifications in your phone settings to receive updates.');
+          setNotificationsEnabled(false);
+          await updateDoc(userRef, { notificationsEnabled: false });
+          return;
+        }
+
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId }).catch(() => Notifications.getExpoPushTokenAsync());
+        
+        await updateDoc(userRef, { 
+          notificationsEnabled: true,
+          expoPushToken: tokenData.data
+        });
       } else {
         await updateDoc(userRef, { notificationsEnabled: false });
       }

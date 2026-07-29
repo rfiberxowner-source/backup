@@ -31,7 +31,7 @@ import SupportScreen from './src/screens/SupportScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-// import PushNotificationHandler from './src/components/PushNotificationHandler';
+import PushNotificationHandler from './src/components/PushNotificationHandler';
 import TutorialOverlay from './src/components/TutorialOverlay';
 
 export const navigationRef = createNavigationContainerRef();
@@ -237,7 +237,7 @@ function RootNavigator() {
           </Stack.Screen>
         )}
       </Stack.Navigator>
-      {/* user && <PushNotificationHandler user={user} onUpdateUser={setUser} /> */}
+      {user && <PushNotificationHandler user={user} onUpdateUser={setUser} />}
       {user && <TutorialOverlay user={user} />}
     </NavigationContainer>
   );

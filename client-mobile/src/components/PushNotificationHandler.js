@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
@@ -22,6 +23,17 @@ export default function PushNotificationHandler({ user, onUpdateUser }) {
 
   const [showSoftPrompt, setShowSoftPrompt] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('alerts', {
+        name: 'Important Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -50,13 +62,6 @@ export default function PushNotificationHandler({ user, onUpdateUser }) {
 
   const handleSoftPromptAllow = async () => {
     setShowSoftPrompt(false);
-    
-    if (!Device.isDevice) {
-      alert('Must use physical device for Push Notifications');
-      await saveToFirebase({ hasBeenAskedSoftPrompt: true, notificationsEnabled: false });
-      return;
-    }
-
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -70,8 +75,9 @@ export default function PushNotificationHandler({ user, onUpdateUser }) {
     }
 
     try {
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: 'rfiberx-mobile-app' 
+        projectId: projectId
       }).catch(() => Notifications.getExpoPushTokenAsync()); 
       
       const token = tokenData.data;

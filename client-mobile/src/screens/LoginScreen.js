@@ -68,12 +68,7 @@ export default function LoginScreen({ onLogin }) {
       });
 
       if (authenticated) {
-        if (userData.activeSessionToken) {
-          setErrorMsg('Account is already logged in on another device. Please sign out from that device first.');
-          setLoading(false);
-          return;
-        }
-
+        // Removed strict activeSessionToken block so users can log in even if they didn't explicitly log out earlier.
         const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const userRef = doc(db, "users", userData.id);
         await updateDoc(userRef, { activeSessionToken: sessionToken });

@@ -16,7 +16,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.rfiberx.billing"
+      "package": "com.rfiberx.technician",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -26,6 +27,11 @@
       "expo-font",
       "expo-asset",
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "48f32c2c-5ed5-4c9d-8dec-747f97d36dd5"
+      }
+    }
   }
 }

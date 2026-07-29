@@ -1137,13 +1137,18 @@ export const adminViews = {
   '/RFiberXAdminportal-communications': () => {
     window.sendPushNotification = async function(expoPushToken, title, body, data = {}) {
       if (!expoPushToken) return;
-      const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data };
+      const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
-        await fetch('https://exp.host/--/api/v2/push/send', {
+        const res = await fetch('/expo-push', {
           method: 'POST',
-          headers: { Accept: 'application/json', 'Accept-encoding': 'gzip, deflate', 'Content-Type': 'application/json' },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify(message),
         });
+        const json = await res.json();
+        console.log("Expo Push Response:", json);
+        if (json.data && json.data.status === 'error') {
+          alert("Expo Push Error: " + json.data.message);
+        }
       } catch (error) { console.error('Error sending push notification:', error); }
     };
     window.sendDailyReminders = async function () {
@@ -1165,14 +1170,14 @@ export const adminViews = {
           if (!uData.expoPushToken) continue;
           
           const billsSnap = await firestore.getDocs(
-            firestore.query(firestore.collection(db, "users", uDoc.id, "billing_emails"), firestore.orderBy("timestamp", "desc"), firestore.limit(1))
+            firestore.query(firestore.collection(db, "users", uDoc.id, "billing_emails"), firestore.orderBy("dateSent", "desc"), firestore.limit(1))
           );
           
           if (billsSnap.empty) continue;
           const latestBill = billsSnap.docs[0].data();
           const bStatus = (latestBill.status || '').toLowerCase();
           
-          if (bStatus === 'unpaid' || bStatus === 'pending') {
+          if (bStatus === 'unpaid' || bStatus === 'pending' || bStatus === 'unread') {
             if (currentDay >= 1 && currentDay <= 5) {
               await window.sendPushNotification(uData.expoPushToken, "New Billing Statement", "You have a new unpaid bill. Please check your portal for details.", { type: 'billing_unpaid' });
               sentCount++;
@@ -3501,7 +3506,7 @@ window.sendMaintenanceAdvisory = async function () {
         }));
 
         // 3. Fire the HTTP POST request to Expo servers
-        await fetch('https://exp.host/--/api/v2/push/send', {
+        await fetch('/expo-push', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',

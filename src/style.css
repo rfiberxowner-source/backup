@@ -95,7 +95,7 @@ a {
 .nav-item {
   font-weight: 500;
   font-size: 1rem;
-  color: var(--text-primary);
+  color: #E53935;
   position: relative;
 }
 
@@ -106,7 +106,7 @@ a {
   height: 2px;
   bottom: -4px;
   left: 0;
-  background: #fff;
+  background: #E53935;
   transition: width 0.3s ease;
 }
 

@@ -50,7 +50,7 @@ export const mainViews = {
       </div>
       <div class="pldt-overlay-card">
         <h3>RFiberX Super Plan 2000</h3>
-        <div class="speed">200 MBPS</div>
+        <div class="speed">1 GBPS</div>
         <p>NO CAP LIMIT, 100% RELIABILITY</p>
       </div>
     </section>
@@ -63,28 +63,26 @@ export const mainViews = {
           <button class="btn btn-company" onclick="window.router.navigate('/about')">Learn More <span class="btn-arrow">→</span></button>
         </div>
         <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-          <div style="display: flex; align-items: flex-end; font-family: 'Saira Condensed', sans-serif; font-size: 8rem; font-weight: 800; font-style: italic; letter-spacing: -4px; text-transform: uppercase;">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: -35px; margin-bottom: 35px; z-index: 2;">
-              <g transform="rotate(-40 12 20)">
-                <path d="M8.5 16.5a5 5 0 0 1 7 0 M4.5 12.5a10 10 0 0 1 15 0" stroke="#E53935" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </g>
-            </svg>
-            <span><span style="color: #E53935;">R</span><span style="color: #fff;">FIBER</span><span style="color: #E53935;">X</span></span>
+          <div style="display: flex; align-items: center; justify-content: center;">
+            <img src="/logo.png" alt="RFiberX" style="width: 100%; max-width: 600px; height: auto;" />
           </div>
         </div>
       </div>
-      <div class="our-company-cards">
-        <div class="company-card">
-          <h3 class="company-card-title">Our Purpose</h3>
-          <p>We are dedicated to empowering individuals, families, and businesses by providing seamless digital connectivity. We strive to make everyday communication and online experiences smoother and more accessible for everyone.</p>
+      <div style="background: #fafafa; border-radius: 20px; padding: 4rem 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-top: 4rem; max-width: 1100px; margin-left: auto; margin-right: auto;">
+        
+        <div style="text-align: center; padding: 0 1.5rem;">
+          <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #991b1b; font-weight: 700;">Our Purpose</h2>
+          <p style="color: #4b5563; line-height: 1.6; font-size: 0.95rem;">We are dedicated to empowering individuals, families, and businesses by providing seamless digital connectivity. We strive to make everyday communication and online experiences smoother and more accessible for everyone.</p>
         </div>
-        <div class="company-card">
-          <h3 class="company-card-title">Our Vision</h3>
-          <p>We envision a future where technology bridges gaps rather than creating them, building robust and forward-looking networks that enable continuous growth, collaboration, and endless digital possibilities.</p>
+
+        <div style="text-align: center; padding: 0 1.5rem;">
+          <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #991b1b; font-weight: 700;">Our Vision</h2>
+          <p style="color: #4b5563; line-height: 1.6; font-size: 0.95rem;">We envision a future where technology bridges gaps rather than creating them, building robust and forward-looking networks that enable continuous growth, collaboration, and endless digital possibilities.</p>
         </div>
-        <div class="company-card">
-          <h3 class="company-card-title">Our Mission</h3>
-          <p>Our team is committed to providing innovative telecommunication services that enhance daily life. We work tirelessly to simplify how people connect, ensuring you stay online and thriving every single day.</p>
+
+        <div style="text-align: center; padding: 0 1.5rem;">
+          <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #991b1b; font-weight: 700;">Our Mission</h2>
+          <p style="color: #4b5563; line-height: 1.6; font-size: 0.95rem;">Our team is committed to providing innovative telecommunication services that enhance daily life. We work tirelessly to simplify how people connect, ensuring you stay online and thriving every single day.</p>
         </div>
       </div>
     </section>
@@ -564,7 +562,7 @@ export const mainViews = {
           <div style="margin-bottom: 2.5rem; display: flex; gap: 1rem;">
             <div>
               <h3 style="margin-bottom: 0.5rem;">Technical Support</h3>
-              <p style="color: var(--text-secondary); font-size: 1.1rem;">+63 09058395471</p>
+              <p style="color: var(--text-secondary); font-size: 1.1rem;">+63 09913746474</p>
               <p style="color: var(--text-secondary); font-size: 0.9rem;">Available 24/7, 365 days a year</p>
             </div>
           </div>
@@ -581,8 +579,8 @@ export const mainViews = {
             <div>
               <h3 style="margin-bottom: 0.5rem;">Headquarters</h3>
               <p style="color: var(--text-secondary); line-height: 1.6;">
-                Salasad, Magadalena<br>
-                Laguna, Philippines
+                Carnation Street, Barangay Uno<br>
+                Calamba 4027, Laguna
               </p>
             </div>
           </div>
@@ -695,11 +693,7 @@ export const mainViews = {
   '/about': () => `
     <!-- Who We Are Hero -->
     <section id="who-we-are" class="about-hero scroll-animate" style="position: relative; overflow: hidden;">
-      <svg width="800" height="800" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; right: -200px; top: -150px; opacity: 0.03; pointer-events: none; z-index: 0;">
-        <g transform="rotate(-40 12 20)">
-          <path d="M8.5 16.5a5 5 0 0 1 7 0 M4.5 12.5a10 10 0 0 1 15 0" stroke="#3b82f6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-      </svg>
+      <img src="/logo.png" alt="RFiberX Logo" style="position: absolute; right: -50px; top: 0px; opacity: 0.05; pointer-events: none; z-index: 0; width: 600px; max-width: 100vw;" />
       <div class="about-hero-content" style="position: relative; z-index: 1;">
         <h2 class="about-hero-kicker">ABOUT RFIBERX</h2>
         <h1 class="about-hero-title">Who We Are</h1>
@@ -711,14 +705,14 @@ export const mainViews = {
     <section id="purpose" class="section-container scroll-animate" style="margin-bottom: 4rem;">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
         
-        <!-- Purpose Card -->
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='var(--accent-color)'; this.style.boxShadow='0 20px 40px rgba(16, 185, 129, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
-          <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: var(--accent-color); filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
-          <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: var(--accent-color); position: relative; z-index: 1;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="21.17" y1="8" x2="12" y2="8"></line><line x1="3.95" y1="6.06" x2="8.54" y2="14"></line><line x1="10.88" y1="21.94" x2="15.46" y2="14"></line></svg>
+        <!-- Mission Card -->
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='#E53935'; this.style.boxShadow='0 20px 40px rgba(229, 57, 53, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
+          <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: #E53935; filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
+          <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935; position: relative; z-index: 1;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
           </div>
-          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: var(--accent-color);">Purpose</span></h2>
-          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">Our purpose is to inspire progress by fostering meaningful and stable connections within the communities we serve. We believe that reliable internet is an essential tool, one that empowers students to learn, businesses to operate smoothly, and everyday people to thrive in an increasingly digital world.</p>
+          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Mission</span></h2>
+          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">Since our founding, RFiberX has been on a mission to provide fast, reliable, and affordable internet access without the hassle. We strive to build a strong digital backbone that empowers homes and businesses alike, ensuring every connection we make is a step toward a more connected community.</p>
         </div>
 
         <!-- Vision Card -->
@@ -731,14 +725,14 @@ export const mainViews = {
           <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">We envision a future where every neighborhood enjoys seamless, high-speed connectivity. By building robust technological bridges, we aim to be the reliable foundation that allows education to flourish online and local businesses to compete, grow, and succeed on a broader stage.</p>
         </div>
 
-        <!-- Mission Card -->
+        <!-- Mandate Card -->
         <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='#E53935'; this.style.boxShadow='0 20px 40px rgba(229, 57, 53, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
           <div style="position: absolute; bottom: -50px; right: -50px; width: 150px; height: 150px; background: #E53935; filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
           <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935; position: relative; z-index: 1;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           </div>
-          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Mission</span></h2>
-          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">Since our founding, RFiberX has been on a mission to provide fast, reliable, and affordable internet access without the hassle. We strive to build a strong digital backbone that empowers homes and businesses alike, ensuring every connection we make is a step toward a more connected community.</p>
+          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Mandate</span></h2>
+          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">To bridge communication gaps through innovative telecommunication services, empowering communities with forward-looking network infrastructure that fosters continuous growth, collaboration, and endless digital possibilities.</p>
         </div>
         
       </div>
@@ -997,7 +991,7 @@ export const mainViews = {
         <h2 style="margin-bottom: 1.5rem; color: #dc2626;">Report a Downed Line</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">If you see a fallen fiber optic cable or a damaged distribution box on a utility pole, please <b>DO NOT</b> touch it. Report it immediately to our hotline.</p>
         <div style="background: #111; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 1.2rem; text-align: center; letter-spacing: 2px;">
-          Call: +63 09058395471
+          Call: +63 09913746474
         </div>
       </div>
 
