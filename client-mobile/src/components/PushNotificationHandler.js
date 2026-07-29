@@ -37,6 +37,9 @@ export default function PushNotificationHandler({ user, onUpdateUser }) {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Do not show notification prompts if the tutorial is not yet completed
+    if (!user.hasSeenTutorial) return;
 
     // Check if we need to show prompts
     if (user.hasBeenAskedSoftPrompt === undefined) {

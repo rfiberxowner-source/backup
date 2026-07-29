@@ -285,7 +285,7 @@ export default function OverviewScreen({ user, navigation }) {
   const currentPlan = userData.Plan || userData.plan || 'No Plan';
   const currentAcct = userData.accountNumber || userData.account || '-';
   const currentEmail = userData.email || 'Add Email Address';
-  const isProfileComplete = userData.email && userData.phone && userData.address;
+  const isProfileComplete = userData.email && userData.phone && userData.address && userData.facebook;
   const fullName = userData.name || 'User';
 
   const unreadRecentCount = recentUpdates.filter(i => !i.isRead).length;
@@ -334,7 +334,7 @@ export default function OverviewScreen({ user, navigation }) {
           >
             <MaterialCommunityIcons name="alert" size={24} color="#D97706" style={{ marginRight: 10 }} />
             <Text style={{ color: '#92400E', fontSize: 13, fontFamily: 'Inter_500Medium', flex: 1 }}>
-              Missing required details. You must input your Email, Phone Number, and Address in your Profile to pay bills and submit requests.
+              Missing required details. You must input your Email, Phone Number, Address, and Facebook in your Profile to pay bills and submit requests.
             </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#D97706" />
           </TouchableOpacity>

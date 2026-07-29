@@ -898,6 +898,11 @@ export const adminViews = {
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
               <input type="text" id="admin-clients-search" placeholder="Search by name, email, or acct #..." style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; width: 250px; outline: none;" onkeyup="window.renderAdminClientsTable()">
+              <select id="admin-clients-status-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
+                <option value="All">All Status</option>
+                <option value="Connected">Connected</option>
+                <option value="Disconnected">Disconnected</option>
+              </select>
               <select id="admin-clients-plan-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
                 <option value="All">All Plans</option>
                 <option value="30Mbps">30Mbps</option>
@@ -1099,6 +1104,13 @@ export const adminViews = {
                 <div>
                   <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Amount</label>
                   <input type="text" id="modal-client-amount-input" readonly style="width: 100%; background: rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.05); color: #94a3b8; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: not-allowed;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Status</label>
+                  <select id="modal-client-status-input" onchange="window.checkAdminClientChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: pointer;">
+                    <option style="background: #0f131f; color: #fff;" value="Connected">Connected</option>
+                    <option style="background: #0f131f; color: #fff;" value="Disconnected">Disconnected</option>
+                  </select>
                 </div>
                 <div>
                   <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Password</label>
@@ -1351,6 +1363,27 @@ export const adminViews = {
         for (const docSnap of usersSnapshot.docs) {
           const userId = docSnap.id;
           const userData = docSnap.data();
+          
+          const status = String(userData.status || '').trim().toLowerCase();
+          if (status === 'disconnected') continue;
+          
+          let rawPlan = String(userData.plan || userData.Plan || 'TBD').trim();
+          if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) continue;
+          
+          rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
+          if (rawPlan === '60Mbps') rawPlan = '50Mbps';
+          if (rawPlan === '20Mbps') rawPlan = '30Mbps';
+          if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+          
+          let amountStr = String(userData.amount || userData.ammount || '').trim();
+          let finalAmount = 0;
+          if (rawPlan === '150Mbps') {
+            finalAmount = 1700;
+          } else {
+            if (!amountStr || amountStr === '0' || amountStr === '') continue;
+            amountStr = amountStr.replace(/[^0-9.]/g, '');
+            finalAmount = parseFloat(amountStr) || 0;
+          }
 
           const userAcct = userData.accountNumber || userData.account || 'TBD';
 
@@ -1363,8 +1396,8 @@ export const adminViews = {
           const billingEmailData = {
             billId: newBillId,
             accountNumber: userAcct,
-            plan: userData.Plan || userData.plan || '',
-            amount: userData.ammount || userData.amount || '0',
+            plan: rawPlan,
+            amount: finalAmount.toString(),
             name: userData.name || '',
             email: userData.email || '',
             phone: userData.phone || '',
@@ -1840,7 +1873,24 @@ window.initDashboard = async function () {
     const updateDashboardUI = () => {
       if (!usersSnap || !billsSnap || !paymentsSnap) return;
 
-      if (dashClients) dashClients.innerText = usersSnap.size;
+      if (dashClients) {
+        let validClients = 0;
+        usersSnap.docs.forEach(d => {
+          const u = d.data();
+          const status = String(u.status || '').trim().toLowerCase();
+          if (status === 'disconnected') return;
+          let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
+          if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return;
+          rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
+          if (rawPlan === '60Mbps') rawPlan = '50Mbps';
+          if (rawPlan === '20Mbps') rawPlan = '30Mbps';
+          if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+          let amountStr = String(u.amount || u.ammount || '').trim();
+          if (rawPlan !== '150Mbps' && (!amountStr || amountStr === '0' || amountStr === '')) return;
+          validClients++;
+        });
+        dashClients.innerText = validClients;
+      }
 
       const overdueSet = new Set();
       billsSnap.docs.forEach(d => {
@@ -2109,7 +2159,22 @@ window.initAdminBanking = async function () {
     const updateBankingStats = () => {
       if (!allUsersSnap || !billsSnap) return;
 
-      document.getElementById('admin-total-accounts').innerText = allUsersSnap.size;
+      let validClients = 0;
+      allUsersSnap.docs.forEach(d => {
+        const u = d.data();
+        const status = String(u.status || '').trim().toLowerCase();
+        if (status === 'disconnected') return;
+        let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
+        if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return;
+        rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
+        if (rawPlan === '60Mbps') rawPlan = '50Mbps';
+        if (rawPlan === '20Mbps') rawPlan = '30Mbps';
+        if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+        let amountStr = String(u.amount || u.ammount || '').trim();
+        if (rawPlan !== '150Mbps' && (!amountStr || amountStr === '0' || amountStr === '')) return;
+        validClients++;
+      });
+      document.getElementById('admin-total-accounts').innerText = validClients;
       let outSum = 0;
       const outSet = new Set();
       let overdueCount = 0;
@@ -2674,13 +2739,30 @@ window.renderAdminClientsTable = async function () {
     // 1. Calculate plan metrics first
     snap.docs.forEach(d => {
       const u = d.data();
+      
+      const status = String(u.status || '').trim().toLowerCase();
+      if (status === 'disconnected') return; // Skip disconnected
+      
       let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
-      // Normalize casing for Mbps to avoid duplicates like '30mbps' vs '30Mbps'
+      if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return; // Skip invalid plans
+      
+      // Normalize plans
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-      const plan = rawPlan;
+      if (rawPlan === '60Mbps') rawPlan = '50Mbps';
+      if (rawPlan === '20Mbps') rawPlan = '30Mbps';
+      if (rawPlan === '45Mbps') rawPlan = '50Mbps';
 
-      let amountStr = String(u.amount || u.ammount || '0').replace(/[^0-9.]/g, '');
-      const amount = parseFloat(amountStr) || 0;
+      let amountStr = String(u.amount || u.ammount || '').trim();
+      let amount = 0;
+      if (rawPlan === '150Mbps') {
+        amount = 1700;
+      } else {
+        if (!amountStr || amountStr === '0' || amountStr === '') return; // Skip if no amount
+        amountStr = amountStr.replace(/[^0-9.]/g, '');
+        amount = parseFloat(amountStr) || 0;
+      }
+      
+      const plan = rawPlan;
 
       planCounts[plan] = (planCounts[plan] || 0) + 1;
       planAmounts[plan] = (planAmounts[plan] || 0) + amount;
@@ -2691,6 +2773,14 @@ window.renderAdminClientsTable = async function () {
     const sortedDocs = snap.docs.sort((a, b) => {
       const uA = a.data();
       const uB = b.data();
+
+      const statusA = String(uA.status || '').trim().toLowerCase();
+      const statusB = String(uB.status || '').trim().toLowerCase();
+      const isDisconnA = statusA === 'disconnected';
+      const isDisconnB = statusB === 'disconnected';
+
+      if (isDisconnA && !isDisconnB) return 1;
+      if (!isDisconnA && isDisconnB) return -1;
 
       let isOnlineA = false;
       if (uA.lastActive) {
@@ -2720,11 +2810,33 @@ window.renderAdminClientsTable = async function () {
     // 3. Render HTML rows
     sortedDocs.forEach(d => {
       const u = d.data();
+      
+      const status = String(u.status || '').trim().toLowerCase();
+      const statFilter = document.getElementById('admin-clients-status-filter') ? document.getElementById('admin-clients-status-filter').value : 'All';
+      
+      if (statFilter !== 'All') {
+        if (statFilter === 'Connected' && status === 'disconnected') return;
+        if (statFilter === 'Disconnected' && status !== 'disconnected') return;
+      }
+      
       let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
+      
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
+      if (rawPlan === '60Mbps') rawPlan = '50Mbps';
+      if (rawPlan === '20Mbps') rawPlan = '30Mbps';
+      if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+      
+      let amountStr = String(u.amount || u.ammount || '').trim();
+      let amount = u.amount || u.ammount || 'TBD';
+      
+      if (rawPlan === '150Mbps') {
+        amount = '1700';
+      }
+      
+      if (!amountStr || amountStr === '0' || amountStr === '') amount = 'TBD';
+
       const plan = rawPlan;
 
-      const amount = u.amount || u.ammount || 'TBD';
       const email = u.email ? u.email : 'TBD';
       const phone = u.phone || u.contactNumber || 'TBD';
       const accNum = u.accountNumber || 'TBD';
@@ -3253,10 +3365,16 @@ window.openAdminClientModal = async function (id) {
     document.getElementById('modal-client-amount-input').value = finalAmount;
     document.getElementById('modal-client-password-input').value = u.password || '';
 
+    let stat = String(u.status || 'Connected').trim();
+    if (stat.toLowerCase() === 'disconnected') stat = 'Disconnected';
+    else stat = 'Connected';
+    document.getElementById('modal-client-status-input').value = stat;
+
     // Initialize dataset values for change tracking
     document.getElementById('modal-client-plan-input').dataset.original = planSel.value;
     document.getElementById('modal-client-amount-input').dataset.original = document.getElementById('modal-client-amount-input').value;
     document.getElementById('modal-client-password-input').dataset.original = document.getElementById('modal-client-password-input').value;
+    document.getElementById('modal-client-status-input').dataset.original = document.getElementById('modal-client-status-input').value;
 
     if (window.checkAdminClientChanges) window.checkAdminClientChanges();
   } catch (e) {
@@ -3316,15 +3434,18 @@ window.requestAdminClientUpdate = async function () {
   const planInput = document.getElementById('modal-client-plan-input');
   const amountInput = document.getElementById('modal-client-amount-input');
   const passInput = document.getElementById('modal-client-password-input');
+  const statusInput = document.getElementById('modal-client-status-input');
 
   const plan = planInput.value;
   const amount = amountInput.value;
   const pass = passInput.value;
+  const status = statusInput.value;
 
   let changes = [];
   if (plan !== planInput.dataset.original) changes.push('Plan');
   if (amount !== amountInput.dataset.original) changes.push('Amount');
   if (pass !== passInput.dataset.original) changes.push('Password');
+  if (status !== statusInput.dataset.original) changes.push('Status');
 
   if (changes.length === 0) {
     const msg = document.getElementById('modal-client-update-msg');
@@ -3347,6 +3468,7 @@ window.requestAdminClientUpdate = async function () {
         plan: plan,
         amount: amount,
         password: pass,
+        status: status,
         Plan: firestore.deleteField(),
         ammount: firestore.deleteField(),
         plan_price: firestore.deleteField(),

@@ -253,11 +253,11 @@ export default function SupportScreen({ user, route, navigation }) {
         />
   
         <TouchableOpacity 
-          style={[styles.btnPrimary, !(user.email && user.phone && user.address) && { opacity: 0.5, backgroundColor: colors.border }]} 
+          style={[styles.btnPrimary, !(user.email && user.phone && user.address && user.facebook) && { opacity: 0.5, backgroundColor: colors.border }]} 
           onPress={submitReport}
-          disabled={!(user.email && user.phone && user.address)}
+          disabled={!(user.email && user.phone && user.address && user.facebook)}
         >
-          <Text style={styles.btnPrimaryText}>{!(user.email && user.phone && user.address) ? 'Missing Profile Details' : 'Submit Request'}</Text>
+          <Text style={styles.btnPrimaryText}>{!(user.email && user.phone && user.address && user.facebook) ? 'Missing Profile Details' : 'Submit Request'}</Text>
         </TouchableOpacity>
       </View>
     );
