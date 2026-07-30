@@ -270,18 +270,19 @@ export const clientViews = {
     };
 
     window.highlightMissingProfileFields = function () {
-      const fields = ['edit-email', 'edit-phone', 'edit-address', 'edit-fb'];
+      const fields = ['ui-profile-email', 'ui-profile-phone', 'ui-profile-address', 'ui-profile-fb'];
       fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-          const val = el.value.trim();
-          if (!val || val === 'Please add Facebook profile') {
+          const val = el.innerText.trim();
+          if (val.includes('Please add') || val === '-' || !val) {
             el.style.transition = 'all 0.3s ease';
-            el.style.borderColor = '#f59e0b';
-            el.style.boxShadow = '0 0 0 4px rgba(245,158,11,0.3)';
+            const originalColor = el.style.color;
+            el.style.color = '#f59e0b'; // amber
+            el.style.textShadow = '0 0 8px rgba(245,158,11,0.5)';
             setTimeout(() => {
-              el.style.borderColor = 'rgba(255,255,255,0.1)';
-              el.style.boxShadow = 'none';
+              el.style.color = originalColor || '';
+              el.style.textShadow = 'none';
             }, 1000);
           }
         }

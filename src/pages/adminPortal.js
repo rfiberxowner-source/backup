@@ -902,6 +902,8 @@ export const adminViews = {
                 <option value="All">All Status</option>
                 <option value="Connected">Connected</option>
                 <option value="Disconnected">Disconnected</option>
+                <option value="Newest">Newest</option>
+                <option value="Oldest">Oldest</option>
               </select>
               <select id="admin-clients-plan-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
                 <option value="All">All Plans</option>
@@ -2772,10 +2774,20 @@ window.renderAdminClientsTable = async function () {
       total++;
     });
 
-    // 2. Sort documents by status (active first) then alphabetically by name
+    // 2. Sort documents by status (active first) then alphabetically by name (or by date if Newest/Oldest)
+    const statFilter = document.getElementById('admin-clients-status-filter') ? document.getElementById('admin-clients-status-filter').value : 'All';
+
     const sortedDocs = snap.docs.sort((a, b) => {
       const uA = a.data();
       const uB = b.data();
+
+      if (statFilter === 'Newest' || statFilter === 'Oldest') {
+        const timeA = uA.createdAt ? new Date(uA.createdAt).getTime() : 0;
+        const timeB = uB.createdAt ? new Date(uB.createdAt).getTime() : 0;
+        if (timeA !== timeB) {
+          return statFilter === 'Newest' ? timeB - timeA : timeA - timeB;
+        }
+      }
 
       const statusA = String(uA.status || '').trim().toLowerCase();
       const statusB = String(uB.status || '').trim().toLowerCase();
@@ -2815,9 +2827,8 @@ window.renderAdminClientsTable = async function () {
       const u = d.data();
       
       const status = String(u.status || '').trim().toLowerCase();
-      const statFilter = document.getElementById('admin-clients-status-filter') ? document.getElementById('admin-clients-status-filter').value : 'All';
       
-      if (statFilter !== 'All') {
+      if (statFilter !== 'All' && statFilter !== 'Newest' && statFilter !== 'Oldest') {
         if (statFilter === 'Connected' && status === 'disconnected') return;
         if (statFilter === 'Disconnected' && status !== 'disconnected') return;
       }
