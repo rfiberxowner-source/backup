@@ -6,12 +6,23 @@ export class Router {
   }
 
   navigate(path) {
-    window.history.pushState(null, null, path);
+    let basePath = import.meta.env.BASE_URL || '/';
+    let fullPath = basePath === '/' ? path : basePath.replace(/\/$/, '') + path;
+    window.history.pushState(null, null, fullPath);
     this.route();
   }
 
   route() {
-    let path = window.location.pathname;
+    let basePath = import.meta.env.BASE_URL || '/';
+    let rawPath = window.location.pathname;
+    let path = rawPath;
+    
+    if (basePath !== '/' && path.startsWith(basePath)) {
+      path = '/' + path.slice(basePath.length);
+    } else if (basePath !== '/' && path === basePath.replace(/\/$/, '')) {
+      path = '/';
+    }
+
     let hash = window.location.hash;
     
     if (window.unmountNetworkMap && path !== '/RFiberXAdminportal-mapping') {
@@ -20,7 +31,8 @@ export class Router {
 
     if (!window.views[path]) {
       path = '/';
-      window.history.replaceState(null, null, '/');
+      let fullPath = basePath === '/' ? '/' : basePath;
+      window.history.replaceState(null, null, fullPath);
     }
 
     // Handle isolated routes (admin and client portals)
