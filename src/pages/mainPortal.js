@@ -16,7 +16,7 @@ export const mainViews = {
       </div>
       <div class="bundle-grid">
         <div class="bundle-card">
-          <div class="img-placeholder" style="background: url('/laptop.jpg') center/cover no-repeat;"></div>
+          <div class="img-placeholder" style="background: url('./laptop.jpg') center/cover no-repeat;"></div>
           <div class="card-content">
             <h3>Starter Plan</h3>
             <p>Reliable 30Mbps connection for everyday browsing and social media.</p>
@@ -24,7 +24,7 @@ export const mainViews = {
           </div>
         </div>
         <div class="bundle-card">
-          <div class="img-placeholder" style="background: url('/family.jpg') center/cover no-repeat;"></div>
+          <div class="img-placeholder" style="background: url('./family.jpg') center/cover no-repeat;"></div>
           <div class="card-content">
             <h3>Family Plan</h3>
             <p>Smooth 70Mbps speed perfect for households with multiple devices.</p>
@@ -32,7 +32,7 @@ export const mainViews = {
           </div>
         </div>
         <div class="bundle-card">
-          <div class="img-placeholder" style="background: url('/gaming.jpg') center/cover no-repeat;"></div>
+          <div class="img-placeholder" style="background: url('./gaming.jpg') center/cover no-repeat;"></div>
           <div class="card-content">
             <h3>Gaming Plan</h3>
             <p>Ultra-fast 200Mbps speeds dedicated for gamers and enthusiasts.</p>
@@ -64,7 +64,7 @@ export const mainViews = {
         </div>
         <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
           <div style="display: flex; align-items: center; justify-content: center;">
-            <img src="/logo.png" alt="RFiberX" style="width: 100%; max-width: 600px; height: auto;" />
+            <img src="./logo.png" alt="RFiberX" style="width: 100%; max-width: 600px; height: auto;" />
           </div>
         </div>
       </div>
@@ -89,7 +89,7 @@ export const mainViews = {
   `,
 
   '/subscriptions': () => `
-    <section class="section-container scroll-animate" style="max-width: 1600px; width: 95%; background: linear-gradient(rgba(10, 15, 26, 0.8), rgba(10, 15, 26, 0.8)), url('/8.png') center/cover no-repeat; border-radius: 16px; padding: 3rem 1rem;">
+    <section class="section-container scroll-animate" style="max-width: 1600px; width: 95%; background: linear-gradient(rgba(10, 15, 26, 0.8), rgba(10, 15, 26, 0.8)), url('./8.png') center/cover no-repeat; border-radius: 16px; padding: 3rem 1rem;">
       <div class="section-header-left" style="text-align: center; margin-bottom: 4rem;">
         <h2>Choose Your Power</h2>
         <p>Unbeatable plans for every need. No hidden fees.</p>
@@ -708,7 +708,7 @@ export const mainViews = {
   '/about': () => `
     <!-- Who We Are Hero -->
     <section id="who-we-are" class="about-hero scroll-animate" style="position: relative; overflow: hidden;">
-      <img src="/logo.png" alt="RFiberX Logo" style="position: absolute; right: -50px; top: 0px; opacity: 0.05; pointer-events: none; z-index: 0; width: 600px; max-width: 100vw;" />
+      <img src="./logo.png" alt="RFiberX Logo" style="position: absolute; right: -50px; top: 0px; opacity: 0.05; pointer-events: none; z-index: 0; width: 600px; max-width: 100vw;" />
       <div class="about-hero-content" style="position: relative; z-index: 1;">
         <h2 class="about-hero-kicker">ABOUT RFIBERX</h2>
         <h1 class="about-hero-title">Who We Are</h1>
@@ -882,7 +882,7 @@ export const mainViews = {
 
         <div style="text-align: center; border-top: 1px solid var(--glass-border); padding-top: 2rem; margin-top: 1rem;">
           <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 1rem;">If you are already online and have account, please visit the Payment Processing System</p>
-          <a href="/clientlogin" target="_blank" rel="noopener noreferrer" class="btn btn-white" style="text-decoration: none;">Go TO RFiberX Payment Processing System</a>
+          <a href="./clientlogin" target="_blank" rel="noopener noreferrer" class="btn btn-white" style="text-decoration: none;">Go TO RFiberX Payment Processing System</a>
         </div>
       </div>
       
