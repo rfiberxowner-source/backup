@@ -269,6 +269,25 @@ export const clientViews = {
       }
     };
 
+    window.highlightMissingProfileFields = function () {
+      const fields = ['edit-email', 'edit-phone', 'edit-address', 'edit-fb'];
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          const val = el.value.trim();
+          if (!val || val === 'Please add Facebook profile') {
+            el.style.transition = 'all 0.3s ease';
+            el.style.borderColor = '#f59e0b';
+            el.style.boxShadow = '0 0 0 4px rgba(245,158,11,0.3)';
+            setTimeout(() => {
+              el.style.borderColor = 'rgba(255,255,255,0.1)';
+              el.style.boxShadow = 'none';
+            }, 1000);
+          }
+        }
+      });
+    };
+
     window.clientReportsData = {};
 
     window.renderClientReportsTable = function () {
@@ -2762,7 +2781,7 @@ If a field is not found, return "TBD".`;
           <div id="dashboard-scroll-container" style="flex: 1; overflow-y: auto; padding-top: 70px; scroll-behavior: smooth;">
             <div style="padding: 3rem 2rem; max-width: 1300px; width: 100%; margin: 0 auto; padding-bottom: 15rem;">
               
-              <div id="ui-missing-details-alert" style="display: none; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #fff; font-size: 0.9rem; align-items: flex-start; gap: 0.75rem;">
+              <div id="ui-missing-details-alert" onclick="window.scrollToSection('profile'); window.highlightMissingProfileFields();" style="display: none; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #fff; font-size: 0.9rem; align-items: flex-start; gap: 0.75rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.2)'" onmouseout="this.style.background='rgba(245,158,11,0.1)'">
                  <div style="color: #f59e0b; font-size: 1.1rem; margin-top: 2px;">⚠️</div>
                  <div>
                    <div style="color: #f59e0b; font-weight: 700; margin-bottom: 0.25rem;">Incomplete Profile</div>
