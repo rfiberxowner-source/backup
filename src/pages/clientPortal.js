@@ -104,7 +104,7 @@ export const clientViews = {
           <!-- Background layers -->
           <div style="position: absolute; top: 0; left: 0; bottom: 0; right: 0; overflow: hidden; pointer-events: none;">
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; width: 100%; display: flex; justify-content: center; z-index: 0;">
-              <img src="/backup/logo3-removebg-preview.png" alt="" style="width: 70%; max-width: 600px; height: auto;" />
+              <img src="/backup/logo.png" alt="" style="width: 70%; max-width: 600px; height: auto;" />
             </div>
             <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: 80%; height: 80%; background: radial-gradient(circle, rgba(229,57,53,0.15) 0%, rgba(26,32,44,0) 70%); filter: blur(60px); z-index: 0;"></div>
           </div>
@@ -896,6 +896,10 @@ export const clientViews = {
     };
     // Store active payment method globally for toggling
     window.submitReport = async function () {
+      if (window.isProfileIncomplete) {
+        alert("Please complete your profile (email, phone, address, and Facebook) before submitting a report.");
+        return;
+      }
       const subjInput = document.getElementById('support-subject');
       const descInput = document.getElementById('support-desc');
       const catInput = document.getElementById('support-category');
@@ -1472,6 +1476,11 @@ export const clientViews = {
         };
 
         window.simulateAIAnalysis = async function (input) {
+          if (window.isProfileIncomplete) {
+            alert("Please complete your profile (email, phone, address, and Facebook) before uploading an image.");
+            return;
+          }
+          if (!input.files || !input.files[0]) return;
           if (input.files && input.files[0]) {
             const file = input.files[0];
 
@@ -2149,9 +2158,9 @@ If a field is not found, return "TBD".`;
               <div style="color: #fff; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">Upload Receipt</div>
               <div style="color: #94a3b8; font-size: 0.8rem; text-align: center; margin-bottom: 1rem; max-width: 200px;">Upload a screenshot of your GCash receipt for verification.</div>
               
-              <label style="background: #10b981; color: #fff; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+              <label style="background: ${window.isProfileIncomplete ? 'rgba(16, 185, 129, 0.5)' : '#10b981'}; color: #fff; padding: 0.6rem 1.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: ${window.isProfileIncomplete ? 'not-allowed' : 'pointer'}; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" ${window.isProfileIncomplete ? '' : 'onmouseover="this.style.background=\\\'#059669\\\'" onmouseout="this.style.background=\\\'#10b981\\\'"'}>
                 <span>📸</span> Add Image
-                <input type="file" accept="image/*" style="display: none;" onchange="window.simulateAIAnalysis(this)">
+                <input type="file" accept="image/*" style="display: none;" onchange="window.simulateAIAnalysis(this)" ${window.isProfileIncomplete ? 'disabled' : ''}>
               </label>
             </div>
           </div>
@@ -2346,14 +2355,19 @@ If a field is not found, return "TBD".`;
 
             const missing = [];
             if (!currentEmail || currentEmail.trim() === '') {
-              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">email address</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\\\'profile\\\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">email address</a>');
             }
             if (!currentPhone || currentPhone.trim() === '') {
-              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">phone number</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\\\'profile\\\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">phone number</a>');
             }
             if (!currentAddress || currentAddress.trim() === '') {
-              missing.push('<a href="#" onclick="window.scrollToSection(\'profile\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">home address</a>');
+              missing.push('<a href="#" onclick="window.scrollToSection(\\\'profile\\\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">home address</a>');
             }
+            if (!data.facebook || data.facebook.trim() === '' || data.facebook === 'Please add Facebook profile') {
+              missing.push('<a href="#" onclick="window.scrollToSection(\\\'profile\\\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">Facebook</a>');
+            }
+            
+            window.isProfileIncomplete = (missing.length > 0);
 
             const alertBox = document.getElementById('ui-missing-details-alert');
             const alertLinks = document.getElementById('ui-missing-links');
@@ -2368,6 +2382,19 @@ If a field is not found, return "TBD".`;
                 alertBox.style.display = 'flex';
               } else {
                 alertBox.style.display = 'none';
+              }
+            }
+            
+            const btnSubmitReport = document.getElementById('btn-submit-report');
+            if (btnSubmitReport) {
+              if (window.isProfileIncomplete) {
+                btnSubmitReport.disabled = true;
+                btnSubmitReport.style.opacity = '0.5';
+                btnSubmitReport.style.cursor = 'not-allowed';
+              } else {
+                btnSubmitReport.disabled = false;
+                btnSubmitReport.style.opacity = '1';
+                btnSubmitReport.style.cursor = 'pointer';
               }
             }
 
@@ -2693,7 +2720,7 @@ If a field is not found, return "TBD".`;
         <!-- Sidebar -->
         <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
           <div style="height: 70px; display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 2rem -1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <img src="/backup/logo3-removebg-preview.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
+            <img src="/backup/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
           </div>
           
           <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase;">My Account</div>
@@ -3040,7 +3067,7 @@ If a field is not found, return "TBD".`;
                     <div style="color: #94a3b8; font-size: 0.85rem;">
                       Or contact our tech-support on our page <a href="https://www.facebook.com/RFiber1" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline; font-weight: 600;">here</a>
                     </div>
-                    <button onclick="window.submitReport()" style="background: #E53935; color: #fff; border: none; padding: 0.75rem 2.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f44336'" onmouseout="this.style.background='#e53935'">Submit report</button>
+                    <button id="btn-submit-report" onclick="window.submitReport()" style="background: #E53935; color: #fff; border: none; padding: 0.75rem 2.5rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; transition: background 0.2s;" onmouseover="if(!this.disabled) this.style.background='#f44336'" onmouseout="if(!this.disabled) this.style.background='#e53935'">Submit report</button>
                   </div>
                 </div>
 
