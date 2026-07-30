@@ -54,7 +54,8 @@ export class Router {
             'value': ['Value Fiber', 'Up to 50 Mbps', 'Γé▒1000/mo'],
             'family': ['Family Fiber', 'Up to 70 Mbps', 'Γé▒1300/mo'],
             'pro': ['Pro Fiber', 'Up to 100 Mbps', 'Γé▒1500/mo'],
-            'extreme': ['Extreme Fiber X', 'Up to 200 Mbps', 'Γé▒2000/mo']
+            'extreme': ['Extreme Fiber X', 'Up to 200 Mbps', 'Γé▒2000/mo'],
+            'ultra': ['Ultra RFiberX', 'Up to 500 Mbps', 'Γé▒4500/mo']
           };
           if (plans[id]) {
             setTimeout(() => {

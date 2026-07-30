@@ -135,6 +135,14 @@ export const mainViews = {
           <p style="margin-bottom: 2rem; line-height: 2;">Up to 200 Mbps<br>Unlimited Data<br>Dual-Band Router 5G<br></p>
           <button class="btn btn-outline" style="margin-top: auto;" onclick="window.router.openSignupForm('Extreme RFiberX', 'Up to 200 Mbps', '₱2000/mo')">Get Started</button>
         </div>
+        
+        <!-- Plan 6 -->
+        <div id="ultra" class="bundle-card" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.5rem;">Ultra RFiberX</h3>
+          <div style="font-size: 3rem; font-weight: 800; color: var(--accent-color); margin: 1rem 0;">₱4500<span style="font-size: 1rem; color: #555;">/mo</span></div>
+          <p style="margin-bottom: 2rem; line-height: 2;">Dual-Band Router 5G<br>Unlimited Data<br>Up to 50 devices<br></p>
+          <button class="btn btn-outline" style="margin-top: auto;" onclick="window.router.openSignupForm('Ultra RFiberX', 'Up to 500 Mbps', '₱4500/mo')">Get Started</button>
+        </div>
       </div>
 
       <!-- Application Form Accordion -->
@@ -229,6 +237,7 @@ export const mainViews = {
               <th class="highlight-col">Plan 1300</th>
               <th>Plan 1500</th>
               <th>Plan 2000</th>
+              <th>Plan 4500</th>
             </tr>
           </thead>
           <tbody>
@@ -239,12 +248,14 @@ export const mainViews = {
               <td class="highlight-col">70 Mbps</td>
               <td>100 Mbps</td>
               <td>200 Mbps</td>
+              <td>500 Mbps</td>
             </tr>
             <tr>
               <td>Data Cap</td>
               <td>Unlimited</td>
               <td>Unlimited</td>
               <td class="highlight-col">Unlimited</td>
+              <td>Unlimited</td>
               <td>Unlimited</td>
               <td>Unlimited</td>
             </tr>
@@ -255,6 +266,7 @@ export const mainViews = {
               <td class="highlight-col check">✓</td>
               <td class="check">✓</td>
               <td class="check">✓</td>
+              <td class="check">✓</td>
             </tr>
             <tr>
               <td>Best Used For</td>
@@ -263,6 +275,7 @@ export const mainViews = {
               <td class="highlight-col">HD Streaming & Working</td>
               <td>Online Gaming & Video Calls</td>
               <td>Heavy Gaming, 4K Streaming & Large Downloads</td>
+              <td>Enterprise, Bulk Streaming & Max Performance</td>
             </tr>
             <tr>
               <td>Recommended Devices</td>
@@ -271,6 +284,7 @@ export const mainViews = {
               <td class="highlight-col">Up to 15 devices</td>
               <td>Up to 20 devices</td>
               <td>Up to 30 devices</td>
+              <td>Up to 50 devices</td>
             </tr>
             <tr>
               <td>Streaming Quality</td>
@@ -279,6 +293,7 @@ export const mainViews = {
               <td class="highlight-col">Multiple Full HD Screens</td>
               <td>4K Ultra HD</td>
               <td>Multiple 4K Streams Simultaneously</td>
+              <td>8K / Multiple 4K Streams + Zero Buffering</td>
             </tr>
           </tbody>
         </table>
@@ -867,7 +882,7 @@ export const mainViews = {
 
         <div style="text-align: center; border-top: 1px solid var(--glass-border); padding-top: 2rem; margin-top: 1rem;">
           <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 1rem;">If you are already online and have account, please visit the Payment Processing System</p>
-          <a href="#" class="btn btn-white" style="text-decoration: none;" onclick="alert('This will lead to the billing system. (Currently in development)'); return false;">Go TO RFiberX Payment Processing System</a>
+          <a href="/clientlogin" target="_blank" rel="noopener noreferrer" class="btn btn-white" style="text-decoration: none;">Go TO RFiberX Payment Processing System</a>
         </div>
       </div>
       

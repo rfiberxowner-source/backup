@@ -135,7 +135,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <div id="admin-main-content" style="flex: 1; margin-left: 260px; display: flex; flex-direction: column; max-height: 100vh; overflow-y: auto; transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
         
         <!-- Header -->
-        <header class="dashboard-topbar" style="height: 70px; box-sizing: border-box; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;">
+        <header class="dashboard-topbar" style="height: 70px; box-sizing: border-box; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(11, 15, 25, 0.4); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;">
           <div style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: auto 0; display: flex; align-items: center; gap: 0.75rem; padding: 0;">
             ${activeRoute === 'mapping' ? `
             <button onclick="window.history.back()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; padding: 0.5rem 0.75rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 6px; transition: all 0.2s; font-size: 0.85rem; font-weight: 600;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#94a3b8'">
@@ -557,11 +557,11 @@ export const adminViews = {
 
         <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; padding-bottom: 4.5rem; position: relative; overflow: hidden; z-index: 1;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">TOTAL ACCOUNTS</div>
+            <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">PENDING BILLS COUNT</div>
             <div style="width: 24px; height: 24px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #3b82f6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div>
           </div>
-          <div id="admin-total-accounts" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
-          <div style="font-size: 0.7rem; color: #3b82f6; font-weight: 500; position: relative; z-index: 2;">Active & Inactive</div>
+          <div id="admin-pending-bills" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
+          <div style="font-size: 0.7rem; color: #3b82f6; font-weight: 500; position: relative; z-index: 2;">Unread and Pending</div>
           <div style="position: absolute; bottom: 1rem; left: 1.25rem; right: 1.25rem; height: 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; z-index: 1;">
             ${[40, 60, 50, 70, 80, 50, 60, 40].map(h => `<div style="flex: 1; height: ${h}%; background: #3b82f6; border-radius: 4px; box-shadow: 0 0 10px rgba(59,130,246,0.8);"></div>`).join('')}
           </div>
@@ -1801,9 +1801,9 @@ window.initDashboard = async function () {
     const dashClients = document.getElementById('dash-clients');
     const dashOverdue = document.getElementById('dash-overdue');
     const dashRevenue = document.getElementById('dash-revenue');
-    if (dashClients) dashClients.innerText = '1205';
-    if (dashOverdue) dashOverdue.innerText = '15';
-    if (dashRevenue) dashRevenue.innerText = '₱50,000';
+    if (dashClients) dashClients.innerText = '0';
+    if (dashOverdue) dashOverdue.innerText = '0';
+    if (dashRevenue) dashRevenue.innerText = '₱0';
 
     const actList = document.getElementById('dash-activity-list');
     if (actList) {
@@ -1816,7 +1816,7 @@ window.initDashboard = async function () {
       d.setMonth(d.getMonth() - i);
       monthKeys.push(d.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
     }
-    const dummyRevs = [50000, 48000, 45000, 40000, 42000, 39000];
+    const dummyRevs = [0, 0, 0, 0, 0, 0];
     const points = [];
     const maxRev = 50000;
 
@@ -1949,10 +1949,7 @@ window.initDashboard = async function () {
       });
 
 
-      // DUMMY DATA FOR TESTING
-      if (monthlyRevenue["March 2026"] !== undefined) monthlyRevenue["March 2026"] += 5000;
-      if (monthlyRevenue["June 2026"] !== undefined) monthlyRevenue["June 2026"] += 1000;
-      // END DUMMY DATA
+
 
       if (dashRevenue) dashRevenue.innerText = '₱' + thisMonthRev.toLocaleString();
 
@@ -2132,7 +2129,7 @@ window.initDashboard = async function () {
 window.initAdminBanking = async function () {
   const adminRole = JSON.parse(localStorage.getItem('adminUser') || '{}').role || 'Minimal';
   if (adminRole === 'Minimal') {
-    document.getElementById('admin-total-accounts').innerText = '1205';
+    document.getElementById('admin-pending-bills').innerText = '15';
     document.getElementById('admin-outstanding-amount').innerText = '₱50,000';
     document.getElementById('admin-outstanding-accounts').innerText = 'Across 150 accounts';
     document.getElementById('admin-overdue-accounts').innerText = '15';
@@ -2174,10 +2171,10 @@ window.initAdminBanking = async function () {
         if (rawPlan !== '150Mbps' && (!amountStr || amountStr === '0' || amountStr === '')) return;
         validClients++;
       });
-      document.getElementById('admin-total-accounts').innerText = validClients;
       let outSum = 0;
       const outSet = new Set();
       let overdueCount = 0;
+      let pendingCount = 0;
 
       billsSnap.docs.forEach(d => {
         const b = d.data();
@@ -2208,8 +2205,10 @@ window.initAdminBanking = async function () {
         }
 
         if (status === 'overdue' && b.accountNumber) overdueCount++;
+        if (status === 'pending' && b.accountNumber) pendingCount++;
       });
 
+      document.getElementById('admin-pending-bills').innerText = pendingCount;
       document.getElementById('admin-outstanding-amount').innerText = '₱' + outSum.toLocaleString();
       document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
       document.getElementById('admin-overdue-accounts').innerText = overdueCount;
