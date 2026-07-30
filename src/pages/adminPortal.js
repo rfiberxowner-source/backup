@@ -83,7 +83,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
       <div id="admin-sidebar" style="width: 260px; background: #0f131f; border-right: 1px solid rgba(255,255,255,0.05); position: fixed; top: 0; bottom: 0; left: 0; display: flex; flex-direction: column; z-index: 50; overflow-y: auto; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(0);">
         
         <div style="height: 70px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; margin-bottom: 1rem;">
-          <img src="/backup/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
+          <img src="/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
         </div>
 
         <div style="flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
@@ -3894,7 +3894,7 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
         <div class="container">
           <div class="header">
             <div class="logo-area">
-              <img src="/backup/logo2-removebg-preview.png" alt="RFiberX" style="height: 250px; width: auto; margin-left: -15px;" />
+              <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 250px; width: auto; margin-left: -15px;" />
             </div>
             <div class="page-num">Page 1 of 1</div>
           </div>

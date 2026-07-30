@@ -104,7 +104,7 @@ export const clientViews = {
           <!-- Background layers -->
           <div style="position: absolute; top: 0; left: 0; bottom: 0; right: 0; overflow: hidden; pointer-events: none;">
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; width: 100%; display: flex; justify-content: center; z-index: 0;">
-              <img src="/backup/logo.png" alt="" style="width: 70%; max-width: 600px; height: auto;" />
+              <img src="/logo.png" alt="" style="width: 70%; max-width: 600px; height: auto;" />
             </div>
             <div style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: 80%; height: 80%; background: radial-gradient(circle, rgba(229,57,53,0.15) 0%, rgba(26,32,44,0) 70%); filter: blur(60px); z-index: 0;"></div>
           </div>
@@ -407,7 +407,7 @@ export const clientViews = {
 
             // Header: Logo and Page 1 of 1
             aHtml += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
-            aHtml += '<img src="/backup/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
+            aHtml += '<img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
             aHtml += '<div style="color: #9ca3af; font-size: 0.7rem;">Page 1 of 1</div>';
             aHtml += '</div>';
 
@@ -472,7 +472,7 @@ export const clientViews = {
             html += '<div style="margin-top: 1rem; padding-left: 2.25rem;">';
             html += '<div style="background: #ffffff; border-radius: 8px; padding: 1.5rem; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.4); position: relative; overflow: hidden; pointer-events: none;">';
             html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">';
-            html += '<img src="/backup/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
+            html += '<img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 150px; width: auto;" />';
             html += '<div style="color: #10b981; font-size: 0.75rem; font-weight: 800; border: 2px solid #10b981; padding: 0.1rem 0.5rem; border-radius: 4px; transform: rotate(15deg);">PAID</div>';
             html += '</div>';
             html += '<div style="width: 100%; height: 2px; background: #10b981; margin-bottom: 1.5rem;"></div>';
@@ -1135,7 +1135,7 @@ export const clientViews = {
 
               <!-- Header -->
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 1px solid #E53935; padding-bottom: 1rem;">
-                <img src="/backup/logo2-removebg-preview.png" alt="RFiberX" style="height: 200px; width: auto;" />
+                <img src="/logo2-removebg-preview.png" alt="RFiberX" style="height: 200px; width: auto;" />
                 <div style="text-align: right; font-size: 0.75rem; color: #888;">
                   Page 1 of 1
                 </div>
@@ -2160,7 +2160,7 @@ If a field is not found, return "TBD".`;
           <div style="display: flex; gap: 2rem; align-items: stretch; flex-wrap: wrap;">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; flex-shrink: 0;">
               <div style="width: 280px; height: 280px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.1);">
-                <img src="/backup/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg" alt="GCash QR Code" style="width: 220%; height: 220%; object-fit: cover; object-position: center 55%; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <img src="/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg" alt="GCash QR Code" style="width: 220%; height: 220%; object-fit: cover; object-position: center 55%; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
               </div>
             </div>
             <div style="flex: 1; min-width: 250px;">
@@ -2740,7 +2740,7 @@ If a field is not found, return "TBD".`;
         <!-- Sidebar -->
         <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
           <div style="height: 70px; display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 2rem -1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <img src="/backup/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
+            <img src="/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
           </div>
           
           <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase;">My Account</div>
