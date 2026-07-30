@@ -1092,6 +1092,10 @@ export const adminViews = {
               <div style="font-size: 0.8rem; font-weight: 700; color: #fff; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">Editable Details</div>
               <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
                 <div>
+                  <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Account Name</label>
+                  <input type="text" id="modal-client-accountname-input" oninput="window.checkAdminClientChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none;">
+                </div>
+                <div>
                   <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Plan</label>
                   <select id="modal-client-plan-input" onchange="window.handleAdminClientPlanChange()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: pointer;">
                     <option style="background: #0f131f; color: #fff;" value="30Mbps">30Mbps - Starter RFiberX</option>
@@ -3370,10 +3374,14 @@ window.openAdminClientModal = async function (id) {
     document.getElementById('modal-client-status-input').value = stat;
 
     // Initialize dataset values for change tracking
+    const acctName = u.accountname || u.accountName || u.name || '';
+    document.getElementById('modal-client-accountname-input').value = acctName;
+
     document.getElementById('modal-client-plan-input').dataset.original = planSel.value;
     document.getElementById('modal-client-amount-input').dataset.original = document.getElementById('modal-client-amount-input').value;
     document.getElementById('modal-client-password-input').dataset.original = document.getElementById('modal-client-password-input').value;
     document.getElementById('modal-client-status-input').dataset.original = document.getElementById('modal-client-status-input').value;
+    document.getElementById('modal-client-accountname-input').dataset.original = document.getElementById('modal-client-accountname-input').value;
 
     if (window.checkAdminClientChanges) window.checkAdminClientChanges();
   } catch (e) {
@@ -3434,17 +3442,20 @@ window.requestAdminClientUpdate = async function () {
   const amountInput = document.getElementById('modal-client-amount-input');
   const passInput = document.getElementById('modal-client-password-input');
   const statusInput = document.getElementById('modal-client-status-input');
+  const acctNameInput = document.getElementById('modal-client-accountname-input');
 
   const plan = planInput.value;
   const amount = amountInput.value;
   const pass = passInput.value;
   const status = statusInput.value;
+  const acctName = acctNameInput.value;
 
   let changes = [];
   if (plan !== planInput.dataset.original) changes.push('Plan');
   if (amount !== amountInput.dataset.original) changes.push('Amount');
   if (pass !== passInput.dataset.original) changes.push('Password');
   if (status !== statusInput.dataset.original) changes.push('Status');
+  if (acctName !== acctNameInput.dataset.original) changes.push('Account Name');
 
   if (changes.length === 0) {
     const msg = document.getElementById('modal-client-update-msg');
@@ -3464,6 +3475,7 @@ window.requestAdminClientUpdate = async function () {
     try {
       const { db, firestore } = await window._getAdminDb();
       await firestore.updateDoc(firestore.doc(db, "users", id), {
+        accountname: acctName,
         plan: plan,
         amount: amount,
         password: pass,
