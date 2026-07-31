@@ -1157,7 +1157,7 @@ export const adminViews = {
       if (!expoPushToken) return;
       const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
-        const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        const res = await fetch('https://corsproxy.io/?https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify(message),
