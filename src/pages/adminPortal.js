@@ -1157,16 +1157,13 @@ export const adminViews = {
       if (!expoPushToken) return;
       const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
-        const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
+          mode: 'no-cors',
           headers: { 'Accept': 'application/json', 'Content-Type': 'text/plain' },
           body: JSON.stringify(message),
         });
-        const json = await res.json();
-        console.log("Expo Push Response:", json);
-        if (json.data && json.data.status === 'error') {
-          alert("Expo Push Error: " + json.data.message);
-        }
+        console.log("Expo Push sent (opaque response).");
       } catch (error) { console.error('Error sending push notification:', error); }
     };
     window.sendDailyReminders = async function () {
@@ -3652,6 +3649,7 @@ window.sendMaintenanceAdvisory = async function () {
         // 3. Fire the HTTP POST request to Expo servers
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
+          mode: 'no-cors',
           headers: {
             'Accept': 'application/json',
             'Accept-encoding': 'gzip, deflate',
@@ -3659,7 +3657,7 @@ window.sendMaintenanceAdvisory = async function () {
           },
           body: JSON.stringify(pushPayload),
         });
-        console.log(`Sent push notification to ${tokens.length} devices.`);
+        console.log(`Sent push notification to ${tokens.length} devices (opaque response).`);
       }
     } catch (pushErr) {
       console.error('Error sending push notifications:', pushErr);
