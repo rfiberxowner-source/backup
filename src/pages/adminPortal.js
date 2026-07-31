@@ -1157,9 +1157,9 @@ export const adminViews = {
       if (!expoPushToken) return;
       const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
-        const res = await fetch('https://corsproxy.io/?https://exp.host/--/api/v2/push/send', {
+        const res = await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'text/plain' },
           body: JSON.stringify(message),
         });
         const json = await res.json();
@@ -3650,12 +3650,12 @@ window.sendMaintenanceAdvisory = async function () {
         }));
 
         // 3. Fire the HTTP POST request to Expo servers
-        await fetch('/expo-push', {
+        await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Accept-encoding': 'gzip, deflate',
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain',
           },
           body: JSON.stringify(pushPayload),
         });
