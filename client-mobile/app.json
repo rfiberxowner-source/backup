@@ -16,7 +16,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.rfiberx.technician",
+      "package": "com.rfiberx.client",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
