@@ -928,11 +928,12 @@ export const adminViews = {
                     <th style="padding: 1rem; vertical-align: middle;">PHONE</th>
                     <th style="padding: 1rem; vertical-align: middle;">PLAN</th>
                     <th style="padding: 1rem; vertical-align: middle;">AMOUNT</th>
+                    <th style="padding: 1rem; vertical-align: middle;">AGE</th>
                     <th style="padding: 1rem; vertical-align: middle;">STATUS</th>
                   </tr>
                 </thead>
                 <tbody id="admin-clients-tbody">
-                  <tr><td colspan="7" style="padding: 1rem; color: #fff; text-transform: none; text-align: center;">Loading clients...</td></tr>
+                  <tr><td colspan="8" style="padding: 1rem; color: #fff; text-transform: none; text-align: center;">Loading clients...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2729,7 +2730,7 @@ window.renderAdminClientsTable = async function () {
 
     const snap = window._adminUsersSnap;
     if (!snap) {
-      tb.innerHTML = '<tr><td colspan="7" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
+      tb.innerHTML = '<tr><td colspan="8" style="padding: 1rem; text-align:center;">Loading...</td></tr>';
       return;
     }
 
@@ -2853,6 +2854,15 @@ window.renderAdminClientsTable = async function () {
       const accNum = u.accountNumber || 'TBD';
       const fullName = u.fullName || u.name || 'TBD';
 
+      let ageBadge = '<span style="color: #94a3b8; font-weight: 600;">Old</span>';
+      if (u.createdAt) {
+        const createdDate = new Date(u.createdAt);
+        const diffDays = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays < 30) {
+          ageBadge = '<span style="color: #3b82f6; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">New</span>';
+        }
+      }
+
       // Check online status (heartbeat within last 60 seconds)
       let isOnline = false;
       if (u.lastActive) {
@@ -2913,6 +2923,7 @@ window.renderAdminClientsTable = async function () {
           <td style="padding: 1rem; vertical-align: middle; color: #94a3b8;">${phone}</td>
           <td style="padding: 1rem; vertical-align: middle;"><span style="color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${plan}</span></td>
           <td style="padding: 1rem; vertical-align: middle; color: #fff; font-weight: 600;">${amtStr}</td>
+          <td style="padding: 1rem; vertical-align: middle;">${ageBadge}</td>
           <td style="padding: 1rem; vertical-align: middle;">
             ${isOnline ?
           '<span style="color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>Active</span>' :
