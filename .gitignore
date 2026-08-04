@@ -27,7 +27,6 @@ dist-ssr
 *.csv
 *.xlsx
 portal-c293a-firebase-adminsdk-fbsvc-8b15a32372.json
-google-services.json
 
 emails/
 public/emails/
