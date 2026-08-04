@@ -169,11 +169,9 @@ function RootNavigator() {
           
           const currentToken = await AsyncStorage.getItem('clientSessionToken');
           
-          // If the server has a token, and we have a token, and they don't match, we got kicked out or cleared.
-          // Or if the server has NO token (admin cleared it), we keep them logged in but they will get a new token next time they log in.
-          // Actually, if admin clears it, they can stay logged in locally, allowing someone else to log in later. 
-          // If someone else logs in, freshData will get a NEW token, which won't match currentToken, so we log them out then!
-          if (currentToken && freshData.activeSessionToken && freshData.activeSessionToken !== currentToken) {
+          // If the server has a token and it doesn't match ours, we got kicked out by another login.
+          // If the server has NO token, we got force logged out by an admin.
+          if (currentToken && (!freshData.activeSessionToken || freshData.activeSessionToken !== currentToken)) {
             await AsyncStorage.multiRemove(['clientUser', 'clientSessionToken']);
             setUser(null);
             return;

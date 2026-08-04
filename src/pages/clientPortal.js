@@ -2284,7 +2284,7 @@ If a field is not found, return "TBD".`;
             if (userDoc.exists()) {
               const data = userDoc.data();
               const currentToken = localStorage.getItem('clientSessionToken');
-              if (currentToken && data.activeSessionToken && data.activeSessionToken !== currentToken) {
+              if (currentToken && (!data.activeSessionToken || data.activeSessionToken !== currentToken)) {
                 if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
                 localStorage.removeItem('clientUser');
                 localStorage.removeItem('clientSessionToken');
