@@ -72,9 +72,12 @@ app.post('/webhook', (req, res) => {
                     const messageText = webhook_event.message.text;
                     const replyText = getAutoReply(messageText);
 
-                    // Send the auto-reply to whoever sent the message
-                    const replyMessage = getAutoReply(messageText);
-                    callSendAPI(sender_psid, replyMessage);
+                    // Send the auto-reply ONLY to Rfiberx Blanco
+                    const RFIBERX_PSID = '28146825618339223';
+                    if (sender_psid === RFIBERX_PSID) {
+                        const replyMessage = getAutoReply(messageText);
+                        callSendAPI(sender_psid, replyMessage);
+                    }
                 }
             }
         });
