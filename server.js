@@ -4,8 +4,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "YOUR_API_KEY_HERE");
+// Google Generative AI imported at top
 
 // Initialize Firebase Admin
 let serviceAccount;
@@ -132,6 +131,15 @@ async function getAutoReply(text) {
     if (!ai_decision) {
         // Second Line of Defense: Gemini AI for complex sentences
         try {
+            // Fetch Gemini API key from Firestore
+            const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
+            let apiKey = '';
+            if (apiKeyDoc.exists && apiKeyDoc.data().gemini) {
+                apiKey = apiKeyDoc.data().gemini;
+            }
+            if (!apiKey) throw new Error("Gemini API Key missing from Firestore");
+
+            const genAI = new GoogleGenerativeAI(apiKey);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const prompt = `You are an intelligent classifier for an ISP called RFiberX. 
             Read the user's message in Tagalog, English, or Taglish. 
