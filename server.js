@@ -91,7 +91,12 @@ app.post('/webhook', (req, res) => {
 
 // Smart Keyword Matching using Regex
 function getAutoReply(text) {
-    const msg = text.toLowerCase();
+    const msg = text.toLowerCase().trim();
+
+    // 0. Test Keyword
+    if (msg === "test") {
+        return "✅ System is responding! The webhook and auto-reply are fully functional.";
+    }
 
     // 1. Technical Support Keywords
     if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|internet|connection)/i)) {
