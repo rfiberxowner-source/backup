@@ -105,6 +105,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
             <div style="padding: 0 2rem; font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 0.75rem; text-transform: uppercase;">Communications</div>
             <nav style="display: flex; flex-direction: column; gap: 0.25rem; padding: 0 1rem;">
               ${['Admin', 'Technician'].includes(adminRole) ? navItem('Communications', '/RFiberXAdminportal-communications', iconComms, activeRoute === 'communications') : ''}
+              ${['Admin', 'Technician'].includes(adminRole) ? navItem('Chatbox', '/RFiberXAdminportal-chatbox', `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`, activeRoute === 'chatbox') : ''}
             </nav>
           </div>
           <div>
@@ -615,7 +616,7 @@ export const adminViews = {
           <table style="width: 100%; border-collapse: collapse; font-size: 0.6rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; text-align: left;">
           <thead>
             <tr style="background: rgba(15, 19, 31, 0.95); border-bottom: 1px solid rgba(255,255,255,0.05); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(4px);">
-              <th style="padding: 1rem;">BILL ID</th>
+              <th style="padding: 1rem;">PROCESSING BY</th>
               <th style="padding: 1rem;">CUSTOMER</th>
               <th style="padding: 1rem;">ACCOUNT #</th>
               <th style="padding: 1rem;">MONTH</th>
@@ -664,7 +665,7 @@ export const adminViews = {
           <table style="width: 100%; border-collapse: collapse; font-size: 0.6rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; text-align: left;">
           <thead>
             <tr style="background: rgba(15, 19, 31, 0.95); border-bottom: 1px solid rgba(255,255,255,0.05); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(4px);">
-              <th style="padding: 1rem;">PAYMENT ID</th>
+              <th style="padding: 1rem;">PROCESSED BY</th>
               <th style="padding: 1rem;">CUSTOMER</th>
               <th style="padding: 1rem;">ACCOUNT #</th>
               <th style="padding: 1rem;">MONTH</th>
@@ -1151,6 +1152,114 @@ export const adminViews = {
       </div>
     `;
     return window.renderAdminLayout('accounts', 'Accounts & Teams', content);
+  },
+
+  '/RFiberXAdminportal-chatbox': () => {
+    const content = `
+      <style>
+        .chatbox-container { display: flex; height: calc(100vh - 80px); background: #0f172a; overflow: hidden; }
+        
+        .chatbox-main { flex: 1; display: flex; position: relative; }
+        
+        .chatbox-header-select { background: #1e293b; border: 1px solid #334155; color: #f8fafc; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Outfit', sans-serif; outline: none; }
+        
+        .chatbox-main { flex: 1; display: flex; flex-direction: column; position: relative; }
+        
+        .chatbox-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #1e293b; background: rgba(16, 185, 129, 0.05); display: flex; align-items: center; gap: 1rem; }
+        .chatbox-header-badge { background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.3rem 0.8rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        
+        .chatbox-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
+        .msg-wrapper.me { align-self: flex-end; }
+        .msg-wrapper.them { align-self: flex-start; }
+        .msg-bubble { padding: 0.75rem 1.25rem; border-radius: 16px; font-size: 0.95rem; line-height: 1.5; position: relative; }
+        .msg-wrapper.me .msg-bubble { background: #10b981; color: #fff; border-bottom-right-radius: 4px; }
+        .msg-wrapper.them .msg-bubble { background: #1e293b; color: #f8fafc; border-bottom-left-radius: 4px; border: 1px solid #334155; }
+        .msg-time { font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; text-align: right; }
+        .msg-wrapper.them .msg-time { text-align: left; }
+        
+        .msg-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.25rem; width: 350px; }
+        .msg-card-header { font-family: 'Outfit', sans-serif; font-weight: bold; font-size: 1.1rem; color: #10b981; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;}
+        .msg-card-row { display: flex; margin-bottom: 0.5rem; }
+        .msg-card-label { width: 120px; color: #94a3b8; font-size: 0.8rem; font-weight: 600; }
+        .msg-card-value { flex: 1; color: #f8fafc; font-size: 0.85rem; font-weight: 500; }
+        .msg-card-btn { width: 100%; margin-top: 1rem; padding: 0.75rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; text-align: center; font-size: 0.85rem; }
+        .msg-card-btn-map { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .msg-card-btn-map:hover { background: rgba(59, 130, 246, 0.2); }
+        .msg-card-btn-delete { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 0.5rem; }
+        .msg-card-btn-delete:hover { background: rgba(239, 68, 68, 0.2); }
+        
+        .chatbox-input-area { padding: 1.25rem; border-top: 1px solid #1e293b; background: #0f172a; display: flex; gap: 1rem; align-items: flex-end; }
+        .chatbox-input { flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 24px; padding: 0.75rem 1.25rem; color: #f8fafc; font-size: 0.95rem; resize: none; min-height: 48px; max-height: 120px; outline: none; }
+        .chatbox-input:focus { border-color: #10b981; }
+        .chatbox-send-btn { width: 48px; height: 48px; border-radius: 24px; background: #10b981; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; transition: background 0.2s; }
+        .chatbox-send-btn:hover { background: #059669; }
+
+        .cb-active-wrapper { display: flex; flex-direction: row; height: 100%; overflow: hidden; width: 100%; }
+        .cb-chat-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #1e293b; overflow: hidden; }
+        .cb-tools-pane { flex: 1; display: flex; flex-direction: column; background: #0f172a; overflow: hidden; }
+        
+        .cb-tools-header { padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); border-bottom: 1px solid #1e293b; }
+        .cb-tools-title { color: #f8fafc; font-size: 1.1rem; font-weight: bold; margin: 0; }
+        .cb-tools-toggle { background: #1e293b; border: 1px solid #334155; color: #f8fafc; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+        .cb-tools-search { padding: 1rem 1.5rem; border-bottom: 1px solid #1e293b; display: flex; gap: 1rem; }
+        .cb-tools-search input { flex: 1; background: #1e293b; border: 1px solid #334155; color: #f8fafc; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .cb-tools-search input:focus { border-color: #10b981; }
+        .cb-tools-content { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
+        
+        .cb-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .cb-table th { padding: 0.75rem; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid #1e293b; }
+        .cb-table td { padding: 0.75rem; color: #f8fafc; font-size: 0.85rem; border-bottom: 1px solid #1e293b; }
+        .cb-btn-send { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.75rem; transition: background 0.2s; }
+        .cb-btn-send:hover { background: rgba(16, 185, 129, 0.2); }
+        .cb-btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+      </style>
+      <div class="chatbox-container">
+        <!-- Main Area -->
+        <div class="chatbox-main">
+          <!-- Active Chat -->
+          <div id="cb-active" class="cb-active-wrapper">
+            <div class="cb-chat-pane">
+              <div class="chatbox-header">
+                <select id="cb-tech-select" class="chatbox-header-select" onchange="window.chatboxSelectUser(this.value)">
+                  <option value="">Select a technician...</option>
+                </select>
+                <span class="chatbox-header-badge">Technician</span>
+              </div>
+              <div id="cb-messages" class="chatbox-messages">
+                <!-- Messages -->
+              </div>
+              <div class="chatbox-input-area">
+                <textarea id="cb-input" class="chatbox-input" placeholder="Type a message..." rows="1" onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.chatboxSendMessage(); }"></textarea>
+                <button id="cb-send-btn" class="chatbox-send-btn" onclick="window.chatboxSendMessage()">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
+            </div>
+            
+            <div class="cb-tools-pane">
+              <div class="cb-tools-header">
+                <h2 id="cb-tools-title" class="cb-tools-title">Service Requests</h2>
+                <select id="cb-tools-select" class="cb-tools-toggle" onchange="window.renderChatboxToolsView()">
+                  <option value="Tickets">Service Requests</option>
+                  <option value="Clients">Clients Directory</option>
+                </select>
+              </div>
+              <div id="cb-tools-search-wrapper" class="cb-tools-search" style="display: none;">
+                <input type="text" id="cb-tools-search-input" placeholder="Search clients by name..." oninput="window.renderChatboxToolsView()" />
+              </div>
+              <div id="cb-tools-content" class="cb-tools-content">
+                <!-- Tickets / Clients Table -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => { window.initAdminChatbox(); window.initChatboxTools(); }, 100);
+    return window.renderAdminLayout('chatbox', 'Chatbox', content);
   },
 
   '/RFiberXAdminportal-communications': () => {
@@ -2272,8 +2381,16 @@ window.renderBills = async function () {
     const billsDocs = window._adminBillsDocs;
 
     const sortedBills = billsDocs.sort((a, b) => {
-      const da = new Date(a.data().dateSent || 0);
-      const db = new Date(b.data().dateSent || 0);
+      const aData = a.data();
+      const bData = b.data();
+      const aStatus = (aData.status || 'Pending').toLowerCase();
+      const bStatus = (bData.status || 'Pending').toLowerCase();
+      
+      if (aStatus === 'waiting' && bStatus !== 'waiting') return -1;
+      if (bStatus === 'waiting' && aStatus !== 'waiting') return 1;
+
+      const da = new Date(aData.dateSent || 0);
+      const db = new Date(bData.dateSent || 0);
       return db - da;
     });
 
@@ -2307,7 +2424,7 @@ window.renderBills = async function () {
       if (m && b.month !== m && b.billingMonth !== m) return;
       if (p && b.plan !== p) return;
 
-      const badgeColor = displayStatus === 'Overdue' ? '#E53935' : '#f59e0b';
+      const badgeColor = displayStatus === 'Overdue' ? '#E53935' : (displayStatus === 'Waiting' ? '#f97316' : '#f59e0b');
       const realBillId = b.billId || d.id;
 
       html += `
@@ -2315,7 +2432,7 @@ window.renderBills = async function () {
             onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'"
             onmouseout="this.style.background='transparent'; this.style.boxShadow='none'"
             onclick="window.openReceiptPage('${realBillId}', true)">
-          <td style="padding: 1rem; font-family: monospace;">${realBillId}</td>
+          <td style="padding: 1rem; color: #fff;">${displayStatus === 'Waiting' ? (b.processedBy || 'Unknown') : 'N/A'}</td>
           <td style="padding: 1rem; color: #fff;">${cName}</td>
           <td style="padding: 1rem; font-family: monospace;">${b.accountNumber || 'N/A'}</td>
           <td style="padding: 1rem;">${b.month || b.billingMonth || '-'}</td>
@@ -2324,7 +2441,11 @@ window.renderBills = async function () {
           <td style="padding: 1rem;">${b.dueDate || '-'}</td>
           <td style="padding: 1rem;"><span style="color: ${badgeColor}; background: ${badgeColor}22; padding: 0.2rem 0.5rem; border-radius: 4px;">${displayStatus}</span></td>
           <td style="padding: 1rem;">
-            <button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>
+            ${displayStatus === 'Waiting' ? 
+              `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '${b.processedBy || ''}', event)" style="background: #f59e0b; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Approve</button>`
+              :
+              `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>`
+            }
           </td>
         </tr>
       `;
@@ -2391,7 +2512,7 @@ window.renderPayments = async function () {
             onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'"
             onmouseout="this.style.background='transparent'; this.style.boxShadow='none'"
             onclick="window.openReceiptPage('${paymentId}', false)">
-          <td style="padding: 1rem; font-family: monospace;">${paymentId}</td>
+          <td style="padding: 1rem; color: #fff;">${pm.processedBy || 'Admin'}</td>
           <td style="padding: 1rem; color: #fff;">${cName}</td>
           <td style="padding: 1rem; font-family: monospace;">${pm.accountNumber || 'N/A'}</td>
           <td style="padding: 1rem;">${pm.month || pm.billingMonth || pm.period || '-'}</td>
@@ -4150,7 +4271,7 @@ window.renderDashActivity = async function () {
   }
 };
 
-window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, billMonth, billPlan, cName, acct, ev) {
+window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, billMonth, billPlan, cName, acct, existingProcessedBy, ev) {
   if (ev) ev.stopPropagation();
   if (btn.disabled) return;
 
@@ -4161,6 +4282,10 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     const { db, firestore } = await window._getAdminDb();
     const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
 
+    const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    const adminName = adminUser.fullName || adminUser.name || adminUser.email || 'Admin';
+    const processedBy = existingProcessedBy ? existingProcessedBy : adminName;
+
     const now = new Date();
     const payData = {
       userId: customerId,
@@ -4168,12 +4293,14 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
       amount: parseFloat(String(amountStr).replace(/,/g, '')) || 0,
       billingMonth: billMonth || '-',
       plan: billPlan || '-',
-      method: 'Online payment',
+      method: 'Cash',
+      paymentMethod: 'Cash',
       datePaid: now.toISOString(),
       status: 'completed',
       timestamp: firestore.serverTimestamp(),
       customerName: cName,
-      accountNumber: acct
+      accountNumber: acct,
+      processedBy: processedBy
     };
 
     await firestore.addDoc(firestore.collection(db, "payments"), payData);
@@ -4228,4 +4355,620 @@ window.showRevenueTaxPopup = function (month, amount) {
 
 window.closeRevenueTaxPopup = function () {
   document.getElementById('admin-revenue-tax-modal').style.display = 'none';
+};
+
+// ==========================================
+// CHATBOX LOGIC
+// ==========================================
+window._chatboxListeners = [];
+window._activeChatUser = null;
+
+window.initAdminChatbox = async function() {
+  window._chatboxListeners.forEach(unsub => unsub());
+  window._chatboxListeners = [];
+  window._activeChatUser = null;
+
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    const adminCol = firestore.collection(db, "admin");
+    const unsubUsers = firestore.onSnapshot(adminCol, (snapshot) => {
+      const users = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.role?.toLowerCase() === 'technician' || !data.role) {
+           const name = data.fullName || data.name || (data.firstName ? `${data.firstName} ${data.lastName||''}`.trim() : 'Technician');
+           users.push({ id: docSnap.id, name, ...data });
+        }
+      });
+      window._chatboxUsers = users;
+      window.renderChatboxUserList();
+    });
+    window._chatboxListeners.push(unsubUsers);
+    
+    const qUnread = firestore.query(firestore.collection(db, "messages"), firestore.where("status", "==", "unread"));
+    const unsubUnread = firestore.onSnapshot(qUnread, (snapshot) => {
+      const unreadMap = {};
+      const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const myId = adminUser.id || 'admin_1';
+      
+      snapshot.forEach(doc => {
+        const msg = doc.data();
+        if (msg.senderId !== myId) {
+          unreadMap[msg.conversationId] = (unreadMap[msg.conversationId] || 0) + 1;
+        }
+      });
+      window._chatboxUnreadMap = unreadMap;
+      window.renderChatboxUserList();
+    });
+    window._chatboxListeners.push(unsubUnread);
+  } catch (error) {
+    console.error("Error initializing chatbox:", error);
+  }
+};
+
+window.renderChatboxUserList = function() {
+  const select = document.getElementById('cb-tech-select');
+  if (!select) return;
+  const users = window._chatboxUsers || [];
+  const unreadMap = window._chatboxUnreadMap || {};
+  
+  const currentVal = select.value;
+  let html = '<option value="">Select a technician...</option>';
+  
+  users.forEach(u => {
+    const hasUnread = unreadMap[u.id] > 0;
+    const name = u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+    const label = hasUnread ? `🔴 ${name} (Unread)` : name;
+    html += `<option value="${u.id}">${label}</option>`;
+  });
+  
+  select.innerHTML = html;
+  
+  if (currentVal && users.find(u => u.id === currentVal)) {
+    select.value = currentVal;
+  } else if (!currentVal && users.length > 0 && !window._activeChatUser) {
+    select.value = users[0].id;
+    window.chatboxSelectUser(users[0].id);
+  }
+};
+
+window.chatboxSelectUser = function(userId) {
+  const users = window._chatboxUsers || [];
+  const user = users.find(u => u.id === userId);
+  
+  if (!user) {
+    window._activeChatUser = null;
+    document.getElementById('cb-messages').innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 2rem;">Select a technician to view messages.</div>';
+    return;
+  }
+  
+  window._activeChatUser = user;
+  
+  const select = document.getElementById('cb-tech-select');
+  if (select && select.value !== userId) select.value = userId;
+  
+  window.loadChatboxMessages(userId);
+};
+
+window.loadChatboxMessages = async function(userId) {
+  if (window._currentChatUnsub) window._currentChatUnsub();
+  
+  const { db, firestore } = await window._getAdminDb();
+  const q = firestore.query(
+    firestore.collection(db, "messages"),
+    firestore.where("conversationId", "==", userId)
+  );
+  
+  const container = document.getElementById('cb-messages');
+  container.innerHTML = '<div style="color:#64748b; text-align:center; padding:1rem;">Loading messages...</div>';
+  
+  window._currentChatUnsub = firestore.onSnapshot(q, (snapshot) => {
+    let html = '';
+    const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    const myId = adminUser.id || 'admin_1';
+    const toUpdate = [];
+    const msgs = [];
+    
+    snapshot.forEach(docSnap => {
+      msgs.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    
+    // Sort messages ascending (oldest first)
+    msgs.sort((a, b) => {
+      const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : Date.now());
+      const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : Date.now());
+      return timeA - timeB;
+    });
+    
+    msgs.forEach(msg => {
+      const msgId = msg.id;
+      if (msg.senderId !== myId && msg.status === 'unread') toUpdate.push(msgId);
+      
+      const isMe = msg.senderId === myId;
+      const type = msg.type || 'text';
+      let dateStr = '';
+      if (msg.timestamp) {
+        const d = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp);
+        dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      if (type === 'text') {
+        html += `
+          <div class="msg-wrapper ${isMe ? 'me' : 'them'}">
+            <div class="msg-bubble" ondblclick="window.chatboxDeleteMsg('${msgId}', 'text')" style="cursor: pointer;" title="Double-click to delete message">${msg.text || ''}</div>
+            <div class="msg-time">${dateStr} ${isMe && msg.status === 'read' ? '✓' : ''}</div>
+          </div>
+        `;
+      } else if (type === 'report' || type === 'client') {
+        html += window.renderChatboxCard(msgId, msg, isMe, dateStr);
+      }
+    });
+    
+    if (snapshot.empty) html = '<div style="color:#64748b; text-align:center; padding:1rem;">No messages yet.</div>';
+    
+    const messagesDiv = document.getElementById('cb-messages');
+    if (messagesDiv) {
+      messagesDiv.innerHTML = html;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    if (toUpdate.length > 0) {
+      toUpdate.forEach(async (id) => {
+        try { await firestore.updateDoc(firestore.doc(db, "messages", id), { status: 'read' }); } catch (e) {}
+      });
+    }
+  });
+  window._chatboxListeners.push(window._currentChatUnsub);
+};
+
+window.renderChatboxCard = function(msgId, msg, isMe, dateStr) {
+  const isTicket = msg.type === 'report';
+  const title = isTicket ? 'SERVICE REQUEST' : 'CLIENT DETAILS';
+  
+  let detailsHtml = '';
+  if (isTicket) {
+    const rawData = msg.data || msg.ticketData || {};
+    detailsHtml = `
+      <div class="msg-card-row"><div class="msg-card-label">Name</div><div class="msg-card-value">${rawData.name || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Account No.</div><div class="msg-card-value">${rawData.accountNumber || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Address</div><div class="msg-card-value">${rawData.address || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Date</div><div class="msg-card-value">${rawData.date || ''} ${rawData.time || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Subject</div><div class="msg-card-value">${rawData.subject || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Category</div><div class="msg-card-value">${rawData.category || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Description</div><div class="msg-card-value">${rawData.desc || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Status</div><div class="msg-card-value">${rawData.status || 'Pending'}</div></div>
+    `;
+    if (rawData.rawLocation) {
+       detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
+    }
+  } else {
+    const rawData = msg.data || msg.clientData || {};
+    detailsHtml = `
+      <div class="msg-card-row"><div class="msg-card-label">Name</div><div class="msg-card-value">${rawData.name || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Account No.</div><div class="msg-card-value">${rawData.accountNumber || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Address</div><div class="msg-card-value">${rawData.address || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Current Plan</div><div class="msg-card-value">${rawData.plan || ''}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Unpaid Bills</div><div class="msg-card-value">${rawData.unpaidBillsCount || 0}</div></div>
+      <div class="msg-card-row"><div class="msg-card-label">Total Amount</div><div class="msg-card-value">₱${rawData.totalUnpaidAmount || 0}</div></div>
+    `;
+    if (rawData.rawLocation) {
+       detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
+    }
+  }
+
+  const targetId = isTicket ? (msg.data?.reportId || msg.reportId) : (msg.data?.clientId || msg.clientId);
+  detailsHtml += `<button class="msg-card-btn msg-card-btn-delete" onclick="window.chatboxDeleteMsg('${msgId}', '${msg.type}', '${targetId}')">Delete Message</button>`;
+  
+  return `
+    <div class="msg-wrapper ${isMe ? 'me' : 'them'}">
+      <div class="msg-card">
+        <div class="msg-card-header">
+           <span>${title}</span>
+        </div>
+        ${detailsHtml}
+      </div>
+      <div class="msg-time">${dateStr} ${isMe && msg.status === 'read' ? '✓' : ''}</div>
+    </div>
+  `;
+};
+
+window.openMap = function(lat, lng) {
+  window.open('https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng, '_blank');
+};
+
+window.chatboxSendMessage = async function() {
+  const input = document.getElementById('cb-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (!window._activeChatUser) return;
+  
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const myId = adminUser.id || 'admin_1';
+  const myName = adminUser.fullName || adminUser.name || 'Admin';
+  const { db, firestore } = await window._getAdminDb();
+  
+  try {
+    input.value = '';
+    await firestore.addDoc(firestore.collection(db, "messages"), {
+      conversationId: window._activeChatUser.id,
+      senderId: myId,
+      senderName: myName,
+      text: text,
+      timestamp: firestore.serverTimestamp(),
+      type: 'text',
+      status: 'unread'
+    });
+
+    // Send push notification if recipient has it enabled
+    const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
+    const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
+    
+    if (tokenToUse) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: JSON.stringify({
+            to: tokenToUse,
+            sound: 'default',
+            channelId: 'default',
+            priority: 'high',
+            title: `New Message from ${myName}`,
+            body: text,
+            data: { type: 'chat' }
+          }),
+        });
+      } catch (pushErr) {
+        console.error('Error sending push notification:', pushErr);
+      }
+    }
+  } catch (error) {
+    console.error("Send message error:", error);
+    alert("Failed to send message: " + error.message);
+  }
+};
+
+window.chatboxDeleteMsg = async function(msgId, type, targetId) {
+  const confirmText = type === 'text' 
+    ? "Are you sure you want to delete this message?" 
+    : "Are you sure you want to delete this message? This will also unassign the task/client from the technician.";
+  if (!confirm(confirmText)) return;
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    await firestore.deleteDoc(firestore.doc(db, "messages", msgId));
+    
+    if (type === 'report' && targetId) {
+       await firestore.updateDoc(firestore.doc(db, "reports", targetId), { assignedTo: null });
+    } else if (type === 'client' && targetId) {
+       await firestore.updateDoc(firestore.doc(db, "users", targetId), { assignedTech: null });
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Error deleting message: " + e.message);
+  }
+};
+
+window.initChatboxTools = async function() {
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    
+    // Fetch reports
+    const unsubReports = firestore.onSnapshot(firestore.collection(db, 'reports'), (snapshot) => {
+      const reps = [];
+      snapshot.forEach(docSnap => reps.push({ id: docSnap.id, ...docSnap.data() }));
+      window._cbReports = reps;
+      window.renderChatboxToolsView();
+    });
+    window._chatboxListeners.push(unsubReports);
+    
+    // Fetch users (Clients)
+    const unsubUsers = firestore.onSnapshot(firestore.collection(db, 'users'), (snapshot) => {
+      const users = [];
+      snapshot.forEach(docSnap => users.push({ id: docSnap.id, ...docSnap.data() }));
+      window._cbClients = users;
+      window.renderChatboxToolsView();
+    });
+    window._chatboxListeners.push(unsubUsers);
+    
+    // Fetch billing emails to know who has bills
+    const unsubBills = firestore.onSnapshot(firestore.collectionGroup(db, 'billing_emails'), (snapshot) => {
+      const ids = new Set();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        let userId = data.userId;
+        if (!userId && docSnap.ref.parent && docSnap.ref.parent.parent) {
+          userId = docSnap.ref.parent.parent.id;
+        }
+        if (userId) ids.add(userId);
+      });
+      window._cbUserIdsWithBills = ids;
+      window.renderChatboxToolsView();
+    });
+    window._chatboxListeners.push(unsubBills);
+    
+  } catch (e) {
+    console.error("Error initializing chatbox tools:", e);
+  }
+};
+
+window.renderChatboxToolsView = function() {
+  const select = document.getElementById('cb-tools-select');
+  if (!select) return;
+  const view = select.value;
+  
+  if (view === 'Tickets') {
+    document.getElementById('cb-tools-search-wrapper').style.display = 'none';
+    window.renderChatboxReportsList();
+  } else {
+    document.getElementById('cb-tools-search-wrapper').style.display = 'flex';
+    window.renderChatboxClientsList();
+  }
+};
+
+window.renderChatboxReportsList = function() {
+  const container = document.getElementById('cb-tools-content');
+  if (!container) return;
+  const reports = window._cbReports || [];
+  
+  const pendingReports = reports.filter(r => (r.status || 'Pending').toLowerCase() !== 'fixed' && (r.status || 'Pending').toLowerCase() !== 'resolved');
+  
+  if (pendingReports.length === 0) {
+    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 2rem;">No pending service requests found.</div>';
+    return;
+  }
+  
+  let html = '<table class="cb-table"><tr><th>Customer</th><th>Subject</th><th>Category</th><th>Status</th><th style="text-align:right;">Action</th></tr>';
+  pendingReports.forEach(r => {
+    const name = r.name || r.customerName || 'Unknown';
+    const status = r.status || 'Pending';
+    let stColor = '#94a3b8';
+    if (status.toLowerCase() === 'pending') stColor = '#f59e0b';
+    if (status.toLowerCase() === 'assigned') stColor = '#3b82f6';
+    
+    const assigned = !!r.assignedTo;
+    
+    html += `
+      <tr>
+        <td>
+          <div style="font-weight: 600;">${name}</div>
+          <div style="font-size: 10px; color: #94a3b8;">${r.accountNumber || ''}</div>
+        </td>
+        <td>${r.subject || ''}</td>
+        <td>${r.category || ''}</td>
+        <td><span style="color: ${stColor}; background: ${stColor}22; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 10px;">${status}</span></td>
+        <td style="text-align:right;">
+          <button class="cb-btn-send" ${assigned ? 'disabled' : ''} onclick="window.chatboxSendReport('${r.id}')">
+            ${assigned ? 'Assigned' : 'Send'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  html += '</table>';
+  container.innerHTML = html;
+};
+
+window.renderChatboxClientsList = function() {
+  const container = document.getElementById('cb-tools-content');
+  const searchInput = document.getElementById('cb-tools-search-input');
+  if (!container || !searchInput) return;
+  
+  const clients = window._cbClients || [];
+  const billsSet = window._cbUserIdsWithBills || new Set();
+  const query = searchInput.value.toLowerCase().trim();
+  
+  const filtered = clients.filter(c => {
+    if (!billsSet.has(c.id)) return false;
+    if (c.role && c.role.toLowerCase() === 'technician') return false;
+    if (!query) return true;
+    const name = (c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`).toLowerCase();
+    return name.includes(query);
+  });
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 2rem;">No clients with active bills found.</div>';
+    return;
+  }
+  
+  let html = '<table class="cb-table"><tr><th>Client Name</th><th>Account No.</th><th>Plan</th><th style="text-align:right;">Action</th></tr>';
+  filtered.forEach(c => {
+    const name = (c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`).trim() || 'Unknown';
+    const assigned = !!c.assignedTech;
+    
+    html += `
+      <tr>
+        <td style="font-weight: 600;">${name}</td>
+        <td>${c.accountNumber || ''}</td>
+        <td>${c.plan || c.Plan || 'TBD'}</td>
+        <td style="text-align:right;">
+          <button class="cb-btn-send" ${assigned ? 'disabled' : ''} onclick="window.chatboxSendClient('${c.id}')">
+            ${assigned ? 'Assigned' : 'Send'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  html += '</table>';
+  container.innerHTML = html;
+};
+
+window.chatboxSendReport = async function(reportId) {
+  if (!window._activeChatUser) {
+    alert("Please select a technician from the chat list first.");
+    return;
+  }
+  const report = (window._cbReports || []).find(r => r.id === reportId);
+  if (!report) return;
+  
+  if (!confirm(`Send ticket for ${report.name || 'this customer'} to ${window._activeChatUser.name || 'the technician'}?`)) return;
+  
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const myId = adminUser.id || 'admin_1';
+  const myName = adminUser.fullName || adminUser.name || 'Admin';
+  
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    
+    // Fetch related user for location
+    let location = report.rawLocation || null;
+    let address = report.address || null;
+    if (!location && report.userId) {
+       const userDoc = await firestore.getDoc(firestore.doc(db, "users", report.userId));
+       if (userDoc.exists()) {
+          const ud = userDoc.data();
+          if (ud.rawLocation) location = ud.rawLocation;
+          else if (ud.latitude && ud.longitude) location = { latitude: ud.latitude, longitude: ud.longitude };
+          if (!address) address = ud.address;
+       }
+    }
+    
+    const msgData = {
+      conversationId: window._activeChatUser.id,
+      senderId: myId,
+      senderName: myName,
+      text: `I have sent you a service request for ${report.name || 'a customer'}. Tap here to view.`,
+      timestamp: firestore.serverTimestamp(),
+      type: 'report',
+      status: 'unread',
+      reportId: report.id,
+      data: {
+        reportId: report.id,
+        name: report.name || report.customerName || 'Unknown',
+        accountNumber: report.accountNumber || '',
+        address: address || '',
+        subject: report.subject || '',
+        category: report.category || '',
+        desc: report.description || report.desc || '',
+        status: report.status || 'Pending',
+        rawLocation: location,
+        date: report.date || report.createdAt ? new Date().toLocaleDateString() : '',
+        time: report.time || ''
+      }
+    };
+    
+    await firestore.addDoc(firestore.collection(db, "messages"), msgData);
+    await firestore.updateDoc(firestore.doc(db, "reports", report.id), { assignedTo: window._activeChatUser.id, status: 'Assigned' });
+    
+    // Send push notification if recipient has it enabled
+    const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
+    const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
+    
+    if (tokenToUse) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: JSON.stringify({
+            to: tokenToUse,
+            sound: 'default',
+            channelId: 'default',
+            priority: 'high',
+            title: `Service Request from ${myName}`,
+            body: `I have sent you a service request for ${report.name || 'a customer'}.`,
+            data: { type: 'report' }
+          }),
+        });
+      } catch (pushErr) {
+        console.error('Error sending push notification for report:', pushErr);
+      }
+    }
+    
+  } catch (e) {
+    console.error("Error sending report:", e);
+    alert("Failed to send ticket: " + e.message);
+  }
+};
+
+window.chatboxSendClient = async function(clientId) {
+  if (!window._activeChatUser) {
+    alert("Please select a technician from the chat list first.");
+    return;
+  }
+  const client = (window._cbClients || []).find(c => c.id === clientId);
+  if (!client) return;
+  
+  const name = (client.name || client.fullName || `${client.firstName || ''} ${client.lastName || ''}`).trim();
+  if (!confirm(`Send billing details for ${name || 'this client'} to ${window._activeChatUser.name || 'the technician'}?`)) return;
+  
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const myId = adminUser.id || 'admin_1';
+  const myName = adminUser.fullName || adminUser.name || 'Admin';
+  
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    
+    let location = client.rawLocation || null;
+    if (!location && client.latitude && client.longitude) location = { latitude: client.latitude, longitude: client.longitude };
+    
+    const billsSnap = await firestore.getDocs(firestore.collection(db, `users/${client.id}/billing_emails`));
+    let unpaidCount = 0;
+    let totalAmt = 0;
+    billsSnap.forEach(docSnap => {
+       const b = docSnap.data();
+       if ((b.status || '').toLowerCase() !== 'paid' && (b.status || '').toLowerCase() !== 'waiting') {
+          unpaidCount++;
+          const amt = parseFloat((b.totalAmount || b.amount || '0').toString().replace(/,/g, ''));
+          if (!isNaN(amt)) totalAmt += amt;
+       }
+    });
+    
+    const msgData = {
+      conversationId: window._activeChatUser.id,
+      senderId: myId,
+      senderName: myName,
+      text: `I have sent you a client billing record for ${name || 'a customer'}. Tap here to view.`,
+      timestamp: firestore.serverTimestamp(),
+      type: 'client',
+      status: 'unread',
+      clientId: client.id,
+      data: {
+        clientId: client.id,
+        name: name || 'Unknown',
+        accountNumber: client.accountNumber || '',
+        address: client.address || '',
+        plan: client.plan || client.Plan || 'TBD',
+        unpaidBillsCount: unpaidCount,
+        totalUnpaidAmount: totalAmt.toLocaleString(),
+        rawLocation: location
+      }
+    };
+    
+    await firestore.addDoc(firestore.collection(db, "messages"), msgData);
+    await firestore.updateDoc(firestore.doc(db, "users", client.id), { assignedTech: window._activeChatUser.id });
+    
+    // Send push notification if recipient has it enabled
+    const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
+    const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
+    
+    if (tokenToUse) {
+      try {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: JSON.stringify({
+            to: tokenToUse,
+            sound: 'default',
+            channelId: 'default',
+            priority: 'high',
+            title: `Client Details from ${myName}`,
+            body: `I have sent you a client billing record for ${name || 'a customer'}.`,
+            data: { type: 'client' }
+          }),
+        });
+      } catch (pushErr) {
+        console.error('Error sending push notification for client:', pushErr);
+      }
+    }
+
+  } catch (e) {
+    console.error("Error sending client:", e);
+    alert("Failed to send client details: " + e.message);
+  }
 };

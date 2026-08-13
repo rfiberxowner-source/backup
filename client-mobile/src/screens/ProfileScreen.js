@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
+// import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 // import * as Device from 'expo-device';
 
@@ -55,7 +55,9 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
     setNotificationsEnabled(val);
     try {
       const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, { notificationsEnabled: val });
       
+      /* === COMMENTED OUT FOR NOW ===
       if (val === true) {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
@@ -81,6 +83,7 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
       } else {
         await updateDoc(userRef, { notificationsEnabled: false });
       }
+      =============================== */
     } catch (e) {
       console.log('Error toggling notifications', e);
       setNotificationsEnabled(!val); // Revert
@@ -230,12 +233,22 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status === 'granted') {
-            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            payload.rawLocation = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              timestamp: new Date().toISOString()
-            };
+            const isLocationEnabled = await Location.hasServicesEnabledAsync();
+            if (!isLocationEnabled) {
+              Alert.alert('GPS Disabled', 'Please turn on your device GPS (Location) to accurately save your address coordinates.');
+            } else {
+              try {
+                const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                payload.rawLocation = {
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  timestamp: new Date().toISOString()
+                };
+              } catch (posErr) {
+                console.error("Position error:", posErr);
+                Alert.alert('GPS Error', 'Could not fetch your exact location. Please ensure your GPS is turned on and try again.');
+              }
+            }
           } else {
             Alert.alert('Notice', 'Location permission was denied. Your address was updated, but the system could not fetch exact coordinates for future features.');
           }

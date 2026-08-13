@@ -1,3 +1,20 @@
+window.switchAboutTab = function(tab) {
+  const tabs = ['mission', 'vision', 'mandate'];
+  tabs.forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === tab) ? 'block' : 'none';
+    const btn = document.getElementById('btn-' + t);
+    if (t === tab) {
+      btn.style.background = 'rgba(229, 57, 53, 0.1)';
+      btn.style.borderBottomColor = '#E53935';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.borderBottomColor = 'transparent';
+      btn.style.color = 'var(--text-secondary)';
+    }
+  });
+};
+
 export const mainViews = {
   '/': () => `
     <section class="hero">
@@ -68,7 +85,7 @@ export const mainViews = {
           </div>
         </div>
       </div>
-      <div style="background: #fafafa; border-radius: 20px; padding: 4rem 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-top: 4rem; max-width: 1100px; margin-left: auto; margin-right: auto;">
+      <div class="our-company-grid" style="background: #fafafa; border-radius: 20px; padding: 4rem 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-top: 4rem; max-width: 1100px; margin-left: auto; margin-right: auto;">
         
         <div style="text-align: center; padding: 0 1.5rem;">
           <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: #991b1b; font-weight: 700;">Our Purpose</h2>
@@ -372,7 +389,7 @@ export const mainViews = {
       <h1 style="font-size: 3rem; margin-bottom: 1.5rem;">How can we help?</h1>
       <p style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 3rem; max-width: 600px; margin-inline: auto;">Browse the categories below to find exactly what you need.</p>
       
-      <div class="bundle-grid" style="margin-bottom: 4rem;">
+      <div class="bundle-grid support-grid" style="margin-bottom: 4rem;">
         <div class="bundle-card" style="padding: 2.5rem; text-align: center; cursor: pointer; transition: transform 0.3s ease, border-color 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='var(--accent-color)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='transparent';" onclick="window.router.navigate('/support/billing')">
           <div style="margin-bottom: 1.5rem; color: var(--accent-color);">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
@@ -493,15 +510,15 @@ export const mainViews = {
   `,
 
   '/contact': () => `
-    <section class="section-container scroll-animate" style="padding-top: 6rem; margin-bottom: 4rem;">
+    <section class="section-container scroll-animate support-page-section" style="padding-top: 6rem; margin-bottom: 4rem;">
       <div style="text-align: center; margin-bottom: 4rem;">
-        <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">Get in Touch</h1>
+        <h1 class="contact-title" style="font-size: 3.5rem; margin-bottom: 1rem;">Get in Touch</h1>
         <p style="color: var(--text-secondary); font-size: 1.2rem;">We're ready to answer your questions and get you connected.</p>
       </div>
 
       <div class="contact-grid">
         <!-- Contact Form -->
-        <div style="background: var(--glass-bg); padding: 3rem; border-radius: 16px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px);">
+        <div class="support-card" style="background: var(--glass-bg); padding: 3rem; border-radius: 16px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px);">
           <h2 style="margin-bottom: 2rem;">Send us a message</h2>
           <form onsubmit="window.router.submitContactMessage(event)">
             
@@ -510,7 +527,7 @@ export const mainViews = {
               <input type="text" id="contact-name" class="form-control" placeholder="John Doe" required>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="contact-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" id="contact-email" class="form-control" placeholder="john@example.com" required>
@@ -521,7 +538,7 @@ export const mainViews = {
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="contact-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="form-group">
                 <label>Location</label>
                 <input type="text" class="form-control" value="Magdalena" readonly style="background: rgba(0,0,0,0.4); color: #888;">
@@ -716,40 +733,45 @@ export const mainViews = {
       </div>
     </section>
 
-    <!-- Purpose, Vision, Mission -->
+    <!-- Purpose, Vision, Mission Tabs -->
     <section id="purpose" class="section-container scroll-animate" style="margin-bottom: 4rem;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <div style="max-width: 800px; margin: 0 auto; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; overflow: hidden; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+        <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: #E53935; filter: blur(100px); border-radius: 50%; opacity: 0.2; z-index: 0; pointer-events: none;"></div>
         
-        <!-- Mission Card -->
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='#E53935'; this.style.boxShadow='0 20px 40px rgba(229, 57, 53, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
-          <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: #E53935; filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
-          <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935; position: relative; z-index: 1;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          </div>
-          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Mission</span></h2>
-          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">Since our founding, RFiberX has been on a mission to provide fast, reliable, and affordable internet access without the hassle. We strive to build a strong digital backbone that empowers homes and businesses alike, ensuring every connection we make is a step toward a more connected community.</p>
+        <!-- Tab Navigation -->
+        <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 1; background: rgba(0,0,0,0.3);">
+          <button id="btn-mission" onclick="window.switchAboutTab('mission')" style="flex: 1; padding: 1.5rem 1rem; background: rgba(229, 57, 53, 0.1); border: none; border-bottom: 2px solid #E53935; color: #fff; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Our Mission</button>
+          <button id="btn-vision" onclick="window.switchAboutTab('vision')" style="flex: 1; padding: 1.5rem 1rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Our Vision</button>
+          <button id="btn-mandate" onclick="window.switchAboutTab('mandate')" style="flex: 1; padding: 1.5rem 1rem; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Our Mandate</button>
         </div>
 
-        <!-- Vision Card -->
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='#E53935'; this.style.boxShadow='0 20px 40px rgba(229, 57, 53, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
-          <div style="position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; background: #E53935; filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
-          <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935; position: relative; z-index: 1;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        <!-- Tab Contents -->
+        <div style="padding: 3rem 2rem; text-align: center; position: relative; z-index: 1;">
+          
+          <!-- Mission -->
+          <div id="tab-mission" style="display: block; animation: fadeSlideDown 0.3s ease;">
+            <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            </div>
+            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Since our founding, RFiberX has been on a mission to provide fast, reliable, and affordable internet access without the hassle. We strive to build a strong digital backbone that empowers homes and businesses alike, ensuring every connection we make is a step toward a more connected community.</p>
           </div>
-          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Vision</span></h2>
-          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">We envision a future where every neighborhood enjoys seamless, high-speed connectivity. By building robust technological bridges, we aim to be the reliable foundation that allows education to flourish online and local businesses to compete, grow, and succeed on a broader stage.</p>
-        </div>
 
-        <!-- Mandate Card -->
-        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: default;" onmouseover="this.style.transform='translateY(-10px)'; this.style.borderColor='#E53935'; this.style.boxShadow='0 20px 40px rgba(229, 57, 53, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
-          <div style="position: absolute; bottom: -50px; right: -50px; width: 150px; height: 150px; background: #E53935; filter: blur(80px); border-radius: 50%; opacity: 0.3; z-index: 0;"></div>
-          <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935; position: relative; z-index: 1;">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <!-- Vision -->
+          <div id="tab-vision" style="display: none; animation: fadeSlideDown 0.3s ease;">
+            <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">We envision a future where every neighborhood enjoys seamless, high-speed connectivity. By building robust technological bridges, we aim to be the reliable foundation that allows education to flourish online and local businesses to compete, grow, and succeed on a broader stage.</p>
           </div>
-          <h2 style="font-size: 2rem; margin-bottom: 1.5rem; color: #fff; position: relative; z-index: 1;">Our <span style="color: #E53935;">Mandate</span></h2>
-          <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.05rem; position: relative; z-index: 1;">To bridge communication gaps through innovative telecommunication services, empowering communities with forward-looking network infrastructure that fosters continuous growth, collaboration, and endless digital possibilities.</p>
+
+          <!-- Mandate -->
+          <div id="tab-mandate" style="display: none; animation: fadeSlideDown 0.3s ease;">
+            <div style="width: 80px; height: 80px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; color: #E53935;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <p style="color: var(--text-secondary); line-height: 1.8; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">To bridge communication gaps through innovative telecommunication services, empowering communities with forward-looking network infrastructure that fosters continuous growth, collaboration, and endless digital possibilities.</p>
+          </div>
         </div>
-        
       </div>
     </section>
 
@@ -852,18 +874,18 @@ export const mainViews = {
   `,
 
   '/support/billing': () => `
-    <section class="section-container scroll-animate" style="padding-top: 6rem; max-width: 1000px;">
+    <section class="section-container scroll-animate support-page-section" style="padding-top: 6rem; max-width: 1000px;">
       <div style="text-align: center; margin-top: 2rem; margin-bottom: 4rem;">
-        <h2 class="about-mission-title" style="font-size: 3rem; margin-bottom: 1rem;">Billing & <span style="color: var(--accent-color);">Payments</span></h2>
+        <h2 class="about-mission-title support-page-title" style="font-size: 3rem; margin-bottom: 1rem;">Billing & <span style="color: var(--accent-color);">Payments</span></h2>
         <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Manage your statements, understand your charges, and securely process your payments.</p>
       </div>
       
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
         <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Payment Methods</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1.05rem;">Payments can be securely processed directly through our billing system. We currently accept the following payment methods:</p>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='var(--accent-color)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(255,255,255,0.05)';">
+          <div class="support-nested-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='var(--accent-color)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(255,255,255,0.05)';">
             <h3 style="color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
               GCash
@@ -871,7 +893,7 @@ export const mainViews = {
             <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">Send your payment via GCash to our official company number:</p>
             <p style="font-weight: 700; font-size: 1.4rem; color: var(--accent-color); letter-spacing: 1px;">+63 09058395471</p>
           </div>
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='var(--accent-color)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(255,255,255,0.05)';">
+          <div class="support-nested-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; transition: transform 0.2s ease, border-color 0.2s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='var(--accent-color)';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(255,255,255,0.05)';">
             <h3 style="color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color);"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
               Bank Transfer (BDO Only)
@@ -886,22 +908,24 @@ export const mainViews = {
         </div>
       </div>
       
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
         <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Frequently Asked Questions</h2>
         
-        <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
-          <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">When is my bill due?</h4>
-          <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">The start of your billing cycle is the <strong style="color: #fff;">1st of the month</strong>, and the due date is every <strong style="color: #fff;">7th of the month</strong>.</p>
-        </div>
-        
-        <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
-          <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">How do I get my Statement of Account (SOA)?</h4>
-          <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">We send e-Statements to your registered email address. You can also view it in our upcoming Mobile App.</p>
-        </div>
-        
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
-          <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">Why is my first bill higher than expected?</h4>
-          <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">Your first bill includes the one-time <strong style="color: #fff;">installation fee</strong> plus an <strong style="color: #fff;">advance fee</strong> required for your internet service to be fully activated. Subsequent bills will only reflect your regular monthly plan rate.</p>
+        <div class="faq-grid" style="display: grid; gap: 1rem;">
+          <div class="support-nested-card faq-card" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
+            <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">When is my bill due?</h4>
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">The start of your billing cycle is the <strong style="color: #fff;">1st of the month</strong>, and the due date is every <strong style="color: #fff;">7th of the month</strong>.</p>
+          </div>
+          
+          <div class="support-nested-card faq-card" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
+            <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">How do I get my Statement of Account (SOA)?</h4>
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">We send e-Statements to your registered email address. You can also view it in our upcoming Mobile App.</p>
+          </div>
+          
+          <div class="support-nested-card faq-card" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
+            <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">Why is my first bill higher than expected?</h4>
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">Your first bill includes the one-time <strong style="color: #fff;">installation fee</strong> plus an <strong style="color: #fff;">advance fee</strong> required for your internet service to be fully activated. Subsequent bills will only reflect your regular monthly plan rate.</p>
+          </div>
         </div>
       </div>
       
@@ -913,13 +937,13 @@ export const mainViews = {
   `,
 
   '/support/technical': () => `
-    <section class="section-container scroll-animate" style="padding-top: 6rem; max-width: 1000px;">
+    <section class="section-container scroll-animate support-page-section" style="padding-top: 6rem; max-width: 1000px;">
       <div style="text-align: center; margin-top: 2rem; margin-bottom: 4rem;">
-        <h2 class="about-mission-title" style="font-size: 3rem; margin-bottom: 1rem;">Technical <span style="color: var(--accent-color);">Support</span></h2>
+        <h2 class="about-mission-title support-page-title" style="font-size: 3rem; margin-bottom: 1rem;">Technical <span style="color: var(--accent-color);">Support</span></h2>
         <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Find solutions to common connectivity issues and router configurations to get you back online quickly.</p>
       </div>
       
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 2rem;">
         <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Basic Troubleshooting Guide</h2>
         <ol style="padding-left: 1.5rem; color: var(--text-secondary); line-height: 2; font-size: 1.05rem;">
           <li style="margin-bottom: 1rem;"><strong style="color: #fff;">Check the LOS Light:</strong> If the Red LOS light on your modem is blinking, there is a fiber cut. Please contact support immediately.</li>
@@ -929,15 +953,15 @@ export const mainViews = {
         </ol>
       </div>
 
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
         <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Optimizing Your Wi-Fi</h2>
         
-        <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
+        <div class="support-nested-card faq-card" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
           <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">Where should I place my router?</h4>
           <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">Place your router in an open, central location, off the floor. Avoid putting it near thick walls, microwaves, or large metal objects.</p>
         </div>
         
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
+        <div class="support-nested-card faq-card" style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--accent-color);">
           <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem; color: #fff;">2.4GHz vs 5GHz?</h4>
           <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0;">Use <strong style="color: #fff;">5GHz</strong> for devices close to the router (faster speeds, less range). Use <strong style="color: #fff;">2.4GHz</strong> for devices far from the router or older devices (slower speeds, longer range).</p>
         </div>
@@ -952,25 +976,25 @@ export const mainViews = {
   `,
 
   '/support/account': () => `
-    <section class="section-container scroll-animate" style="padding-top: 6rem; max-width: 1000px;">
+    <section class="section-container scroll-animate support-page-section" style="padding-top: 6rem; max-width: 1000px;">
       <div style="text-align: center; margin-top: 2rem; margin-bottom: 4rem;">
-        <h2 class="about-mission-title" style="font-size: 3rem; margin-bottom: 1rem;">Account <span style="color: var(--accent-color);">Management</span></h2>
+        <h2 class="about-mission-title support-page-title" style="font-size: 3rem; margin-bottom: 1rem;">Account <span style="color: var(--accent-color);">Management</span></h2>
         <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Need to make changes to your existing service? We've got you covered.</p>
       </div>
       
       <div style="display: grid; grid-template-columns: 1fr; gap: 2rem; margin-bottom: 3rem;">
-        <div style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
+        <div class="support-card" style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
           <h3 style="margin-bottom: 1rem; color: var(--accent-color);">Upgrading Your Plan</h3>
           <p style="color: var(--text-secondary); margin-bottom: 1rem;">Want faster speeds? You can upgrade your plan at any time without any termination fees. The new speed and billing rate will take effect within 24 hours.</p>
         </div>
         
-        <div style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
+        <div class="support-card" style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
           <h3 style="margin-bottom: 1rem; color: var(--accent-color);">Transfer of Location</h3>
           <p style="color: var(--text-secondary); margin-bottom: 1rem;">Moving to a new house? We can transfer your connection to your new address, subject to facility availability in the new area. A standard relocation fee is based on the complexity of the work, most of the time is free.</p>
           <p style="color: var(--text-secondary);">To request a transfer, please contact our support team at least 1 week before your move.</p>
         </div>
         
-        <div style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
+        <div class="support-card" style="background: var(--glass-bg); padding: 2rem; border-radius: 16px; border: 1px solid var(--glass-border);">
           <h3 style="margin-bottom: 1rem; color: var(--accent-color);">Change of Account Name</h3>
           <p style="color: var(--text-secondary); margin-bottom: 1rem;">To transfer ownership of the account, both the current owner and new owner must submit valid Information to our nearest business center.</p>
         </div>
@@ -987,9 +1011,9 @@ export const mainViews = {
   `,
 
   '/support/outages': () => `
-    <section class="section-container scroll-animate" style="padding-top: 6rem; max-width: 1000px;">
+    <section class="section-container scroll-animate support-page-section" style="padding-top: 6rem; max-width: 1000px;">
       <div style="text-align: center; margin-top: 2rem; margin-bottom: 4rem;">
-        <h2 class="about-mission-title" style="font-size: 3rem; margin-bottom: 1rem;">Outages & <span style="color: var(--accent-color);">Network</span></h2>
+        <h2 class="about-mission-title support-page-title" style="font-size: 3rem; margin-bottom: 1rem;">Outages & <span style="color: var(--accent-color);">Network</span></h2>
         <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">Stay updated on network maintenance and localized outages.</p>
       </div>
       
@@ -1002,7 +1026,7 @@ export const mainViews = {
         </a>
       </div>
 
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
         <h2 style="margin-bottom: 1.5rem; color: #dc2626;">Report a Downed Line</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">If you see a fallen fiber optic cable or a damaged distribution box on a utility pole, please <b>DO NOT</b> touch it. Report it immediately to our hotline.</p>
         <div style="background: #111; padding: 1.5rem; border-radius: 8px; font-family: monospace; font-size: 1.2rem; text-align: center; letter-spacing: 2px;">
@@ -1010,7 +1034,7 @@ export const mainViews = {
         </div>
       </div>
 
-      <div style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
+      <div class="support-card" style="background: var(--glass-bg); padding: 2.5rem; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom: 3rem;">
         <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Scheduled Maintenance</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1rem;">To ensure optimal performance, we actively and quickly fix broken or downed lines on the same schedule that they occur.</p>
         <p style="color: var(--text-secondary);">We will notify affected subscribers via SMS and Email at least 24 hours prior to any scheduled maintenance.</p>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TextInput, TouchableOpacity, Alert, RefreshControl, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { Picker } from '@react-native-picker/picker';
@@ -87,6 +87,17 @@ export default function SupportScreen({ user, route, navigation }) {
       return;
     }
 
+    const todayStr = new Date().toDateString();
+    const todaysReports = tickets.filter(t => {
+      if (!t.date) return false;
+      return new Date(t.date).toDateString() === todayStr;
+    });
+
+    if (todaysReports.length >= 3) {
+      Alert.alert('Limit Reached', 'You have reached the maximum limit of 3 service requests per day.');
+      return;
+    }
+
     try {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let reportId = 'REQ-';
@@ -150,6 +161,28 @@ export default function SupportScreen({ user, route, navigation }) {
     }
   };
 
+  const deleteTicket = async (id) => {
+    Alert.alert(
+      "Delete Ticket",
+      "Are you sure you want to delete this pending ticket?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, "reports", id));
+              fetchTickets();
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete ticket.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderTickets = () => {
     if (tickets.length === 0) {
       return (
@@ -191,6 +224,12 @@ export default function SupportScreen({ user, route, navigation }) {
           <TouchableOpacity style={styles.btnAction} onPress={(e) => { e.stopPropagation(); markFixed(t.id); }}>
             <MaterialCommunityIcons name="check-circle-outline" size={16} color="#fff" />
             <Text style={styles.btnActionText}>Mark as Done</Text>
+          </TouchableOpacity>
+        )}
+        {(t.status === 'Pending' || !t.status) && (
+          <TouchableOpacity style={[styles.btnAction, { backgroundColor: '#e53935' }]} onPress={(e) => { e.stopPropagation(); deleteTicket(t.id); }}>
+            <MaterialCommunityIcons name="delete-outline" size={16} color="#fff" />
+            <Text style={styles.btnActionText}>Delete</Text>
           </TouchableOpacity>
         )}
       </TouchableOpacity>
@@ -236,9 +275,9 @@ export default function SupportScreen({ user, route, navigation }) {
           >
             <Picker.Item label="Other" value="Other" />
             <Picker.Item label="Billing" value="Billing" />
-            <Picker.Item label="Technical" value="Technical" />
+            <Picker.Item label="Repair" value="Repair" />
             {(currentSpeed === 0 || currentSpeed < 200) && <Picker.Item label="Upgrade internet" value="Upgrade internet" />}
-            {(currentSpeed === 0 || currentSpeed > 30) && <Picker.Item label="Downgrade internet" value="Downgrade internet" />}
+            {(currentSpeed === 0 || currentSpeed > 30) && <Picker.Item label="Other Plan" value="Other Plan" />}
           </Picker>
         </View>
   

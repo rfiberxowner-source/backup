@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -18,6 +18,29 @@ export default function OverviewScreen({ user, navigation }) {
   const [recentUpdates, setRecentUpdates] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [activeTab, setActiveTab] = useState(0); // 0 = Recent, 1 = Announcements
+  
+  const [showDue, setShowDue] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentMonthName = monthNames[new Date().getMonth()];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowDue(prev => !prev);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
   const [receiptVisible, setReceiptVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
@@ -366,10 +389,14 @@ export default function OverviewScreen({ user, navigation }) {
                 <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase' }}>Current Plan</Text>
                 <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold' }}>{currentPlan}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase' }}>Monthly Fee</Text>
-                <Text style={{ color: '#10b981', fontSize: 16, fontFamily: 'Inter_700Bold' }}>{displayAmount}</Text>
-              </View>
+              <Animated.View style={{ alignItems: 'flex-end', opacity: fadeAnim }}>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 4, textTransform: 'uppercase' }}>
+                  {showDue ? 'Due Date' : 'Monthly Fee'}
+                </Text>
+                <Text style={{ color: '#10b981', fontSize: 16, fontFamily: 'Inter_700Bold' }}>
+                  {showDue ? `7th of ${currentMonthName}` : displayAmount}
+                </Text>
+              </Animated.View>
             </View>
             <View style={{ alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }}>
               <Text style={{ color: '#94a3b8', fontSize: 12, fontFamily: 'Inter_500Medium' }} numberOfLines={1} adjustsFontSizeToFit>{currentEmail}</Text>

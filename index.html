@@ -17,10 +17,10 @@
 <body>
   <header class="navbar">
     <div class="nav-container">
-      <a href="/" class="brand-logo" data-link style="margin-left: 70px;">
-        <img src="/logo.png" alt="RFiberX" style="height: 110px; width: auto; max-height: 100%; margin: -25px 0;" />
+      <a href="/" class="brand-logo" data-link>
+        <img src="/logo.png" alt="RFiberX" class="header-logo-img" />
       </a>
-      <div style="display: flex; align-items: center; gap: 4rem; margin-left: auto;">
+      <div class="header-right-actions">
         <nav class="nav-links">
           <div class="nav-dropdown">
             <a href="/" class="nav-item" data-link>Home <span style="font-size: 0.7em; margin-left: 4px;">▼</span></a>
@@ -66,12 +66,13 @@
             </div>
           </div>
         </nav>
-        <a href="/clientlogin" class="btn"
-          style="background-color: #E53935; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem;"
-          target="_blank" rel="noopener noreferrer">Go to The Billing Page</a>
+        <a href="/clientlogin" class="btn header-billing-btn" target="_blank" rel="noopener noreferrer">
+          <span class="desktop-text">Go to The Billing Page</span>
+          <span class="mobile-text">Billing</span>
+        </a>
       </div>
-      <button id="mobile-toggle" class="nav-mobile-toggle" aria-label="Toggle Navigation" style="margin-left: 1rem;">
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"
+      <button id="mobile-toggle" class="nav-mobile-toggle" aria-label="Toggle Navigation">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
           stroke-linecap="round" stroke-linejoin="round">
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>

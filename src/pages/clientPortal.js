@@ -122,6 +122,7 @@ export const clientViews = {
 
         <!-- Right Side -->
         <div style="flex: 35; background: #0b0f19; display: flex; flex-direction: column; padding: 3rem 2rem; position: relative;">
+          <img src="/logo.png" alt="RFiberX" class="mobile-logo-only" style="height: 40px; width: auto; object-fit: contain; position: absolute; top: 1.5rem; left: 1.5rem;" />
 
           <div style="max-width: 420px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; justify-content: center;">
             <div style="color: #E53935; font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 1rem; text-transform: uppercase;">Portal Login</div>
@@ -263,10 +264,25 @@ export const clientViews = {
       const container = document.getElementById('dashboard-scroll-container');
       if (el && container) {
         container.scrollTo({
-          top: el.offsetTop - 100, // Account for topbar offset
+          top: el.offsetTop - 100,
           behavior: 'smooth'
         });
       }
+
+      // Manually highlight the clicked tab
+      const tabs = document.querySelectorAll('.dashboard-tab');
+      tabs.forEach(t => {
+        t.style.background = 'transparent';
+        t.style.color = '#cbd5e1';
+      });
+      const activeTab = document.getElementById('tab-' + id);
+      if (activeTab) {
+        activeTab.style.background = 'rgba(229,57,53,0.1)';
+        activeTab.style.color = '#fff';
+      }
+
+      const sidebar = document.getElementById('client-sidebar');
+      if (sidebar) sidebar.classList.remove('open');
     };
 
     window.highlightMissingProfileFields = function () {
@@ -325,6 +341,8 @@ export const clientViews = {
           let doneBtn = '';
           if (r.status === 'Read') {
             doneBtn = '<button onclick="window.markReportFixed(event, \'' + r.id + '\')" style="background: #3b82f6; color: #fff; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">Done</button>';
+          } else if (r.status === 'Pending' || (!r.status)) {
+            doneBtn = '<button onclick="window.deleteClientReport(event, \'' + r.id + '\')" style="background: #e53935; color: #fff; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'#b71c1c\'" onmouseout="this.style.background=\'#e53935\'">Delete</button>';
           }
 
           html += '<tr onclick="window.viewClientReport(\'' + r.id + '\')" style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'rgba(255,255,255,0.02)\'" onmouseout="this.style.background=\'transparent\'">';
@@ -451,6 +469,33 @@ export const clientViews = {
           });
         }
 
+        const userStr = localStorage.getItem('clientUser');
+        if (userStr) {
+          try {
+            const uObj = JSON.parse(userStr);
+            if (uObj.recentProfileUpdates && Array.isArray(uObj.recentProfileUpdates)) {
+              uObj.recentProfileUpdates.forEach(u => {
+                let tTime = new Date(u.date).getTime();
+                let dateStr = new Date(u.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const changedFields = u.changes.map(c => c.key).join(', ');
+
+                let pHtml = '<div onclick="window.viewProfileUpdate(\'' + u.id + '\')" style="cursor: pointer; background: rgba(16,185,129,0.03); border: 1px solid rgba(16,185,129,0.15); border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(16,185,129,0.08)\'" onmouseout="this.style.background=\'rgba(16,185,129,0.03)\'">';
+                pHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">';
+                pHtml += '<div style="display: flex; align-items: center; gap: 0.5rem;">';
+                pHtml += '<div style="width: 28px; height: 28px; background: rgba(16,185,129,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">📝</div>';
+                pHtml += '<span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Profile Updated</span>';
+                pHtml += '</div>';
+                pHtml += '<span style="color: #64748b; font-size: 0.75rem;">' + dateStr + '</span>';
+                pHtml += '</div>';
+                pHtml += '<div style="color: #94a3b8; font-size: 0.85rem; padding-left: 2.25rem;">You recently updated your <span style="color: #fff; font-weight: 600;">' + changedFields + '</span> details.</div>';
+                pHtml += '</div>';
+
+                recentItems.push({ time: tTime, html: pHtml });
+              });
+            }
+          } catch (e) { }
+        }
+
         if (window.clientPayments) {
           window.clientPayments.forEach(p => {
             let da = p.datePaid || p.date || 0;
@@ -515,6 +560,58 @@ export const clientViews = {
           if (recCount) recCount.textContent = '0';
         }
       }
+    };
+
+    window.viewProfileUpdate = function (id) {
+      const userStr = localStorage.getItem('clientUser');
+      if (!userStr) return;
+      const userObj = JSON.parse(userStr);
+      if (!userObj.recentProfileUpdates) return;
+      const update = userObj.recentProfileUpdates.find(u => u.id === id);
+      if (!update) return;
+
+      const modalId = 'profile-update-modal-' + id;
+      let modal = document.getElementById(modalId);
+      if (modal) modal.remove();
+
+      let html = `<div id="${modalId}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(5px);">
+        <div style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+          <h3 style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; text-align: center;">Profile Details Updated</h3>
+          <div style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem;">
+      `;
+
+      update.changes.forEach(c => {
+        let oldVal = c.oldValue || 'None';
+        let newVal = c.newValue || 'None';
+        if (c.key === 'password') {
+          oldVal = '********';
+          newVal = '********';
+        }
+
+        html += `
+            <div style="background: #0f172a; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.05);">
+              <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">${c.key}</div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                  <span style="color: #ef4444; font-size: 0.9rem; font-weight: bold; width: 20px;">-</span>
+                  <span style="color: #cbd5e1; font-size: 0.85rem; text-decoration: line-through; flex: 1; word-break: break-all;">${oldVal}</span>
+                </div>
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                  <span style="color: #10b981; font-size: 0.9rem; font-weight: bold; width: 20px;">+</span>
+                  <span style="color: #fff; font-size: 0.85rem; font-weight: 500; flex: 1; word-break: break-all;">${newVal}</span>
+                </div>
+              </div>
+            </div>
+        `;
+      });
+
+      html += `
+          </div>
+          <button onclick="document.getElementById('${modalId}').remove()" style="width: 100%; background: #3b82f6; color: #fff; border: none; padding: 0.85rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer;">Close</button>
+        </div>
+      </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', html);
     };
 
     window.viewClientReport = function (id) {
@@ -586,6 +683,44 @@ export const clientViews = {
         alert('Failed to mark report as Done.');
         e.target.innerHTML = 'Done';
         e.target.disabled = false;
+      }
+    };
+
+    window.deleteClientReport = async function (e, id) {
+      e.stopPropagation();
+      if (!confirm("Are you sure you want to delete this pending ticket?")) return;
+      try {
+        const btn = e.target;
+        btn.innerHTML = '...';
+        btn.disabled = true;
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyB80-L7Y9KHJbyCG-Q8qd3D-s6yAwFkRYE",
+          authDomain: "portal-c293a.firebaseapp.com",
+          projectId: "portal-c293a",
+          storageBucket: "portal-c293a.firebasestorage.app",
+          messagingSenderId: "159583415029",
+          appId: "1:159583415029:web:bb5221ff531fa1005a33bc"
+        };
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        try { initializeApp(firebaseConfig); } catch (err) { }
+
+        const { getFirestore, doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = getFirestore();
+
+        await deleteDoc(doc(db, "reports", id));
+
+        // Update local cache and re-render table
+        if (window.clientReportsData[id]) {
+          delete window.clientReportsData[id];
+          window.renderClientReportsTable();
+        }
+      } catch (err) {
+        console.error('Error deleting report:', err);
+        alert('Failed to delete ticket.');
+        const btn = e.target;
+        btn.innerHTML = 'Delete';
+        btn.disabled = false;
       }
     };
 
@@ -747,6 +882,24 @@ export const clientViews = {
       }
     };
 
+    // Format phone number to start with 09 in real-time
+    window.handlePhoneInput = function (inputId, previewId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      let val = input.value.replace(/[^0-9]/g, '');
+
+      if (val.length === 1) {
+        if (val === '9') val = '09';
+        else if (val !== '0') val = '09' + val;
+      } else if (val.length === 2 && val.startsWith('0') && val[1] !== '9') {
+        val = '09' + val[1];
+      }
+
+      input.value = val;
+      if (previewId) window.handleInputPreview(inputId, previewId);
+    };
+
     // Highlight Subscriber Info container & Auto-Center
     window.handleInputFocus = function (containerId, isFocus) {
       const container = document.getElementById(containerId);
@@ -789,14 +942,29 @@ export const clientViews = {
 
       window._pendingChanges = {};
       window._pendingLabels = [];
+      let validationError = null;
 
-      fields.forEach(f => {
+      for (let i = 0; i < fields.length; i++) {
+        const f = fields[i];
         const val = document.getElementById(f.id).value.trim();
         if (val) {
+          if (f.dbKey === 'email' && !val.toLowerCase().endsWith('@gmail.com')) {
+            validationError = "Email address must strictly end with @gmail.com";
+            break;
+          }
+          if (f.dbKey === 'phone' && (!/^\d+$/.test(val) || val.length !== 11)) {
+            validationError = "Phone number must be exactly 11 digits and contain only numbers.";
+            break;
+          }
           window._pendingChanges[f.dbKey] = val;
           window._pendingLabels.push(f.label);
         }
-      });
+      }
+
+      if (validationError) {
+        alert(validationError);
+        return;
+      }
 
       if (window._pendingLabels.length === 0) return; // Nothing to change
 
@@ -831,6 +999,29 @@ export const clientViews = {
         const db = getFirestore();
         const userStr = localStorage.getItem('clientUser');
         const userObj = JSON.parse(userStr);
+
+        const changes = [];
+        const fieldsToCheck = ['name', 'email', 'phone', 'address', 'facebook', 'password'];
+        fieldsToCheck.forEach(key => {
+          if (window._pendingChanges[key] !== undefined && window._pendingChanges[key] !== userObj[key]) {
+            changes.push({ key: key, oldValue: userObj[key] || '', newValue: window._pendingChanges[key] || '' });
+          }
+        });
+
+        if (changes.length > 0) {
+          const newUpdate = {
+            id: Date.now().toString(),
+            changes: changes,
+            date: new Date().toISOString(),
+            isRead: false
+          };
+          let recentUpdates = userObj.recentProfileUpdates || [];
+          recentUpdates = [newUpdate, ...recentUpdates].slice(0, 3);
+          window._pendingChanges.recentProfileUpdates = recentUpdates;
+
+          userObj.recentProfileUpdates = recentUpdates;
+          localStorage.setItem('clientUser', JSON.stringify({ ...userObj, ...window._pendingChanges }));
+        }
 
         await updateDoc(doc(db, "users", userObj.id), window._pendingChanges);
 
@@ -894,7 +1085,7 @@ export const clientViews = {
           datePaid: now.toISOString(),
           status: 'Completed'
         });
-        
+
         await deleteDoc(billDocRef);
 
         // Show success, then reload
@@ -940,6 +1131,18 @@ export const clientViews = {
       const addr = userObj.address || '';
       if (!addr || addr.toLowerCase() === 'none' || addr.toLowerCase() === 'please add address') {
         alert("Please update your address in the profile section before submitting a report.");
+        return;
+      }
+
+      // Check daily limit of 3 requests
+      const todayStr = new Date().toDateString();
+      const todaysReports = Object.values(window.clientReportsData || {}).filter(r => {
+        if (!r.date) return false;
+        return new Date(r.date).toDateString() === todayStr;
+      });
+
+      if (todaysReports.length >= 3) {
+        alert("You have reached the maximum limit of 3 service requests per day.");
         return;
       }
 
@@ -2159,8 +2362,8 @@ If a field is not found, return "TBD".`;
         html = `
           <div style="display: flex; gap: 2rem; align-items: stretch; flex-wrap: wrap;">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem; flex-shrink: 0;">
-              <div style="width: 280px; height: 280px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.1);">
-                <img src="/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg" alt="GCash QR Code" style="width: 220%; height: 220%; object-fit: cover; object-position: center 55%; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+              <div style="width: 350px; height: 350px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.1); padding: 10px;">
+                <img src="/gkas.jpg" alt="GCash QR Code" style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
               </div>
             </div>
             <div style="flex: 1; min-width: 250px;">
@@ -2279,25 +2482,29 @@ If a field is not found, return "TBD".`;
 
           if (!user.id) return;
 
-          if (window._clientPortalAuthUnsub) window._clientPortalAuthUnsub();
-          window._clientPortalAuthUnsub = onSnapshot(doc(db, "users", user.id), (userDoc) => {
-            if (userDoc.exists()) {
-              const data = userDoc.data();
-              const currentToken = localStorage.getItem('clientSessionToken');
-              if (currentToken && (!data.activeSessionToken || data.activeSessionToken !== currentToken)) {
-                if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
-                localStorage.removeItem('clientUser');
-                localStorage.removeItem('clientSessionToken');
-                window.router.navigate('/clientlogin');
-              }
-            }
-          });
-
           const userDoc = await getDoc(doc(db, "users", user.id));
           if (userDoc.exists()) {
             const data = userDoc.data();
             // Update local storage so data persists on reload
             localStorage.setItem('clientUser', JSON.stringify({ id: user.id, ...data }));
+
+            // Update user auth listener to also trigger rendering recent updates
+            if (window._clientPortalAuthUnsub) window._clientPortalAuthUnsub();
+            window._clientPortalAuthUnsub = onSnapshot(doc(db, "users", user.id), (docSnap) => {
+              if (docSnap.exists()) {
+                const snapData = docSnap.data();
+                localStorage.setItem('clientUser', JSON.stringify({ id: user.id, ...snapData }));
+                if (window.renderRecentUpdates) window.renderRecentUpdates();
+
+                const currentToken = localStorage.getItem('clientSessionToken');
+                if (currentToken && (!snapData.activeSessionToken || snapData.activeSessionToken !== currentToken)) {
+                  if (window.clientPortalHeartbeat) clearInterval(window.clientPortalHeartbeat);
+                  localStorage.removeItem('clientUser');
+                  localStorage.removeItem('clientSessionToken');
+                  window.router.navigate('/clientlogin');
+                }
+              }
+            });
 
             // --- PRESENCE HEARTBEAT SYSTEM ---
             const { serverTimestamp, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
@@ -2356,7 +2563,34 @@ If a field is not found, return "TBD".`;
               if (el) el.textContent = text;
             };
 
-            setText('ui-billing-balance', '₱' + currentAmount);
+            // Start animated Monthly Fee / Due Date toggler
+            if (window._feeInterval) clearInterval(window._feeInterval);
+            let showDue = false;
+            window._feeInterval = setInterval(() => {
+              const label = document.getElementById('fee-due-label');
+              const val = document.getElementById('fee-due-value');
+              if (label && val) {
+                label.style.opacity = '0';
+                val.style.opacity = '0';
+                setTimeout(() => {
+                  showDue = !showDue;
+                  if (showDue) {
+                    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    const monthName = monthNames[new Date().getMonth()];
+                    label.textContent = 'Due Date';
+                    val.textContent = '7th of ' + monthName;
+                  } else {
+                    label.textContent = 'Monthly Fee';
+                    val.textContent = '₱' + (parseFloat(String(currentAmount).replace(/[^0-9.]/g, '')) || 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
+                  }
+                  label.style.opacity = '1';
+                  val.style.opacity = '1';
+                }, 500); // Wait for fade out
+              }
+            }, 5000);
+
+
+            setText('ui-billing-balance', '₱0.00');
             setText('ui-billing-plan', currentPlan);
 
             setText('ui-overview-plan', currentPlan);
@@ -2386,7 +2620,7 @@ If a field is not found, return "TBD".`;
             if (!data.facebook || data.facebook.trim() === '' || data.facebook === 'Please add Facebook profile') {
               missing.push('<a href="#" onclick="window.scrollToSection(\\\'profile\\\'); return false;" style="color: #f59e0b; text-decoration: underline; font-weight: 600;">Facebook</a>');
             }
-            
+
             window.isProfileIncomplete = (missing.length > 0);
 
             const alertBox = document.getElementById('ui-missing-details-alert');
@@ -2404,7 +2638,7 @@ If a field is not found, return "TBD".`;
                 alertBox.style.display = 'none';
               }
             }
-            
+
             const btnSubmitReport = document.getElementById('btn-submit-report');
             if (btnSubmitReport) {
               if (window.isProfileIncomplete) {
@@ -2491,7 +2725,7 @@ If a field is not found, return "TBD".`;
                     if (cat) cat.value = 'Upgrade internet';
                   };
                 } else {
-                  btn.textContent = 'Downgrade';
+                  btn.textContent = 'Other Plan';
                   btn.style.background = 'transparent';
                   btn.style.border = '1px solid #E53935';
                   btn.style.color = '#E53935';
@@ -2499,7 +2733,7 @@ If a field is not found, return "TBD".`;
                   btn.onclick = () => {
                     window.scrollToSection('support');
                     const cat = document.getElementById('support-category');
-                    if (cat) cat.value = 'Downgrade internet';
+                    if (cat) cat.value = 'Other Plan';
                   };
                 }
               }
@@ -2513,7 +2747,7 @@ If a field is not found, return "TBD".`;
                 if (opt.text === 'Upgrade internet') {
                   opt.disabled = (currentSpeed >= maxSpeed || currentSpeed === 0);
                 }
-                if (opt.text === 'Downgrade internet') {
+                if (opt.text === 'Other Plan') {
                   opt.disabled = (currentSpeed <= minSpeed || currentSpeed === 0);
                 }
               });
@@ -2603,6 +2837,8 @@ If a field is not found, return "TBD".`;
                     });
                     statementsBody.innerHTML = tHtml;
                   }
+
+                  if (window.renderRecentUpdates) window.renderRecentUpdates();
                 }
               });
             } catch (billingErr) {
@@ -2653,6 +2889,8 @@ If a field is not found, return "TBD".`;
                     });
                     paymentsBody.innerHTML = pHtml;
                   }
+
+                  if (window.renderRecentUpdates) window.renderRecentUpdates();
                 }
               });
             } catch (e) { console.error('Error fetching payments:', e); }
@@ -2701,6 +2939,20 @@ If a field is not found, return "TBD".`;
 
     return `
       <style>
+        /* Kill the outer scrollbar — dashboard scrolls internally only */
+        html, body {
+          height: 100vh !important;
+          max-height: 100vh !important;
+          overflow: hidden !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        #app-content {
+          margin-top: 0 !important;
+          height: 100vh !important;
+          max-height: 100vh !important;
+          overflow: hidden !important;
+        }
         .dashboard-content {
           margin-bottom: 10rem;
         }
@@ -2738,9 +2990,13 @@ If a field is not found, return "TBD".`;
       <div style="height: 100vh; background: #0b0f19; font-family: 'Inter', sans-serif; display: flex; overflow: hidden; margin: 0; padding: 0;">
         
         <!-- Sidebar -->
-        <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; z-index: 10;">
-          <div style="height: 70px; display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 2rem -1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <img src="/logo.png" alt="RFiberX" style="height: 60px; width: auto; object-fit: contain;" />
+        <div id="client-sidebar" style="width: 260px; min-width: 260px; background: #0b0f19; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 1.5rem; height: 100vh; position: relative; z-index: 20;">
+          <button class="portal-mobile-toggle-close" onclick="document.getElementById('client-sidebar').classList.remove('open')" style="display: none; position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; color: white; cursor: pointer;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+          
+          <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: -1.5rem -1.5rem 2rem -1.5rem;">
+            <img src="/logo.png" alt="RFiberX" style="height: 100px; width: auto; object-fit: contain;" />
           </div>
           
           <div style="font-size: 0.7rem; color: #64748b; font-weight: 700; letter-spacing: 1px; margin-bottom: 1rem; text-transform: uppercase;">My Account</div>
@@ -2762,12 +3018,16 @@ If a field is not found, return "TBD".`;
 
         <!-- Main Content Area -->
         <div id="client-main-content" style="flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; background: #0b0f19;">
+          <!-- Glowing Orbs Background -->
+          <div style="position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(229,57,53,0.08) 0%, rgba(11,15,25,0) 70%); border-radius: 50%; pointer-events: none; z-index: 0;"></div>
+          <div style="position: absolute; bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(37,99,235,0.06) 0%, rgba(11,15,25,0) 70%); border-radius: 50%; pointer-events: none; z-index: 0;"></div>
           
           <!-- Topbar (Sticky) -->
           <div class="dashboard-topbar" style="height: 70px; min-height: 70px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: flex-end; padding: 0 2rem; background: rgba(11,15,25,0.8); backdrop-filter: blur(10px); position: absolute; top: 0; left: 0; right: 0; z-index: 10;">
-            <button class="portal-mobile-toggle" onclick="document.getElementById('client-sidebar').classList.toggle('open')" aria-label="Toggle Sidebar" style="margin-right: auto;">
+            <button class="portal-mobile-toggle" onclick="document.getElementById('client-sidebar').classList.toggle('open')" aria-label="Toggle Sidebar" style="margin-right: 1rem;">
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
+            <img src="/logo.png" alt="RFiberX" class="mobile-logo-only" style="height: 35px; width: auto; object-fit: contain; margin-right: auto;" />
             <div style="display: flex; align-items: center; gap: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <div id="ui-topbar-name" style="color: #fff; font-size: 0.85rem; font-weight: 600;">${name}</div>
@@ -2803,14 +3063,14 @@ If a field is not found, return "TBD".`;
                         <div style="color: #10b981; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Current Plan</div>
                         <div style="color: #fff; font-weight: 600; font-size: 0.95rem;">${plan}</div>
                       </div>
-                      <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="color: #3b82f6; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Monthly Fee</div>
-                        <div style="color: #fff; font-weight: 600; font-size: 0.95rem;">₱${parseFloat(String(basePlanAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString()}</div>
+                      <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem; min-width: 150px; justify-content: center;">
+                        <div id="fee-due-label" style="color: #3b82f6; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; transition: opacity 0.5s;">Monthly Fee</div>
+                        <div id="fee-due-value" style="color: #fff; font-weight: 600; font-size: 0.95rem; transition: opacity 0.5s;">₱${parseFloat(String(basePlanAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
-                  <div style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
-                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
+                  <div style="z-index: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;">
+                    <div class="overview-active-badge" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.4rem 0.75rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem;">
                       <div style="width: 6px; height: 6px; background: #10b981; border-radius: 50%;"></div>
                       <span style="color: #10b981; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Active</span>
                     </div>
@@ -2843,7 +3103,7 @@ If a field is not found, return "TBD".`;
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="billing-stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
                   <div style="background: #1a202c; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
                     <div style="color: #64748b; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem;">Current plan</div>
                     <div id="ui-billing-plan" style="color: #fff; font-size: 1.5rem; font-weight: 600;">${plan}</div>
@@ -2877,14 +3137,18 @@ If a field is not found, return "TBD".`;
                     </div>
 
                     <div id="payment-btn-cc" class="payment-btn" onclick="window.togglePaymentMethod('cc')" style="border: 1px solid rgba(255,255,255,0.05); background: transparent; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s;">
-                      <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700;">CC</div>
+                      <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                      </div>
                       <div>
                         <div style="color: #fff; font-size: 0.85rem; font-weight: 600;">Credit / Debit</div>
                         <div style="color: #64748b; font-size: 0.7rem;">Visa or Mastercard</div>
                       </div>
                     </div>
                     <div id="payment-btn-bt" class="payment-btn" onclick="window.togglePaymentMethod('bt')" style="border: 1px solid rgba(255,255,255,0.05); background: transparent; padding: 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s;">
-                      <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700;">BT</div>
+                      <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.1); color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                      </div>
                       <div>
                         <div style="color: #fff; font-size: 0.85rem; font-weight: 600;">Bank Transfer</div>
                         <div style="color: #64748b; font-size: 0.7rem;">Direct deposit</div>
@@ -3068,7 +3332,7 @@ If a field is not found, return "TBD".`;
                         <option>Billing</option>
                         <option>Technical</option>
                         <option>Upgrade internet</option>
-                        <option>Downgrade internet</option>
+                        <option>Other Plan</option>
                       </select>
                     </div>
                   </div>
@@ -3238,7 +3502,7 @@ If a field is not found, return "TBD".`;
                       
                       <div>
                         <label style="display: block; color: #fff; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Phone Number</label>
-                        <input type="text" id="edit-phone" onkeyup="window.handleInputPreview('edit-phone', 'preview-phone')" onfocus="this.style.borderColor='#E53935'; this.style.boxShadow='0 0 0 3px rgba(229,57,53,0.1)'; window.handleInputFocus('container-phone', true);" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none'; window.handleInputFocus('container-phone', false);" placeholder="Add phone number" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem; border-radius: 6px; font-size: 0.9rem; outline: none; transition: all 0.2s;">
+                        <input type="text" id="edit-phone" maxlength="11" oninput="window.handlePhoneInput('edit-phone', 'preview-phone')" onfocus="this.style.borderColor='#E53935'; this.style.boxShadow='0 0 0 3px rgba(229,57,53,0.1)'; window.handleInputFocus('container-phone', true);" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none'; window.handleInputFocus('container-phone', false);" placeholder="Add phone number" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem; border-radius: 6px; font-size: 0.9rem; outline: none; transition: all 0.2s;">
                       </div>
                       
                       <div>

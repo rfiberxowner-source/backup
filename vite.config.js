@@ -5,6 +5,7 @@ export default defineConfig({
   base: '/',
   plugins: [react()],
   server: {
+    host: true,
     proxy: {
       '/expo-push': {
         target: 'https://exp.host/--/api/v2/push/send',

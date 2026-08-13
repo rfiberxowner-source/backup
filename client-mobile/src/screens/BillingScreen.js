@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions, Alert, ActivityIndicator, Animated, Easing, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
+
+// Try to load MediaLibrary - works in APK builds but not in Expo Go
+let MediaLibrary = null;
+try {
+  MediaLibrary = require('expo-media-library');
+} catch (e) {
+  // Not available in Expo Go, will fall back to sharing
+}
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, doc, getDoc, updateDoc, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -81,31 +90,46 @@ export default function BillingScreen({ user, route, navigation }) {
     if (isSharing) return;
     setIsSharing(true);
     try {
-      const asset = Asset.fromModule(require('../../assets/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg'));
+      const asset = Asset.fromModule(require('../../assets/gkas.jpg'));
       await asset.downloadAsync();
-      const localUri = asset.localUri || asset.uri;
-      if (!localUri) {
+      const sourceUri = asset.localUri || asset.uri;
+
+      if (!sourceUri) {
+        Alert.alert('Error', 'Could not load the QR code image.');
         setIsSharing(false);
         return;
       }
 
-      const Sharing = require('expo-sharing');
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(localUri, { 
-          mimeType: 'image/jpeg',
-          dialogTitle: 'Download GCash QR Code',
-          UTI: 'public.jpeg'
-        });
+      if (MediaLibrary) {
+        // APK build: save directly to gallery, no picker needed
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Needed', 'Please grant storage permissions to save the QR code.');
+          setIsSharing(false);
+          return;
+        }
+
+        // Download the asset to a guaranteed local file path
+        const destPath = FileSystem.cacheDirectory + 'gcash_qr_' + Date.now() + '.jpg';
+        await FileSystem.downloadAsync(sourceUri, destPath);
+        await MediaLibrary.saveToLibraryAsync(destPath);
+        Alert.alert('Saved!', 'GCash QR code has been saved to your gallery.');
       } else {
-        Alert.alert('Unavailable', 'Saving is not available on this device.');
+        // Expo Go fallback: use share sheet
+        const Sharing = require('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(sourceUri, {
+            mimeType: 'image/jpeg',
+            dialogTitle: 'Save GCash QR Code',
+            UTI: 'public.jpeg'
+          });
+        } else {
+          Alert.alert('Unavailable', 'Saving is not available on this device.');
+        }
       }
     } catch (error) {
-      console.error('Error downloading image:', error);
-      if (error && error.message && error.message.includes('Another share request is being processed')) {
-        // Ignore this specific error
-      } else {
-        Alert.alert('Error', 'Failed to download the image.');
-      }
+      console.error('Error saving image:', error);
+      Alert.alert('Error', 'Failed to save the image: ' + (error.message || error));
     } finally {
       setIsSharing(false);
     }
@@ -122,7 +146,7 @@ export default function BillingScreen({ user, route, navigation }) {
       lastTap.current = now;
       tapTimeout.current = setTimeout(() => {
         lastTap.current = null;
-        setShowFullQRModal(true);
+        // Do nothing on single tap (removed enlarge function)
       }, DOUBLE_PRESS_DELAY);
     }
   };
@@ -841,11 +865,11 @@ If a field is not found, return "TBD".`;
           {showGcashDropdown && (
             <View style={{ backgroundColor: colors.card, padding: 20, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: colors.border, alignItems: 'center' }}>
               <TouchableOpacity activeOpacity={0.8} onPress={handleQRTap}>
-                <View style={{ width: 180, height: 180, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: colors.border, marginBottom: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
-                  <Image source={require('../../assets/3a8e1b7a-5a09-4f8e-816f-8bcafbdb6703.jpg')} style={{ width: '240%', height: '240%', transform: [{ translateY: -50 }] }} resizeMode="cover" />
+                <View style={{ width: 260, height: 260, borderRadius: 16, overflow: 'hidden', borderWidth: 2, borderColor: colors.border, marginBottom: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', padding: 10 }}>
+                  <Image source={require('../../assets/gkas.jpg')} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
                 </View>
               </TouchableOpacity>
-              <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 20, textAlign: 'center' }}>Tap to enlarge • Double-tap to save</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 20, textAlign: 'center' }}>Double-tap to save</Text>
               <Text style={{ color: colors.text, fontSize: 16, fontFamily: 'Inter_600SemiBold', marginBottom: 10 }}>Scan to Pay</Text>
               <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 5 }}>Or manually input the number:</Text>
               <Text style={{ color: colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 20 }}>09058395471</Text>
@@ -1214,64 +1238,64 @@ If a field is not found, return "TBD".`;
         </View>
       </Modal>
 
-        {/* Floating Action Button for Rules */}
-        <TouchableOpacity 
-          style={styles.fabRules}
-          onPress={openScreenshotRules}
-        >
-          <MaterialCommunityIcons name="receipt" size={24} color="#fff" />
-        </TouchableOpacity>
+      {/* Floating Action Button for Rules */}
+      <TouchableOpacity
+        style={styles.fabRules}
+        onPress={openScreenshotRules}
+      >
+        <MaterialCommunityIcons name="receipt" size={24} color="#fff" />
+      </TouchableOpacity>
 
-        {/* Screenshot Guidelines Modal */}
-        {showScreenshotRules && (
-          <Modal visible={true} transparent={true} animationType="none" hardwareAccelerated>
-            <View style={styles.rulesModalOverlay}>
-              <Animated.View style={[
-                styles.rulesModalContent, 
-                { 
-                  backgroundColor: colors.card,
-                  transform: [{ scale: screenshotRulesAnim }],
-                  opacity: screenshotRulesAnim
-                }
-              ]}>
-                <Text style={styles.rulesModalTitle}>Billing Screenshot Guidelines</Text>
-                
-                <View style={styles.rulesImageContainer}>
-                  <Image 
-                    source={require('../../assets/tutorial/standard.jpg')}
-                    style={styles.rulesImage}
-                  />
+      {/* Screenshot Guidelines Modal */}
+      {showScreenshotRules && (
+        <Modal visible={true} transparent={true} animationType="none" hardwareAccelerated>
+          <View style={styles.rulesModalOverlay}>
+            <Animated.View style={[
+              styles.rulesModalContent,
+              {
+                backgroundColor: colors.card,
+                transform: [{ scale: screenshotRulesAnim }],
+                opacity: screenshotRulesAnim
+              }
+            ]}>
+              <Text style={styles.rulesModalTitle}>Billing Screenshot Guidelines</Text>
+
+              <View style={styles.rulesImageContainer}>
+                <Image
+                  source={require('../../assets/tutorial/standard.jpg')}
+                  style={styles.rulesImage}
+                />
+              </View>
+
+              <View style={styles.rulesTextContainer}>
+                <View style={styles.ruleItem}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                  <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> alter the image details or block the details.</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                  <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> take a picture of another phone.</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
+                  <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> crop the image.</Text>
                 </View>
 
-                <View style={styles.rulesTextContainer}>
-                  <View style={styles.ruleItem}>
-                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
-                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> alter the image details or block the details.</Text>
-                  </View>
-                  <View style={styles.ruleItem}>
-                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
-                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> take a picture of another phone.</Text>
-                  </View>
-                  <View style={styles.ruleItem}>
-                    <MaterialCommunityIcons name="close-circle" size={18} color="#ef4444" style={styles.ruleIcon} />
-                    <Text style={[styles.ruleText, { color: colors.text }]}>Do <Text style={{ fontFamily: 'Inter_700Bold' }}>NOT</Text> crop the image.</Text>
-                  </View>
-                  
-                  <View style={styles.rulesAlertBox}>
-                    <MaterialCommunityIcons name="shield-alert" size={20} color="#ef4444" style={{ marginRight: 8, marginTop: 2 }} />
-                    <Text style={styles.rulesAlertText}>
-                      Failure to upload a clean, standard screenshot will cause our AI and Admin security system to flag the transaction as fraud. Strict compliance ensures fast, error-free processing and protects against automated scams.
-                    </Text>
-                  </View>
+                <View style={styles.rulesAlertBox}>
+                  <MaterialCommunityIcons name="shield-alert" size={20} color="#ef4444" style={{ marginRight: 8, marginTop: 2 }} />
+                  <Text style={styles.rulesAlertText}>
+                    Failure to upload a clean, standard screenshot will cause our AI and Admin security system to flag the transaction as fraud. Strict compliance ensures fast, error-free processing and protects against automated scams.
+                  </Text>
                 </View>
+              </View>
 
-                <TouchableOpacity style={styles.rulesAcceptBtn} onPress={closeScreenshotRules}>
-                  <Text style={styles.rulesAcceptBtnText}>I Understand</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-          </Modal>
-        )}
+              <TouchableOpacity style={styles.rulesAcceptBtn} onPress={closeScreenshotRules}>
+                <Text style={styles.rulesAcceptBtnText}>I Understand</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }

@@ -72,7 +72,7 @@ export default function PlansScreen({ user, navigation }) {
   const onRequestChange = (targetPlan) => {
     let action = 'Upgrade internet';
     const targetSpeed = getPlanSpeed(targetPlan);
-    if (targetSpeed < currentSpeed) action = 'Downgrade internet';
+    if (targetSpeed < currentSpeed) action = 'Other Plan';
 
     navigation.navigate('Support', { prefillCategory: action, timestamp: Date.now() });
   };
@@ -103,11 +103,11 @@ export default function PlansScreen({ user, navigation }) {
           <Text style={styles.policyTitle}>PLAN POLICY</Text>
           {isEligibleForChange ? (
             <Text style={styles.policyText}>
-              Your account has been subscribed for at least 6 months. You can now upgrade or downgrade your plan by messaging our <Text style={{ color: '#3b82f6', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://www.facebook.com/RFiber1')}>Facebook page</Text>.
+              Your account has been subscribed for at least 6 months. You can now upgrade or switch to another plan by messaging our <Text style={{ color: '#3b82f6', textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://www.facebook.com/RFiber1')}>Facebook page</Text>.
             </Text>
           ) : (
             <Text style={styles.policyText}>
-              Requests for upgrades or downgrades will be queued for admin approval. Clients cannot upgrade or downgrade if they haven't been subscribed for at least 6 months on their current plan.
+              Requests for upgrades or switching plans will be queued for admin approval. Clients cannot upgrade or switch plans if they haven't been subscribed for at least 6 months on their current plan.
             </Text>
           )}
         </View>
@@ -159,7 +159,7 @@ export default function PlansScreen({ user, navigation }) {
                       {!isCurrent ? (
                         <TouchableOpacity style={styles.actionBtn} onPress={() => onRequestChange(plan)}>
                           <Text style={styles.actionBtnText}>
-                            {targetSpeed < currentSpeed ? 'Downgrade' : 'Upgrade'}
+                            {targetSpeed < currentSpeed ? 'Other Plan' : 'Upgrade'}
                           </Text>
                         </TouchableOpacity>
                       ) : (
