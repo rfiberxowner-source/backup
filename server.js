@@ -67,14 +67,17 @@ app.post('/webhook', (req, res) => {
                 .then(() => console.log(`✅ PSID ${sender_psid} saved to Firestore!`))
                 .catch(err => console.error("❌ Error saving to Firestore: ", err));
 
-                // Auto-reply ONLY to Jasper Mangulabnan
-                const JASPER_PSID = '27076770378611516';
-                if (sender_psid === JASPER_PSID && webhook_event.message && webhook_event.message.text) {
-                    // Prevent infinite loops in case we reply to ourselves, though we check sender
-                    const replyMessage = {
-                        text: "Hi Jasper! This is an automated test reply from RFiberX. Your PSID is verified!"
-                    };
-                    callSendAPI(sender_psid, replyMessage);
+                // Auto-reply logic
+                if (webhook_event.message && webhook_event.message.text) {
+                    const messageText = webhook_event.message.text;
+                    const replyText = getAutoReply(messageText);
+
+                    // For testing: we restrict this to Jasper's PSID
+                    const JASPER_PSID = '27076770378611516';
+                    if (sender_psid === JASPER_PSID) {
+                        const replyMessage = { text: replyText };
+                        callSendAPI(sender_psid, replyMessage);
+                    }
                 }
             }
         });
@@ -86,7 +89,30 @@ app.post('/webhook', (req, res) => {
     }
 });
 
-const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAWcO9Nk1mgBRkaXUTGK3JqhZCLkJXXlPZBDcMDIUmrbsOmCRmbtzplX7zbJYnltaZAyZB0292pGfZBBtce1oKRZC0ZBICmiZCZBLoHKYUPBc7UES4RZChyOoyQZAYFszs487BJQDbYuZCu0ZCY568OIckOXOhRR2OQ9MUf17PGUCwkxxThIfmxeRRcZBnjFzhVh6FBVwCq1z35gZDZD';
+// Smart Keyword Matching using Regex
+function getAutoReply(text) {
+    const msg = text.toLowerCase();
+
+    // 1. Technical Support Keywords
+    if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|internet|connection)/i)) {
+        return "Hi! Kung kayo po ay nawalan ng internet o nakita ninyo na nakailaw ng RED ang LOS sa inyong modem, maaaring may fiber cut sa inyong area. \n\nMaaari po kayong mag-chat ng detalye ng inyong account o tumawag sa aming Technical Support sa +63 09913746474.";
+    }
+    
+    // 2. Billing & Payment Keywords
+    if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad)/i)) {
+        return "Para po sa pagbabayad ng inyong bill:\n\nMaaari kayong magpadala via GCash sa aming opisyal na numero: 09058395471.\n\nPaki-send po ang inyong screenshot o resibo dito kapag kayo ay nakapagbayad na para ma-process namin agad.";
+    }
+
+    // 3. Application / New Connection Keywords
+    if (msg.match(/(apply|kabit|pakabit|install|bago)/i)) {
+        return "Gusto niyo po bang mag-apply para sa RFiberX internet? \n\nMaaari kayong mag-sign up directly sa aming website: https://rfiberx.net/apply o ibigay ang inyong kumpletong pangalan, address, at contact number dito.";
+    }
+
+    // 4. Default / Menu (If they just say "hello" or something we don't recognize)
+    return "Hello! Ako ang RFiberX Auto-Bot. Ano po ang kailangan ninyo?\n\n1 - Magbayad ng Bill (GCash)\n2 - Nawalan ng Internet (Technical Support)\n3 - Mag-apply ng bagong connection\n4 - Kausapin ang Admin\n\n(I-type lang po ang inyong katanungan o concern)";
+}
+
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAOCL1hceK8BSMsUSSYLdHh8bEVNuxGJZC7t24ZBPdG2x6ObyB3XIAclpVVGtvLrJQiHnZBaTWJmHsFXucILzvSbrTedn02okEsU446aEc0ZAzVLagUqjn78d6bzLhOcEZAITP0dIZAVzeuPlBYZADXH4St6j2NXfTtdjrZAHTptA1ZAsfUhYe2hnbweKApPjj3kmsfTSxNSNrgZDZD';
 
 // Function to send the message back to Facebook Graph API
 async function callSendAPI(sender_psid, response) {
