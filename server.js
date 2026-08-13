@@ -75,7 +75,7 @@ app.post('/webhook', (req, res) => {
                     // Send the auto-reply ONLY to Jasper Mangulabnan
                     const JASPER_PSID = '27076770378611516';
                     if (sender_psid === JASPER_PSID) {
-                        const replyMessage = { text: replyText };
+                        const replyMessage = getAutoReply(messageText);
                         callSendAPI(sender_psid, replyMessage);
                     }
                 }
@@ -93,28 +93,43 @@ app.post('/webhook', (req, res) => {
 function getAutoReply(text) {
     const msg = text.toLowerCase().trim();
 
-    // 0. Test Keyword
+    // 0. Test Keyword (With Button)
     if (msg === "test") {
-        return "✅ System is responding! The webhook and auto-reply are fully functional.";
+        return {
+            attachment: {
+                type: "template",
+                payload: {
+                    template_type: "button",
+                    text: "✅ System is responding! The webhook and auto-reply are fully functional.",
+                    buttons: [
+                        {
+                            type: "web_url",
+                            url: "https://rfiberx.net",
+                            title: "Visit RFiberX"
+                        }
+                    ]
+                }
+            }
+        };
     }
 
     // 1. Technical Support Keywords
     if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|internet|connection)/i)) {
-        return "Hi! Kung kayo po ay nawalan ng internet o nakita ninyo na nakailaw ng RED ang LOS sa inyong modem, maaaring may fiber cut sa inyong area. \n\nMaaari po kayong mag-chat ng detalye ng inyong account o tumawag sa aming Technical Support sa +63 09913746474.";
+        return { text: "Hi! Kung kayo po ay nawalan ng internet o nakita ninyo na nakailaw ng RED ang LOS sa inyong modem, maaaring may fiber cut sa inyong area. \n\nMaaari po kayong mag-chat ng detalye ng inyong account o tumawag sa aming Technical Support sa +63 09913746474." };
     }
     
     // 2. Billing & Payment Keywords
     if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad)/i)) {
-        return "Para po sa pagbabayad ng inyong bill:\n\nMaaari kayong magpadala via GCash sa aming opisyal na numero: 09058395471.\n\nPaki-send po ang inyong screenshot o resibo dito kapag kayo ay nakapagbayad na para ma-process namin agad.";
+        return { text: "Para po sa pagbabayad ng inyong bill:\n\nMaaari kayong magpadala via GCash sa aming opisyal na numero: 09058395471.\n\nPaki-send po ang inyong screenshot o resibo dito kapag kayo ay nakapagbayad na para ma-process namin agad." };
     }
 
     // 3. Application / New Connection Keywords
     if (msg.match(/(apply|kabit|pakabit|install|bago)/i)) {
-        return "Gusto niyo po bang mag-apply para sa RFiberX internet? \n\nMaaari kayong mag-sign up directly sa aming website: https://rfiberx.net/apply o ibigay ang inyong kumpletong pangalan, address, at contact number dito.";
+        return { text: "Gusto niyo po bang mag-apply para sa RFiberX internet? \n\nMaaari kayong mag-sign up directly sa aming website: https://rfiberx.net/apply o ibigay ang inyong kumpletong pangalan, address, at contact number dito." };
     }
 
     // 4. Default / Menu (If they just say "hello" or something we don't recognize)
-    return "Hello! Ako ang RFiberX Auto-Bot. Ano po ang kailangan ninyo?\n\n1 - Magbayad ng Bill (GCash)\n2 - Nawalan ng Internet (Technical Support)\n3 - Mag-apply ng bagong connection\n4 - Kausapin ang Admin\n\n(I-type lang po ang inyong katanungan o concern)";
+    return { text: "Hello! Ako ang RFiberX Auto-Bot. Ano po ang kailangan ninyo?\n\n1 - Magbayad ng Bill (GCash)\n2 - Nawalan ng Internet (Technical Support)\n3 - Mag-apply ng bagong connection\n4 - Kausapin ang Admin\n\n(I-type lang po ang inyong katanungan o concern)" };
 }
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAOCL1hceK8BSMsUSSYLdHh8bEVNuxGJZC7t24ZBPdG2x6ObyB3XIAclpVVGtvLrJQiHnZBaTWJmHsFXucILzvSbrTedn02okEsU446aEc0ZAzVLagUqjn78d6bzLhOcEZAITP0dIZAVzeuPlBYZADXH4St6j2NXfTtdjrZAHTptA1ZAsfUhYe2hnbweKApPjj3kmsfTSxNSNrgZDZD';
