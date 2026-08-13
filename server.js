@@ -4,7 +4,15 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import fs from 'fs';
 
 // Initialize Firebase Admin
-const serviceAccount = JSON.parse(fs.readFileSync(new URL('./portal-c293a-firebase-adminsdk-fbsvc-8b15a32372.json', import.meta.url)));
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // On Render: Read securely from environment variable
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+    // Local Testing: Read from the local file
+    serviceAccount = JSON.parse(fs.readFileSync(new URL('./portal-c293a-firebase-adminsdk-fbsvc-8b15a32372.json', import.meta.url)));
+}
+
 initializeApp({
   credential: cert(serviceAccount)
 });
@@ -15,7 +23,7 @@ app.use(express.json());
 
 // A simple verify token for Facebook to validate your webhook.
 // You will enter this exact string in the Facebook Developer Portal.
-const VERIFY_TOKEN = "rfiberx_messenger_webhook_12345"; 
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rfiberx_messenger_webhook_12345"; 
 
 // 1. Webhook Verification Endpoint (Facebook uses this to connect)
 app.get('/webhook', (req, res) => {
