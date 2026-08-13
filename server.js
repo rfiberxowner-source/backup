@@ -124,8 +124,10 @@ async function getAutoReply(text) {
         ai_decision = 'TECHNICAL_SUPPORT';
     } else if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad)/i)) {
         ai_decision = 'BILLING';
-    } else if (msg.match(/(apply|kabit|pakabit|install|bago)/i)) {
+    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b)/i)) {
         ai_decision = 'APPLICATION';
+    } else if (msg.match(/(password|wifi pass|change pass)/i)) {
+        ai_decision = 'CHANGE_PASSWORD';
     }
 
     if (!ai_decision) {
@@ -194,7 +196,7 @@ Our team will verify if there is an available NAP box/port at your new site and 
 Thank you for choosing RFIBERX Telecom!` };
             
             case 'APPLICATION':
-                return { text: "Gusto niyo po bang mag-apply para sa RFiberX internet? Maaari kayong mag-sign up directly sa aming website: https://rfiberx.net/apply o ibigay ang inyong kumpletong pangalan, address, at contact number dito upang ma-assist namin kayo." };
+                return { text: "Are you interested in applying for an RFiberX internet connection? You can sign up directly on our website: https://rfiberx.net/apply, or simply provide your complete name, address, and contact number here so we can assist you." };
             
             case 'BILLING':
                 return { text: `We accept the following payment methods:
