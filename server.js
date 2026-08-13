@@ -142,7 +142,7 @@ async function getAutoReply(text) {
             if (!apiKey) throw new Error("Gemini API Key missing from Firestore");
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
             const prompt = `You are an intelligent classifier for an ISP called RFiberX. 
             Read the user's message in Tagalog, English, or Taglish. 
             You must reply with exactly ONE word from this list that best matches their intent:
