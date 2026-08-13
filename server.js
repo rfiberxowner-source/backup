@@ -72,9 +72,12 @@ app.post('/webhook', (req, res) => {
                     const messageText = webhook_event.message.text;
                     const replyText = getAutoReply(messageText);
 
-                    // Send the auto-reply to whoever sent the message
-                    const replyMessage = { text: replyText };
-                    callSendAPI(sender_psid, replyMessage);
+                    // Send the auto-reply ONLY to Jasper Mangulabnan
+                    const JASPER_PSID = '27076770378611516';
+                    if (sender_psid === JASPER_PSID) {
+                        const replyMessage = { text: replyText };
+                        callSendAPI(sender_psid, replyMessage);
+                    }
                 }
             }
         });
