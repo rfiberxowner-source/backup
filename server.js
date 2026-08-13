@@ -66,6 +66,16 @@ app.post('/webhook', (req, res) => {
                 }, { merge: true })
                 .then(() => console.log(`✅ PSID ${sender_psid} saved to Firestore!`))
                 .catch(err => console.error("❌ Error saving to Firestore: ", err));
+
+                // Auto-reply ONLY to Jasper Mangulabnan
+                const JASPER_PSID = '27076770378611516';
+                if (sender_psid === JASPER_PSID && webhook_event.message && webhook_event.message.text) {
+                    // Prevent infinite loops in case we reply to ourselves, though we check sender
+                    const replyMessage = {
+                        text: "Hi Jasper! This is an automated test reply from RFiberX. Your PSID is verified!"
+                    };
+                    callSendAPI(sender_psid, replyMessage);
+                }
             }
         });
         
@@ -75,6 +85,37 @@ app.post('/webhook', (req, res) => {
         res.sendStatus(404);
     }
 });
+
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAWcO9Nk1mgBRkaXUTGK3JqhZCLkJXXlPZBDcMDIUmrbsOmCRmbtzplX7zbJYnltaZAyZB0292pGfZBBtce1oKRZC0ZBICmiZCZBLoHKYUPBc7UES4RZChyOoyQZAYFszs487BJQDbYuZCu0ZCY568OIckOXOhRR2OQ9MUf17PGUCwkxxThIfmxeRRcZBnjFzhVh6FBVwCq1z35gZDZD';
+
+// Function to send the message back to Facebook Graph API
+async function callSendAPI(sender_psid, response) {
+    const requestBody = {
+        recipient: {
+            id: sender_psid
+        },
+        message: response
+    };
+
+    try {
+        const res = await fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (res.ok) {
+            console.log('✅ Message sent successfully to Jasper!');
+        } else {
+            const errBody = await res.text();
+            console.error('❌ Unable to send message:', errBody);
+        }
+    } catch (err) {
+        console.error('❌ Failed to fetch Graph API:', err);
+    }
+}
 
 // A simple root route to verify the server is running
 app.get('/', (req, res) => {
