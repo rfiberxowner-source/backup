@@ -13,6 +13,7 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@vitejs/plugin-react": "^6.0.3",
     "csv-parser": "^3.2.1",
     "express": "^5.2.1",
