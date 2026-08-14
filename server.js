@@ -20,6 +20,7 @@ initializeApp({
   credential: cert(serviceAccount)
 });
 const db = getFirestore();
+const userSessions = new Map();
 
 const app = express();
 app.use(express.json());
@@ -77,7 +78,7 @@ app.post('/webhook', (req, res) => {
                     // Send the auto-reply ONLY to Rfiberx Blanco
                     const RFIBERX_PSID = '28146825618339223';
                     if (sender_psid === RFIBERX_PSID) {
-                        getAutoReply(messageText).then(replyMessage => {
+                        getAutoReply(messageText, sender_psid).then(replyMessage => {
                             if (replyMessage) {
                                 callSendAPI(sender_psid, replyMessage);
                             }
@@ -95,8 +96,23 @@ app.post('/webhook', (req, res) => {
 });
 
 // Smart AI Classification using Gemini
-async function getAutoReply(text) {
+async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
+
+    // Check Multi-Turn Chat Flow Memory
+    if (userSessions.has(sender_psid)) {
+        if (userSessions.get(sender_psid) === 'TECH_SUPPORT_STEP_1') {
+            userSessions.delete(sender_psid); // Clear memory state
+
+            if (msg.match(/(slow|mabagal|bagal)/i)) {
+                return { text: `Hi [Client Name],\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.` };
+            } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
+                return { text: `Hi [Client Name],\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
+            } else {
+                return { text: "Please clarify if you are experiencing (A) Slow Internet, (B) No Internet, or (C) Red light flashing." };
+            }
+        }
+    }
 
     // Keep the "test" keyword manual for debugging
     if (msg === "test") {
@@ -128,6 +144,8 @@ async function getAutoReply(text) {
         ai_decision = 'APPLICATION';
     } else if (msg.match(/(password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
+    } else if (msg.match(/(agent|support|tao|operator|customer service)/i)) {
+        ai_decision = 'UNKNOWN'; // Hand over to agent
     }
 
     if (!ai_decision) {
@@ -159,12 +177,28 @@ async function getAutoReply(text) {
             
             User's Message: "${text}"`;
 
-            const result = await model.generateContent(prompt);
+            let result = null;
+            let retries = 3;
+            while (retries > 0) {
+                try {
+                    result = await model.generateContent(prompt);
+                    break; // Success, break out of loop
+                } catch (apiError) {
+                    if (apiError.status === 503 && retries > 1) {
+                        console.warn("Gemini 503 Overloaded. Retrying in 2 seconds...");
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        retries--;
+                    } else {
+                        throw apiError;
+                    }
+                }
+            }
+
             ai_decision = result.response.text().trim();
             console.log("🤖 Gemini Classified Intent as: " + ai_decision);
         } catch (error) {
             console.error("Gemini Error:", error);
-            return { text: "We apologize, but we encountered a system error. Please wait for an admin to assist you." };
+            return { text: "We apologize, but we encountered a system error: " + error.message };
         }
     } else {
         console.log("⚡ Fast Keyword Matched Intent as: " + ai_decision);
@@ -173,15 +207,8 @@ async function getAutoReply(text) {
     // Process the final decision (from either Keywords or Gemini)
     switch (ai_decision) {
             case 'TECHNICAL_SUPPORT':
-                return { text: `Good day! We apologize for the inconvenience. To check your line status, kindly provide:
-
-• Account Name:
-• Account ID/Number:
-• Complete Address:
-• Active Contact Number:
-
-Please restart your modem by unplugging it for 30 seconds, then plug it back in. If the issue persists, or your modem shows a red light, reply with your details so our technical team can inspect your line.
-Thank you for choosing RFIBERX Telecom!` };
+                userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
+                return { text: "We apologize for the inconvenience. Are you experiencing (A) Slow Internet, (B) No Internet, or (C) Red light flashing?" };
             
             case 'RELOCATION':
                 return { text: `Good day! For site transfers or modem relocation, please send:
