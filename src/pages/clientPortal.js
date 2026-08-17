@@ -66,14 +66,7 @@ export const clientViews = {
         });
 
         if (authenticated) {
-          if (userData.activeSessionToken) {
-            errorMsg.textContent = 'Account is already logged in on another device. Please sign out from that device first.';
-            errorMsg.style.display = 'block';
-            submitBtn.innerHTML = 'Sign in &rarr;';
-            submitBtn.disabled = false;
-            return;
-          }
-
+          // Strict block removed so users can login and kick out ghost sessions
           const sessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           await updateDoc(doc(db, "users", userData.id), { activeSessionToken: sessionToken });
           userData.activeSessionToken = sessionToken;

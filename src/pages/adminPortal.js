@@ -1802,10 +1802,7 @@ window.handleAdminLogin = async function () {
       throw new Error("Invalid credentials");
     }
 
-    if (data.activeSessionToken) {
-      throw new Error("Account is already logged in on another device/browser. Please log out there first.");
-    }
-
+    // Strict block removed so admins can login and kick out ghost sessions
     const sessionToken = 'admin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     await firestore.updateDoc(firestore.doc(db, "admin", doc.id), { activeSessionToken: sessionToken });
 

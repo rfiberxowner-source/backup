@@ -17,17 +17,18 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 }
 
 initializeApp({
-  credential: cert(serviceAccount)
+    credential: cert(serviceAccount)
 });
 const db = getFirestore();
 const userSessions = new Map();
+const accountRecoveryData = new Map();
 
 const app = express();
 app.use(express.json());
 
 // A simple verify token for Facebook to validate your webhook.
 // You will enter this exact string in the Facebook Developer Portal.
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rfiberx_messenger_webhook_12345"; 
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "rfiberx_messenger_webhook_12345";
 
 // 1. Webhook Verification Endpoint (Facebook uses this to connect)
 app.get('/webhook', (req, res) => {
@@ -50,10 +51,10 @@ app.post('/webhook', (req, res) => {
     let body = req.body;
 
     if (body.object === 'page') {
-        body.entry.forEach(function(entry) {
+        body.entry.forEach(function (entry) {
             // Get the webhook event
             let webhook_event = entry.messaging[0];
-            
+
             if (webhook_event.sender) {
                 // Extract the sender's PSID
                 let sender_psid = webhook_event.sender.id;
@@ -61,33 +62,40 @@ app.post('/webhook', (req, res) => {
                 console.log("New message received from PSID: " + sender_psid);
                 console.log("Message Text: ", webhook_event.message?.text || "[No text]");
                 console.log("-----------------------------------------");
-                
+
                 // Save sender_psid to Firestore
                 db.collection('messenger_psids').doc(sender_psid).set({
                     psid: sender_psid,
                     lastMessage: webhook_event.message?.text || "",
                     lastInteraction: FieldValue.serverTimestamp()
                 }, { merge: true })
-                .then(() => console.log(`✅ PSID ${sender_psid} saved to Firestore!`))
-                .catch(err => console.error("❌ Error saving to Firestore: ", err));
+                    .then(() => console.log(`✅ PSID ${sender_psid} saved to Firestore!`))
+                    .catch(err => console.error("❌ Error saving to Firestore: ", err));
 
                 // Auto-reply logic
-                if (webhook_event.message && webhook_event.message.text) {
-                    const messageText = webhook_event.message.text;
-
+                if (webhook_event.message) {
                     // Send the auto-reply ONLY to Rfiberx Blanco
                     const RFIBERX_PSID = '28146825618339223';
                     if (sender_psid === RFIBERX_PSID) {
-                        getAutoReply(messageText, sender_psid).then(replyMessage => {
-                            if (replyMessage) {
-                                callSendAPI(sender_psid, replyMessage);
-                            }
-                        }).catch(err => console.error("Error generating reply:", err));
+                        if (webhook_event.message.text) {
+                            getAutoReply(webhook_event.message.text, sender_psid).then(replyMessage => {
+                                if (replyMessage) {
+                                    callSendAPI(sender_psid, replyMessage);
+                                }
+                            }).catch(err => console.error("Error generating reply:", err));
+                        } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
+                            const imageUrl = webhook_event.message.attachments[0].payload.url;
+                            processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
+                                if (replyMessage) {
+                                    callSendAPI(sender_psid, replyMessage);
+                                }
+                            }).catch(err => console.error("Error processing image:", err));
+                        }
                     }
                 }
             }
         });
-        
+
         // Return a '200 OK' response to all requests
         res.status(200).send('EVENT_RECEIVED');
     } else {
@@ -99,8 +107,18 @@ app.post('/webhook', (req, res) => {
 async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
 
-    // Check Multi-Turn Chat Flow Memory
+    // =========================================================================
+    // 🧠 SECTION 1: MULTI-TURN CONVERSATION LOGIC (STATE MACHINE)
+    // This block handles users who are already in a specific conversation flow
+    // (e.g. they are answering a step-by-step form for Billing, Tech Support, etc.)
+    // =========================================================================
     if (userSessions.has(sender_psid)) {
+        // Global escape hatch to cancel out of any flow
+        if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|operator|tao|customer service)/i)) {
+            userSessions.delete(sender_psid);
+            return { text: "Okay, we've cancelled that request. If you need to talk to a human agent, please wait, and our team will be with you shortly. How else can I help you today?" };
+        }
+
         if (userSessions.get(sender_psid) === 'TECH_SUPPORT_STEP_1') {
             userSessions.delete(sender_psid); // Clear memory state
 
@@ -109,7 +127,243 @@ async function getAutoReply(text, sender_psid) {
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
                 return { text: `Hi [Client Name],\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
             } else {
-                return { text: "Please clarify if you are experiencing (A) Slow Internet, (B) No Internet, or (C) Red light flashing." };
+                return { text: "Please clarify if you are experiencing Slow Internet, No Internet, or Red light flashing." };
+            }
+        } else if (userSessions.get(sender_psid) === 'RELOCATION_STEP_1') {
+            if (msg.match(/(yes|oo|sige|proceed)/i)) {
+                userSessions.delete(sender_psid); // Clear memory state
+                return {
+                    text: `Good day! For site transfers or modem relocation, please send:
+• Account Name:
+• Account ID / Number:
+• Current Address:
+• New Target Address:
+• Active Contact Number:
+
+Please note that relocation have a relocation fee, which will be discussed by our team. Our team will verify if there is an available NAP box/port at your new site and update you on the relocation process.
+
+Thank you for choosing RFIBERX Telecom!` };
+            } else {
+                return { text: "Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
+            }
+        } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_1') {
+            if (msg.match(/(yes|oo|sige|proceed)/i)) {
+                userSessions.delete(sender_psid); // Clear memory state
+                return { text: `Great! Here are our available plans:
+• 30 Mbps – ₱800
+• 50 Mbps – ₱1,000
+• 70 Mbps – ₱1,300
+• 100 Mbps – ₱1,500
+• 200 Mbps – ₱2,000
+• 500 Mbps – ₱4,500
+
+To proceed, please provide the following details:
+• Complete Name:
+• Complete Address (with landmarks):
+• Contact Number:
+• Preferred Plan:
+
+Our team will check if your area is serviceable and contact you for installation!` };
+            } else {
+                return { text: "Would you like to apply here? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
+            }
+        } else if (userSessions.get(sender_psid) === 'CHANGE_PASSWORD_STEP_1') {
+            if (msg.includes('192.168.1.1')) {
+                return { text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
+            } else if (msg.includes('192.168.100.1')) {
+                return { text: "Here is the tutorial for 192.168.100.1:\n\n1. Login with telecomadmin/admintelecom.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
+            } else if (msg.includes('192.168.8.1')) {
+                return { text: "Here is the tutorial for 192.168.8.1:\n\n1. Login with admin/admin.\n2. Go to Wi-Fi Basic Settings.\n3. Change Wi-Fi Password and Save.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
+            } else {
+                return { text: "Please reply with your exact gateway URL (e.g. '192.168.1.1', '192.168.100.1', or '192.168.8.1') so I can send the tutorial." };
+            }
+        } else if (userSessions.get(sender_psid) === 'BILLING_STEP_1') {
+            if (msg.match(/(forgot|nakalimutan|hindi ko alam|wala)/i)) {
+                userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
+                return { text: "Please provide your Full Name so we can search our database." };
+            } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
+                accountRecoveryData.set(sender_psid, { account: text.trim() });
+                userSessions.set(sender_psid, 'BILLING_MENU');
+                return { text: "Thank you. Would you like to check your 'Balance' or see 'Payment' methods?" };
+            } else {
+                return { text: "Please provide a valid Account Number, or reply with 'Forgot'." };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_RECOVERY_NAME') {
+            try {
+                const usersSnapshot = await db.collection('users').get();
+                let matches = [];
+                usersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const name = (data.name || data.firstName || data.lastName || '').toLowerCase();
+                    if (name && name.includes(msg)) {
+                        matches.push(data);
+                    }
+                });
+
+                if (matches.length > 0) {
+                    accountRecoveryData.set(sender_psid, { matches: matches, currentIndex: 0 });
+                    userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_CONFIRM');
+                    const firstMatch = matches[0];
+                    const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
+                    return { text: `We found an account for ${matchedName}. Is this you? (Yes/No)\n\n*(If you also need your password, reply 'Yes password')*` };
+                } else {
+                    return { text: "We couldn't find an account with that name. Please try another name or type 'Cancel' to stop." };
+                }
+            } catch (err) {
+                console.error("DB Error:", err);
+                return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_RECOVERY_CONFIRM') {
+            const data = accountRecoveryData.get(sender_psid);
+            if (!data || !data.matches) {
+                userSessions.delete(sender_psid);
+                return { text: "Session expired. Please start again." };
+            }
+
+            if (msg.match(/(yes|oo|ako|proceed)/i)) {
+                const match = data.matches[data.currentIndex];
+                const accountNum = match.account || match.accountNumber || 'Not found';
+                const pass = match.password || 'Not set';
+                
+                accountRecoveryData.set(sender_psid, { account: accountNum });
+                userSessions.set(sender_psid, 'BILLING_MENU');
+
+                let reply = `Great! Your Account Number is ${accountNum}.\n`;
+                if (text.toLowerCase().includes('password') || text.toLowerCase().includes('pass')) {
+                    reply += `Your password is: ${pass}\n\n`;
+                }
+                reply += `Would you like to check your 'Balance' or see 'Payment' methods?`;
+                return { text: reply };
+            } else if (msg.match(/(no|hindi)/i)) {
+                data.currentIndex++;
+                if (data.currentIndex < data.matches.length) {
+                    const nextMatch = data.matches[data.currentIndex];
+                    const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
+                    return { text: `How about ${matchedName}? Is this you? (Yes/No)\n\n*(If you also need your password, reply 'Yes password')*` };
+                } else {
+                    userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
+                    accountRecoveryData.delete(sender_psid);
+                    return { text: "We couldn't find any other matching accounts. Please try a different name, or contact our support team." };
+                }
+            } else if (msg.match(/(password|pass)/i)) {
+                return { text: "If this is you, please reply 'Yes' and I will provide your account number and password." };
+            } else {
+                return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
+            }
+        } else if (userSessions.get(sender_psid) === 'BILLING_MENU') {
+            if (msg.match(/(payment|bayad)/i)) {
+                userSessions.delete(sender_psid);
+                // We keep accountRecoveryData so they can upload a receipt immediately after
+                return {
+                    text: `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`
+                };
+            } else if (msg.match(/(balance|magkano|balanse)/i)) {
+                const data = accountRecoveryData.get(sender_psid);
+                const accountNum = data ? data.account : null;
+                
+                if (!accountNum) {
+                    userSessions.delete(sender_psid);
+                    return { text: "We lost your account number. Please try the billing process again." };
+                }
+
+                try {
+                    const billingSnapshot = await db.collection('billing_emails').get();
+                    let amountDue = null;
+                    billingSnapshot.forEach(doc => {
+                        const billData = doc.data();
+                        if ((billData.account === accountNum || billData.accountNumber === accountNum) && billData.amount) {
+                            amountDue = billData.amount;
+                        }
+                    });
+
+                    userSessions.delete(sender_psid);
+                    // We keep accountRecoveryData so they can upload a receipt immediately after
+
+                    if (amountDue) {
+                        return { text: `Your current outstanding balance is: ₱${amountDue}.` };
+                    } else {
+                        return { text: "You have no bills to pay at the moment." };
+                    }
+                } catch (err) {
+                    console.error("DB Error:", err);
+                    return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+                }
+            } else {
+                return { text: "Would you like to check your 'Balance' or see 'Payment' methods?" };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_NAME') {
+            try {
+                const usersSnapshot = await db.collection('users').get();
+                let matches = [];
+                usersSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const name = (data.name || data.firstName || data.lastName || '').toLowerCase();
+                    if (name && name.includes(msg)) {
+                        matches.push(data);
+                    }
+                });
+
+                if (matches.length > 0) {
+                    accountRecoveryData.set(sender_psid, { matches: matches, currentIndex: 0, tries: 0 });
+                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_CONFIRM');
+                    const firstMatch = matches[0];
+                    const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
+                    return { text: `We found an account for ${matchedName}. Is this you? (Yes/No)` };
+                } else {
+                    return { text: "We couldn't find an account with that name. Please try another name or type 'Cancel' to stop." };
+                }
+            } catch (err) {
+                console.error("DB Error:", err);
+                return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_CONFIRM') {
+            const data = accountRecoveryData.get(sender_psid);
+            if (!data || !data.matches) {
+                userSessions.delete(sender_psid);
+                return { text: "Session expired. Please start again." };
+            }
+
+            if (msg.match(/(yes|oo|ako|proceed)/i)) {
+                const match = data.matches[data.currentIndex];
+                const accountNum = match.account || match.accountNumber || 'Not found';
+                const pass = match.password || 'Not set';
+                
+                accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
+                userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+                return { text: `Great! Your Account Number is ${accountNum}.\n\nWould you also like to see your password? (Yes/No)` };
+            } else if (msg.match(/(no|hindi)/i)) {
+                data.currentIndex++;
+                data.tries = (data.tries || 0) + 1;
+                
+                if (data.tries >= 5) {
+                    userSessions.delete(sender_psid);
+                    accountRecoveryData.delete(sender_psid);
+                    return { text: "We've reached the maximum number of attempts. Please wait, and our agent will assist you shortly." };
+                } else if (data.currentIndex < data.matches.length) {
+                    const nextMatch = data.matches[data.currentIndex];
+                    const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
+                    return { text: `How about ${matchedName}? Is this you? (Yes/No)` };
+                } else {
+                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
+                    accountRecoveryData.delete(sender_psid);
+                    return { text: "We couldn't find any other matching accounts. Please try a different name, or wait for an agent." };
+                }
+            } else {
+                return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_PASSWORD') {
+            if (msg.match(/(yes|oo|sige)/i)) {
+                const data = accountRecoveryData.get(sender_psid);
+                const pass = data ? data.password : 'Not set';
+                userSessions.delete(sender_psid);
+                accountRecoveryData.delete(sender_psid);
+                return { text: `Your password is: ${pass}\n\nThank you for choosing RFiberX!` };
+            } else if (msg.match(/(no|hindi)/i)) {
+                userSessions.delete(sender_psid);
+                accountRecoveryData.delete(sender_psid);
+                return { text: "Okay! Thank you for choosing RFiberX!" };
+            } else {
+                return { text: "Would you like to see your password? Please reply 'Yes' or 'No'." };
             }
         }
     }
@@ -134,22 +388,28 @@ async function getAutoReply(text, sender_psid) {
         };
     }
 
-    // First Line of Defense: Fast Keyword Matching (0 API Requests)
+    // =========================================================================
+    // 🔍 SECTION 2: INTENT CLASSIFICATION & KEYWORD MATCHING
+    // This block determines what the user wants to do based on trigger words.
+    // =========================================================================
     let ai_decision = null;
     if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los)/i)) {
         ai_decision = 'TECHNICAL_SUPPORT';
-    } else if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad)/i)) {
+    } else if (msg.match(/(lipat|relocate|transfer|move|ibang bahay)/i)) {
+        ai_decision = 'RELOCATION';
+    } else if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
         ai_decision = 'BILLING';
-    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b)/i)) {
+    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b|\bhi\b|\bhello\b|eto po ba|rfiberx)/i)) {
         ai_decision = 'APPLICATION';
     } else if (msg.match(/(password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
-    } else if (msg.match(/(agent|support|tao|operator|customer service)/i)) {
+    } else if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
 
     if (!ai_decision) {
-        // Second Line of Defense: Gemini AI for complex sentences
+        // Second Line of Defense: Gemini AI for complex sentences (TEMPORARILY DISABLED)
+        /*
         try {
             // Fetch Gemini API key from Firestore
             const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
@@ -200,49 +460,37 @@ async function getAutoReply(text, sender_psid) {
             console.error("Gemini Error:", error);
             return { text: "We apologize, but we encountered a system error: " + error.message };
         }
+        */
+        console.log("🤖 Gemini is temporarily disabled. No keywords matched. Remaining silent.");
     } else {
         console.log("⚡ Fast Keyword Matched Intent as: " + ai_decision);
     }
 
-    // Process the final decision (from either Keywords or Gemini)
+    // =========================================================================
+    // 💬 SECTION 3: INITIAL RESPONSES & FLOW STARTERS
+    // This block starts a conversation flow or sends a direct response based on 
+    // the intent classified in Section 2.
+    // =========================================================================
     switch (ai_decision) {
-            case 'TECHNICAL_SUPPORT':
-                userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
-                return { text: "We apologize for the inconvenience. Are you experiencing (A) Slow Internet, (B) No Internet, or (C) Red light flashing?" };
-            
-            case 'RELOCATION':
-                return { text: `Good day! For site transfers or modem relocation, please send:
-• Account Name:
-• Account ID / Number:
-• Current Address:
-• New Target Address:
-• Active Contact Number:
+        case 'TECHNICAL_SUPPORT':
+            userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
+            return { text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?" };
 
-Our team will verify if there is an available NAP box/port at your new site and update you on the relocation process.
+        case 'RELOCATION':
+            userSessions.set(sender_psid, 'RELOCATION_STEP_1');
+            return { text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
 
-Thank you for choosing RFIBERX Telecom!` };
-            
-            case 'APPLICATION':
-                return { text: "Are you interested in applying for an RFiberX internet connection? You can sign up directly on our website: https://rfiberx.net/apply, or simply provide your complete name, address, and contact number here so we can assist you." };
-            
-            case 'BILLING':
-                return { text: `We accept the following payment methods:
+        case 'APPLICATION':
+            userSessions.set(sender_psid, 'APPLICATION_STEP_1');
+            return { text: "Good day! Are you interested in applying for a new RFiberX internet connection? You can sign up quickly on our website: https://rfiberx.net/apply, or we can do it right here. Would you like to apply here? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
 
-1. GCash:
-•Account Name: RE****L B.
-•Account Nuber: 09058395471 
+        case 'BILLING':
+            userSessions.set(sender_psid, 'BILLING_STEP_1');
+            return { text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please reply with 'Forgot'." };
 
-2. UnionBank:
-•Account Name: RFIBERX
-•Account Number: 1096-6732-3727
-
-3.Cash Payment:
-•Visit our official office location.
-
-Note: All transactions and payment are strictly non-refundable.` };
-            
-            case 'PLANS':
-                return { text: `Good day! Here are our available RFIBERX internet plans:
+        case 'PLANS':
+            return {
+                text: `Good day! Here are our available RFIBERX internet plans:
 • 30 Mbps – ₱800
 • 50 Mbps – ₱1,000
 • 70 Mbps – ₱1,300
@@ -253,21 +501,39 @@ Note: All transactions and payment are strictly non-refundable.` };
 For inquiries or applications, kindly message us with your preferred plan and contact details. Our team will assist you with the application process.
 
 Thank you for choosing RFIBERX Telecom!` };
-            
-            case 'CHANGE_PASSWORD':
-                return { text: `Good day Sir/Ma'am! I'm sorry if you're having a hard time with your current password. Changing it is very simple.
 
-Changing your Wi-Fi password
-1. Open your web browser and enter 192.168.1.1, 192.168.100.1, or 192.168.8.1.
-2. Log in using the username user and password user.
-3. Click on Local Network and then WLAN.
-4. Select WLAN SSID Configuration.
-5. Enter your new password in the WPA Passphrase field and click Apply to save your changes.
+        case 'CHANGE_PASSWORD':
+            userSessions.set(sender_psid, 'CHANGE_PASSWORD_STEP_1');
+            return {
+                attachment: {
+                    type: "template",
+                    payload: {
+                        template_type: "button",
+                        text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE REPLY to this chat with the correct gateway (e.g. '192.168.1.1') so I can send you the exact step-by-step tutorial!",
+                        buttons: [
+                            {
+                                type: "web_url",
+                                url: "http://192.168.1.1",
+                                title: "192.168.1.1"
+                            },
+                            {
+                                type: "web_url",
+                                url: "http://192.168.100.1",
+                                title: "192.168.100.1"
+                            },
+                            {
+                                type: "web_url",
+                                url: "http://192.168.8.1",
+                                title: "192.168.8.1"
+                            }
+                        ]
+                    }
+                }
+            };
 
-Were you able to log in to the modem page successfully?` };
-            
-            case 'AREA_INQUIRY':
-                return { text: `Good day! To check if your location is covered by RFIBERX and available for installation, kindly provide:
+        case 'AREA_INQUIRY':
+            return {
+                text: `Good day! To check if your location is covered by RFIBERX and available for installation, kindly provide:
 • Complete Name:
 • Phone Number:
 • Complete Address:
@@ -276,21 +542,17 @@ Were you able to log in to the modem page successfully?` };
 RFIBERX service is currently available in selected areas, including Magdalena and Majayjay. Our team will verify the exact coverage, NAP/port availability, and installation feasibility at your address.
 
 Thank you for choosing RFIBERX Telecom!` };
-            
-            case 'ACCOUNT_INQUIRY':
-                return { text: `To log in to your RFIBERX mobile app:
-• Account Number: Use the account number provided by RFIBERX or the technician.
-• Password: Use the Last Name of the registered account holder as provided or instructed by the technician.Enter your Account Number and Password on the login page, then click Login.If you are unable to log in, please make sure that your Account Number and Last Name are entered correctly.
- You may also contact RFIBERX Support for assistance.
 
-Thank you for choosing RFIBERX Teleco` };
-            
-            case 'GREETING':
-                return { text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please type your inquiry or concern (for example: 'Slow internet', 'Billing inquiry', or 'I want to apply') so we can assist you properly." };
+        case 'ACCOUNT_INQUIRY':
+            userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
+            return { text: "To help you find your account details, please provide your Full Name." };
 
-            default:
-                return null;
-        }
+        case 'GREETING':
+            return { text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please type your inquiry or concern (for example: 'Slow internet', 'Billing inquiry', or 'I want to apply') so we can assist you properly." };
+
+        default:
+            return null;
+    }
 }
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAOCL1hceK8BSMsUSSYLdHh8bEVNuxGJZC7t24ZBPdG2x6ObyB3XIAclpVVGtvLrJQiHnZBaTWJmHsFXucILzvSbrTedn02okEsU446aEc0ZAzVLagUqjn78d6bzLhOcEZAITP0dIZAVzeuPlBYZADXH4St6j2NXfTtdjrZAHTptA1ZAsfUhYe2hnbweKApPjj3kmsfTSxNSNrgZDZD';
@@ -321,6 +583,101 @@ async function callSendAPI(sender_psid, response) {
         }
     } catch (err) {
         console.error('❌ Failed to fetch Graph API:', err);
+    }
+}
+
+// Process Image Attachment using Gemini Vision
+async function processImageAttachment(imageUrl, sender_psid) {
+    const data = accountRecoveryData.get(sender_psid);
+    const accountNum = data ? data.account : null;
+    
+    if (!accountNum) {
+        userSessions.set(sender_psid, 'BILLING_STEP_1');
+        return { text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it." };
+    }
+
+    try {
+        console.log("📸 Processing image receipt...");
+        // Fetch Gemini API key
+        const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
+        let apiKey = '';
+        if (apiKeyDoc.exists && apiKeyDoc.data().gemini) {
+            apiKey = apiKeyDoc.data().gemini;
+        }
+        if (!apiKey) {
+            console.error("Gemini API Key missing");
+            return null;
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Download image and convert to Base64
+        const imageResp = await fetch(imageUrl);
+        const buffer = await imageResp.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString("base64");
+        
+        const imagePart = {
+            inlineData: {
+                data: base64Data,
+                mimeType: "image/jpeg"
+            }
+        };
+
+        const prompt = `I need you to scan this GCash/UnionBank receipt image and extract text.
+Reply ONLY with a strictly formatted JSON object without markdown formatting. If it is NOT a receipt, reply with {"error": "NOT_A_RECEIPT"}.
+If it IS a receipt, extract:
+{
+  "referenceNumber": "The 13-digit reference number",
+  "amount": "Numeric amount (e.g. 1500)",
+  "date": "Full date",
+  "senderName": "Name of the sender",
+  "receiverName": "Name of the receiver"
+}`;
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const responseText = result.response.text();
+        
+        // Clean JSON formatting
+        let jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let extracted = JSON.parse(jsonStr);
+
+        if (extracted.error === "NOT_A_RECEIPT") {
+            console.log("❌ Image is not a receipt. Ignoring.");
+            return null; // silently ignore
+        }
+
+        const refNo = extracted.referenceNumber ? String(extracted.referenceNumber).replace(/[^0-9]/g, '') : '';
+        if (refNo.length !== 13) {
+            return { text: `🚨 FRAUD DETECTED 🚨\n\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits.` };
+        }
+
+        // Duplicate Check
+        const receiptsRef = db.collection('receipts');
+        const q = receiptsRef.where("referenceNumber", "==", refNo);
+        const dupCheck = await q.get();
+        if (!dupCheck.empty) {
+            return { text: `🚨 FRAUD DETECTED 🚨\n\nThis Reference Number (${refNo}) has already been used in another receipt. Submitting duplicate receipts is strictly prohibited.` };
+        }
+
+        // Save receipt to Firestore
+        await receiptsRef.add({
+            account: accountNum,
+            referenceNumber: refNo,
+            amount: extracted.amount || 0,
+            date: extracted.date || '',
+            senderName: extracted.senderName || '',
+            receiverName: extracted.receiverName || '',
+            imageUrl: imageUrl,
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        console.log("✅ Receipt saved successfully!");
+        return { text: `Thank you! We have successfully received your payment receipt for ₱${extracted.amount || '0'} (Ref: ${refNo}). Your account has been updated.` };
+
+    } catch (err) {
+        console.error("Error processing image receipt:", err);
+        return { text: `Sorry, there was an error processing your receipt. Please try again later. (Error: ${err.message || err})` };
     }
 }
 
