@@ -403,6 +403,8 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'APPLICATION';
     } else if (msg.match(/(password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
+    } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
+        ai_decision = 'GREETING';
     } else if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
