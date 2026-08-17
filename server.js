@@ -63,26 +63,73 @@ app.post('/webhook', (req, res) => {
                 console.log("Message Text: ", webhook_event.message?.text || "[No text]");
                 console.log("-----------------------------------------");
 
-                // Save sender_psid to Firestore
-                db.collection('messenger_psids').doc(sender_psid).set({
-                    psid: sender_psid,
-                    lastMessage: webhook_event.message?.text || "",
-                    lastInteraction: FieldValue.serverTimestamp()
-                }, { merge: true })
-                    .then(() => console.log(`✅ PSID ${sender_psid} saved to Firestore!`))
-                    .catch(err => console.error("❌ Error saving to Firestore: ", err));
+                // Fetch PSID from Firestore to check pause state BEFORE updating timestamp
+                const psidRef = db.collection('messenger_psids').doc(sender_psid);
+                psidRef.get().then(doc => {
+                    let is_paused = false;
+                    let lastInteractionTime = 0;
+                    if (doc.exists) {
+                        const data = doc.data();
+                        is_paused = data.is_paused === true;
+                        if (data.lastInteraction) {
+                            lastInteractionTime = data.lastInteraction.toMillis();
+                        }
+                    }
 
-                // Auto-reply logic
-                if (webhook_event.message) {
-                    // Send the auto-reply ONLY to Rfiberx Blanco
-                    const RFIBERX_PSID = '28146825618339223';
-                    if (sender_psid === RFIBERX_PSID) {
-                        if (webhook_event.message.text) {
-                            getAutoReply(webhook_event.message.text, sender_psid).then(replyMessage => {
-                                if (replyMessage) {
-                                    callSendAPI(sender_psid, replyMessage);
-                                }
-                            }).catch(err => console.error("Error generating reply:", err));
+                    const now = Date.now();
+                    let shouldProcessMessage = true;
+
+                    // 10-second timer logic
+                    if (is_paused) {
+                        const PAUSE_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
+                        if (lastInteractionTime && (now - lastInteractionTime > PAUSE_TIMEOUT_MS)) {
+                            // Wake up!
+                            is_paused = false;
+                            callSendAPI(sender_psid, { text: "⚠️ The human agent session has ended due to inactivity. You are now talking to the RFiberX Auto-Bot again!" });
+                        } else {
+                            // Stay paused
+                            shouldProcessMessage = false;
+                        }
+                    }
+
+                    // Save new timestamp and state to Firestore
+                    const recoveryData = accountRecoveryData.get(sender_psid);
+                    const linkedAccount = recoveryData ? recoveryData.account : null;
+                    
+                    let psidPayload = {
+                        psid: sender_psid,
+                        lastMessage: webhook_event.message?.text || "",
+                        lastInteraction: FieldValue.serverTimestamp(),
+                        is_paused: is_paused
+                    };
+                    if (linkedAccount) {
+                        psidPayload.account = linkedAccount;
+                    }
+
+                    psidRef.set(psidPayload, { merge: true })
+                        .then(() => console.log(`✅ PSID ${sender_psid} timestamp updated.`))
+                        .catch(err => console.error("❌ Error saving to Firestore: ", err));
+
+                    // If still paused, ignore the message completely
+                    if (!shouldProcessMessage) {
+                        console.log(`⏸️ Bot is paused for PSID ${sender_psid}. Ignoring message.`);
+                        return;
+                    }
+
+                    // Auto-reply logic
+                    if (webhook_event.message) {
+                        // Send the auto-reply ONLY to Rfiberx Blanco
+                        const RFIBERX_PSID = '28146825618339223';
+                        if (sender_psid === RFIBERX_PSID) {
+                            if (webhook_event.message.text) {
+                                getAutoReply(webhook_event.message.text, sender_psid).then(replyMessage => {
+                                    if (replyMessage) {
+                                        if (replyMessage.isHandover) {
+                                            psidRef.set({ is_paused: true }, { merge: true });
+                                        }
+                                        callSendAPI(sender_psid, replyMessage);
+                                    }
+                                }).catch(err => console.error("Error generating reply:", err));
                         } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
                             const imageUrl = webhook_event.message.attachments[0].payload.url;
                             processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
@@ -278,7 +325,7 @@ Our team will check if your area is serviceable and contact you for installation
                 }
 
                 try {
-                    const billingSnapshot = await db.collection('billing_emails').get();
+                    const billingSnapshot = await db.collectionGroup('billing_emails').get();
                     let amountDue = null;
                     billingSnapshot.forEach(doc => {
                         const billData = doc.data();
@@ -565,10 +612,74 @@ Thank you for choosing RFIBERX Telecom!` };
         case 'GREETING':
             return { text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please type your inquiry or concern (for example: 'Slow internet', 'Billing inquiry', or 'I want to apply') so we can assist you properly." };
 
+        case 'UNKNOWN':
+            return { text: "I am connecting you to a human agent now. Please wait.", isHandover: true };
+
         default:
             return null;
     }
 }
+
+// Intercept getAutoReply to append persistent reminder
+const originalGetAutoReply = getAutoReply;
+getAutoReply = async function(text, sender_psid) {
+    let reply = await originalGetAutoReply(text, sender_psid);
+    if (!reply) return null;
+
+    // Check if they have a pending bill
+    const recovery = accountRecoveryData.get(sender_psid);
+    if (recovery && recovery.account) {
+        try {
+            const pendingQuery = await db.collectionGroup('billing_emails')
+                .where('accountNumber', '==', recovery.account)
+                .where('status', '==', 'Pending Verification')
+                .limit(1).get();
+                
+            if (!pendingQuery.empty) {
+                reply.text += "\n\n*(Reminder: Your billing statement is currently Waiting for approval.)*";
+            }
+        } catch (e) {
+            console.error("Reminder check error:", e);
+        }
+    }
+    return reply;
+}
+
+// -------------------------------------------------------------------------
+// REAL-TIME PAID LISTENER
+// Proactively notifies clients when their bill is approved
+// -------------------------------------------------------------------------
+db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
+    snapshot.docChanges().forEach(async (change) => {
+        if (change.type === 'modified') {
+            const data = change.doc.data();
+            
+            // If the status was just changed to Paid and hasn't been notified yet
+            if (data.status === 'Paid' && data.botNotifiedPaid !== true) {
+                try {
+                    // Find the client's PSID using the account number
+                    const acct = data.accountNumber || data.account;
+                    if (acct) {
+                        const psidSnap = await db.collection('messenger_psids').where('account', '==', acct).limit(1).get();
+                        if (!psidSnap.empty) {
+                            const psid = psidSnap.docs[0].id;
+                            
+                            // Send proactive message
+                            await callSendAPI(psid, { 
+                                text: `🎉 Great news! Your recent payment has been verified and your billing statement is now officially marked as Paid. Thank you!` 
+                            });
+                            
+                            // Mark as notified so it doesn't spam
+                            await change.doc.ref.update({ botNotifiedPaid: true });
+                        }
+                    }
+                } catch(e) {
+                    console.error("Failed to send paid notification:", e);
+                }
+            }
+        }
+    });
+});
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN || 'EAAOCL1hceK8BSMsUSSYLdHh8bEVNuxGJZC7t24ZBPdG2x6ObyB3XIAclpVVGtvLrJQiHnZBaTWJmHsFXucILzvSbrTedn02okEsU446aEc0ZAzVLagUqjn78d6bzLhOcEZAITP0dIZAVzeuPlBYZADXH4St6j2NXfTtdjrZAHTptA1ZAsfUhYe2hnbweKApPjj3kmsfTSxNSNrgZDZD';
 
@@ -675,20 +786,60 @@ If it IS a receipt, extract:
             return { text: `🚨 FRAUD DETECTED 🚨\n\nThis Reference Number (${refNo}) has already been used in another receipt. Submitting duplicate receipts is strictly prohibited.` };
         }
 
-        // Save receipt to Firestore
+        // 1. Fetch Client Details
+        let clientName = 'Unknown';
+        let userId = null;
+        
+        const usersSnap = await db.collection('users').where('accountNumber', '==', accountNum).limit(1).get();
+        if (!usersSnap.empty) {
+            const userDoc = usersSnap.docs[0];
+            const uData = userDoc.data();
+            clientName = uData.name || uData.firstName || 'Unknown';
+            userId = userDoc.id;
+        } else {
+            const usersSnap2 = await db.collection('users').where('account', '==', accountNum).limit(1).get();
+            if (!usersSnap2.empty) {
+                const userDoc2 = usersSnap2.docs[0];
+                const uData2 = userDoc2.data();
+                clientName = uData2.name || uData2.firstName || 'Unknown';
+                userId = userDoc2.id;
+            }
+        }
+
+        const now = new Date();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+        // 2. Save exactly matching client portal schema
         await receiptsRef.add({
-            account: accountNum,
             referenceNumber: refNo,
             amount: extracted.amount || 0,
             date: extracted.date || '',
             senderName: extracted.senderName || '',
             receiverName: extracted.receiverName || '',
+            clientName: clientName,
+            clientAccountNumber: accountNum,
+            billingMonth: billingMonth,
+            status: "Pending Verification",
             imageUrl: imageUrl,
+            sender_psid: sender_psid, // Hidden tracker for bot notifications
             timestamp: FieldValue.serverTimestamp()
         });
 
         console.log("✅ Receipt saved successfully!");
-        return { text: `Thank you! We have successfully received your payment receipt for ₱${extracted.amount || '0'} (Ref: ${refNo}). Your account has been updated.` };
+
+        // 3. Update the billing statement status to Pending
+        if (userId) {
+            const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
+            for (let docSnap of billingSnap.docs) {
+                const status = docSnap.data().status || '';
+                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'pending verification' && status.toLowerCase() !== 'pending') {
+                    await docSnap.ref.update({ status: 'Pending Verification' });
+                }
+            }
+        }
+
+        return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
 
     } catch (err) {
         console.error("Error processing image receipt:", err);
