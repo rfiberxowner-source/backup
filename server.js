@@ -107,6 +107,17 @@ app.post('/webhook', (req, res) => {
 async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
 
+    let clientName = "Valued Customer";
+    try {
+        const response = await fetch(`https://graph.facebook.com/${sender_psid}?fields=first_name&access_token=${PAGE_ACCESS_TOKEN}`);
+        const data = await response.json();
+        if (data.first_name) {
+            clientName = data.first_name;
+        }
+    } catch (e) {
+        console.error("Error fetching client name:", e);
+    }
+
     // =========================================================================
     // 🧠 SECTION 1: MULTI-TURN CONVERSATION LOGIC (STATE MACHINE)
     // This block handles users who are already in a specific conversation flow
@@ -123,9 +134,9 @@ async function getAutoReply(text, sender_psid) {
             userSessions.delete(sender_psid); // Clear memory state
 
             if (msg.match(/(slow|mabagal|bagal)/i)) {
-                return { text: `Hi [Client Name],\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.` };
+                return { text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.` };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
-                return { text: `Hi [Client Name],\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
+                return { text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
             } else {
                 return { text: "Please clarify if you are experiencing Slow Internet, No Internet, or Red light flashing." };
             }
