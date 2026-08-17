@@ -25,6 +25,7 @@ const accountRecoveryData = new Map();
 
 const app = express();
 app.use(express.json());
+app.use('/public', express.static('public'));
 
 // A simple verify token for Facebook to validate your webhook.
 // You will enter this exact string in the Facebook Developer Portal.
@@ -122,12 +123,21 @@ app.post('/webhook', (req, res) => {
                         const RFIBERX_PSID = '28146825618339223';
                         if (sender_psid === RFIBERX_PSID) {
                             if (webhook_event.message.text) {
-                                getAutoReply(webhook_event.message.text, sender_psid).then(replyMessage => {
+                                getAutoReply(webhook_event.message.text, sender_psid).then(async replyMessage => {
                                     if (replyMessage) {
-                                        if (replyMessage.isHandover) {
-                                            psidRef.set({ is_paused: true }, { merge: true });
+                                        if (Array.isArray(replyMessage)) {
+                                            for (let msg of replyMessage) {
+                                                if (msg.isHandover) {
+                                                    await psidRef.set({ is_paused: true }, { merge: true });
+                                                }
+                                                await callSendAPI(sender_psid, msg);
+                                            }
+                                        } else {
+                                            if (replyMessage.isHandover) {
+                                                psidRef.set({ is_paused: true }, { merge: true });
+                                            }
+                                            callSendAPI(sender_psid, replyMessage);
                                         }
-                                        callSendAPI(sender_psid, replyMessage);
                                     }
                                 }).catch(err => console.error("Error generating reply:", err));
                             } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
@@ -228,7 +238,10 @@ Our team will check if your area is serviceable and contact you for installation
             }
         } else if (userSessions.get(sender_psid) === 'CHANGE_PASSWORD_STEP_1') {
             if (msg.includes('192.168.1.1')) {
-                return { text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
+                return [
+                    { text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." },
+                    { attachment: { type: "video", payload: { url: "https://rfiberx.net/public/videos/192.168.1.1.mp4", is_reusable: true } } }
+                ];
             } else if (msg.includes('192.168.100.1')) {
                 return { text: "Here is the tutorial for 192.168.100.1:\n\n1. Login with telecomadmin/admintelecom.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
             } else if (msg.includes('192.168.8.1')) {
@@ -466,6 +479,10 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'CHANGE_PASSWORD';
     } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
         ai_decision = 'GREETING';
+    } else if (msg.match(/(plans|packages|magkano plan|internet plans|speeds|options)/i)) {
+        ai_decision = 'PLANS';
+    } else if (msg.match(/(area|location|covered ba|available ba sa|serviceable|address|sakop)/i)) {
+        ai_decision = 'AREA_INQUIRY';
     } else if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
@@ -537,11 +554,11 @@ Our team will check if your area is serviceable and contact you for installation
     switch (ai_decision) {
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
-            return { text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?" };
+            return { text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just type \"Agent\".)*" };
 
         case 'RELOCATION':
             userSessions.set(sender_psid, 'RELOCATION_STEP_1');
-            return { text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
+            return { text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just type \"Agent\".)*" };
 
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
