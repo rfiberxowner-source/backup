@@ -84,9 +84,8 @@ app.post('/webhook', (req, res) => {
                     if (is_paused) {
                         const PAUSE_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
                         if (lastInteractionTime && (now - lastInteractionTime > PAUSE_TIMEOUT_MS)) {
-                            // Wake up!
+                            // Wake up silently!
                             is_paused = false;
-                            callSendAPI(sender_psid, { text: "⚠️ The human agent session has ended due to inactivity. You are now talking to the RFiberX Auto-Bot again!" });
                         } else {
                             // Stay paused
                             shouldProcessMessage = false;
@@ -238,10 +237,22 @@ Our team will check if your area is serviceable and contact you for installation
             }
         } else if (userSessions.get(sender_psid) === 'CHANGE_PASSWORD_STEP_1') {
             if (msg.includes('192.168.1.1')) {
-                return [
-                    { text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." },
-                    { attachment: { type: "video", payload: { url: "https://rfiberx.net/public/videos/192.168.1.1.mp4", is_reusable: true } } }
-                ];
+                return {
+                    attachment: {
+                        type: "template",
+                        payload: {
+                            template_type: "button",
+                            text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply 'Cancel').",
+                            buttons: [
+                                {
+                                    type: "web_url",
+                                    url: "https://rfiberx.net/public/videos/192.168.1.1.mp4",
+                                    title: "▶️ Watch Video Tutorial"
+                                }
+                            ]
+                        }
+                    }
+                };
             } else if (msg.includes('192.168.100.1')) {
                 return { text: "Here is the tutorial for 192.168.100.1:\n\n1. Login with telecomadmin/admintelecom.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
             } else if (msg.includes('192.168.8.1')) {
