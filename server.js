@@ -130,16 +130,17 @@ app.post('/webhook', (req, res) => {
                                         callSendAPI(sender_psid, replyMessage);
                                     }
                                 }).catch(err => console.error("Error generating reply:", err));
-                        } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
-                            const imageUrl = webhook_event.message.attachments[0].payload.url;
-                            processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
-                                if (replyMessage) {
-                                    callSendAPI(sender_psid, replyMessage);
-                                }
-                            }).catch(err => console.error("Error processing image:", err));
+                            } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
+                                const imageUrl = webhook_event.message.attachments[0].payload.url;
+                                processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
+                                    if (replyMessage) {
+                                        callSendAPI(sender_psid, replyMessage);
+                                    }
+                                }).catch(err => console.error("Error processing image:", err));
+                            }
                         }
                     }
-                }
+                }).catch(err => console.error("Error getting PSID:", err));
             }
         });
 
