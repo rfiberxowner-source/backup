@@ -412,6 +412,8 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'BILLING';
     } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b|\bhi\b|\bhello\b|eto po ba|rfiberx)/i)) {
         ai_decision = 'APPLICATION';
+    } else if (msg.match(/(account number|ano account ko|forgot account|forgot password|portal password|account info|my account)/i)) {
+        ai_decision = 'ACCOUNT_INQUIRY';
     } else if (msg.match(/(password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
     } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
