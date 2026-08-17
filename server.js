@@ -478,15 +478,15 @@ Our team will check if your area is serviceable and contact you for installation
     let ai_decision = null;
     if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|technical support)/i)) {
         ai_decision = 'TECHNICAL_SUPPORT';
-    } else if (msg.match(/(lipat|relocate|transfer|move|ibang bahay)/i)) {
+    } else if (msg.match(/(lipat|relocate|relocation|transfer|move|ibang bahay)/i)) {
         ai_decision = 'RELOCATION';
-    } else if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
+    } else if (msg.match(/(bayad|magkano|gcash|payment|bill|billing|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
         ai_decision = 'BILLING';
-    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b|eto po ba|rfiberx)/i)) {
+    } else if (msg.match(/(apply|apply now|kabit|pakabit|install|\bbago\b|eto po ba|rfiberx)/i)) {
         ai_decision = 'APPLICATION';
-    } else if (msg.match(/(account number|ano account ko|forgot account|forgot password|portal password|account info|my account)/i)) {
+    } else if (msg.match(/(account number|account inquiry|ano account ko|forgot account|forgot password|portal password|account info|my account)/i)) {
         ai_decision = 'ACCOUNT_INQUIRY';
-    } else if (msg.match(/(password|wifi pass|change pass)/i)) {
+    } else if (msg.match(/(password|change password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
     } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
         ai_decision = 'GREETING';
