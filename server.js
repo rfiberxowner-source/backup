@@ -476,7 +476,7 @@ Our team will check if your area is serviceable and contact you for installation
     // This block determines what the user wants to do based on trigger words.
     // =========================================================================
     let ai_decision = null;
-    if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los)/i)) {
+    if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|technical support)/i)) {
         ai_decision = 'TECHNICAL_SUPPORT';
     } else if (msg.match(/(lipat|relocate|transfer|move|ibang bahay)/i)) {
         ai_decision = 'RELOCATION';
@@ -639,7 +639,19 @@ Thank you for choosing RFIBERX Telecom!` };
             return { text: "To help you find your account details, please provide your Full Name." };
 
         case 'GREETING':
-            return { text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please type your inquiry or concern (for example: 'Slow internet', 'Billing inquiry', or 'I want to apply') so we can assist you properly." };
+            return {
+                text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:",
+                quick_replies: [
+                    { content_type: "text", title: "Technical Support", payload: "TECHNICAL_SUPPORT" },
+                    { content_type: "text", title: "Billing", payload: "BILLING" },
+                    { content_type: "text", title: "Apply Now", payload: "APPLICATION" },
+                    { content_type: "text", title: "Internet Plans", payload: "PLANS" },
+                    { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
+                    { content_type: "text", title: "Area Inquiry", payload: "AREA_INQUIRY" },
+                    { content_type: "text", title: "Relocation", payload: "RELOCATION" },
+                    { content_type: "text", title: "Account Inquiry", payload: "ACCOUNT_INQUIRY" }
+                ]
+            };
 
         case 'UNKNOWN':
             return { text: "I am connecting you to a human agent now. Please wait.", isHandover: true };
