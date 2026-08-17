@@ -182,7 +182,7 @@ async function getAutoReply(text, sender_psid) {
     // =========================================================================
     if (userSessions.has(sender_psid)) {
         // Global escape hatch to cancel out of any flow
-        if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|operator|tao|customer service)/i)) {
+        if (msg.match(/(cancel|stop|ayoko|agent|operator|tao|customer service)/i)) {
             userSessions.delete(sender_psid);
             return { text: "Okay, we've cancelled that request. If you need to talk to a human agent, please wait, and our team will be with you shortly. How else can I help you today?" };
         }
