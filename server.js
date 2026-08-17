@@ -482,7 +482,7 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'RELOCATION';
     } else if (msg.match(/(bayad|magkano|gcash|payment|bill|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
         ai_decision = 'BILLING';
-    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b|\bhi\b|\bhello\b|eto po ba|rfiberx)/i)) {
+    } else if (msg.match(/(apply|kabit|pakabit|install|\bbago\b|eto po ba|rfiberx)/i)) {
         ai_decision = 'APPLICATION';
     } else if (msg.match(/(account number|ano account ko|forgot account|forgot password|portal password|account info|my account)/i)) {
         ai_decision = 'ACCOUNT_INQUIRY';
