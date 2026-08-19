@@ -122,7 +122,8 @@ app.post('/webhook', (req, res) => {
                         const RFIBERX_PSID = '28146825618339223';
                         if (sender_psid === RFIBERX_PSID) {
                             if (webhook_event.message.text) {
-                                getAutoReply(webhook_event.message.text, sender_psid).then(async replyMessage => {
+                                let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
+                                getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
                                     if (replyMessage) {
                                         if (Array.isArray(replyMessage)) {
                                             for (let msg of replyMessage) {
@@ -181,6 +182,14 @@ async function getAutoReply(text, sender_psid) {
     // (e.g. they are answering a step-by-step form for Billing, Tech Support, etc.)
     // =========================================================================
     if (userSessions.has(sender_psid)) {
+        if (msg === 'urgent_tech_agent') {
+            userSessions.delete(sender_psid);
+            return { 
+                text: "🚨 HIGH PRIORITY ALERT: Client is reporting a severe connection issue (No Internet / Red Light). I am connecting you to our technical support team immediately. Please wait.", 
+                isHandover: true 
+            };
+        }
+
         // Global escape hatch to cancel out of any flow
         if (msg.match(/(cancel|stop|ayoko|agent|operator|tao|customer service)/i)) {
             userSessions.delete(sender_psid);
@@ -200,17 +209,24 @@ async function getAutoReply(text, sender_psid) {
                     ]
                 };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
-                return { text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
+                return { 
+                    text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem.`,
+                    quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "URGENT_TECH_AGENT" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }
+                    ]
+                };
             } else {
                 return { text: "Please clarify if you are experiencing Slow Internet, No Internet, or Red light flashing." };
             }
         } else if (userSessions.get(sender_psid) === 'RELOCATION_STEP_1') {
             if (msg.match(/(yes|oo|sige|proceed)/i)) {
-                userSessions.delete(sender_psid); // Clear memory state
+                userSessions.set(sender_psid, 'RELOCATION_STEP_2');
                 return {
                     text: `Good day! For site transfers or modem relocation, please send:
+• Full Name:
 • Account Name:
-• Account ID / Number:
+• Account ID / Number (Optional):
 • Current Address:
 • New Target Address:
 • Active Contact Number:
@@ -221,6 +237,12 @@ Thank you for choosing RFIBERX Telecom!` };
             } else {
                 return { text: "Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
             }
+        } else if (userSessions.get(sender_psid) === 'RELOCATION_STEP_2') {
+            userSessions.delete(sender_psid); // Clear memory state
+            return {
+                text: "🚨 HIGH PRIORITY ALERT: Client submitted a Relocation Request. I am connecting you to our support team immediately to process this. Please wait.",
+                isHandover: true
+            };
         } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_1') {
             if (msg.match(/(yes|oo|sige|proceed)/i)) {
                 userSessions.delete(sender_psid); // Clear memory state
@@ -595,7 +617,14 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'RELOCATION':
             userSessions.set(sender_psid, 'RELOCATION_STEP_1');
-            return { text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just type \"Agent\".)*" };
+            return { 
+                text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just tap \"Agent\".)*",
+                quick_replies: [
+                    { content_type: "text", title: "Yes", payload: "Yes" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" },
+                    { content_type: "text", title: "Agent", payload: "URGENT_TECH_AGENT" }
+                ]
+            };
 
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
