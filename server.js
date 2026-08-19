@@ -697,6 +697,47 @@ Our team will check if your area is serviceable and contact you for installation
             } else {
                 return { text: "Would you like to see your password? Please reply 'Yes' or 'No'." };
             }
+        } else if (userSessions.get(sender_psid) === 'REMOVE_ACCOUNT_CONFIRM') {
+            if (msg.match(/(yes|oo|proceed)/i)) {
+                userSessions.set(sender_psid, 'REMOVE_ACCOUNT_VERIFY');
+                return { text: "For your security, please provide the exact Account Number or the Full Name of the account you want to remove." };
+            } else {
+                userSessions.delete(sender_psid);
+                accountRecoveryData.delete(sender_psid);
+                return { text: "Okay, we have cancelled the account removal process. Your account is still saved." };
+            }
+        } else if (userSessions.get(sender_psid) === 'REMOVE_ACCOUNT_VERIFY') {
+            const data = accountRecoveryData.get(sender_psid);
+            const savedAccountNum = data ? data.accountToRemove : null;
+            if (!savedAccountNum) {
+                userSessions.delete(sender_psid);
+                return { text: "Session expired. Please try again." };
+            }
+            
+            let accountName = "Unknown";
+            try {
+                const usersSnapshot = await db.collection('users').where('account', '==', savedAccountNum).limit(1).get();
+                if (!usersSnapshot.empty) {
+                    const userData = usersSnapshot.docs[0].data();
+                    accountName = (userData.name || userData.firstName || userData.lastName || '').trim().toLowerCase();
+                }
+            } catch (err) {}
+            
+            if (msg === savedAccountNum.toLowerCase() || (accountName !== "unknown" && msg.includes(accountName))) {
+                try {
+                    await db.collection('messenger_psids').doc(sender_psid).update({
+                        account: FieldValue.delete()
+                    });
+                    userSessions.delete(sender_psid);
+                    accountRecoveryData.delete(sender_psid);
+                    return { text: "Success! The account has been removed from your profile." };
+                } catch(e) {
+                    console.error("Error deleting account:", e);
+                    return { text: "An error occurred while removing your account. Please try again later." };
+                }
+            } else {
+                return { text: "The details you provided do not match the saved account. Please try again or type 'Cancel' to stop." };
+            }
         }
     }
 
@@ -745,6 +786,10 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'AREA_INQUIRY';
     } else if (msg.match(/(cancel|stop|ayoko)/i)) {
         ai_decision = 'CANCEL';
+    } else if (msg.match(/(change account|palit account|ibang account)/i)) {
+        ai_decision = 'CHANGE_ACCOUNT';
+    } else if (msg.match(/(remove account|tanggalin account|delete account)/i)) {
+        ai_decision = 'REMOVE_ACCOUNT';
     } else if (msg.match(/(no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
@@ -990,6 +1035,39 @@ Would you also like to see our internet plans?`,
                     { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
                 ]
             };
+
+        case 'CHANGE_ACCOUNT':
+            userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
+            return { text: "To change the account saved to your profile, please provide the Full Name or the name you remember for the new account you want to link." };
+
+        case 'REMOVE_ACCOUNT':
+            try {
+                const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
+                if (!savedAccount) {
+                    return { text: "You don't have an account saved to your profile right now." };
+                }
+
+                let accountName = savedAccount;
+                const usersSnapshot = await db.collection('users').where('account', '==', savedAccount).limit(1).get();
+                if (!usersSnapshot.empty) {
+                    const data = usersSnapshot.docs[0].data();
+                    accountName = data.name || data.firstName || data.lastName || savedAccount;
+                }
+
+                accountRecoveryData.set(sender_psid, { accountToRemove: savedAccount });
+                userSessions.set(sender_psid, 'REMOVE_ACCOUNT_CONFIRM');
+                return { 
+                    text: `Are you sure you want to remove the currently saved account (${accountName}) from your profile?`,
+                    quick_replies: [
+                        { content_type: "text", title: "Yes", payload: "Yes" },
+                        { content_type: "text", title: "No", payload: "No" }
+                    ]
+                };
+            } catch (err) {
+                console.error("Error fetching account for removal:", err);
+                return { text: "Sorry, there was an error accessing your account details." };
+            }
 
         case 'UNKNOWN':
             return { text: "I am connecting you to a human agent now. Please wait.", isHandover: true };
