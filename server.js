@@ -1171,9 +1171,29 @@ async function callSendAPI(sender_psid, response) {
 
 // Process Image Attachment using Gemini Vision
 async function processImageAttachment(imageUrl, sender_psid) {
-    const data = accountRecoveryData.get(sender_psid);
-    const accountNum = data ? data.account : null;
+    let accountNum = null;
     
+    // 1. Check current session memory
+    const data = accountRecoveryData.get(sender_psid);
+    if (data && data.account) {
+        accountNum = data.account;
+    }
+
+    // 2. If not in memory, check permanent Firestore memory
+    if (!accountNum) {
+        try {
+            const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+            if (psidDoc.exists && psidDoc.data().account) {
+                accountNum = psidDoc.data().account;
+                // Cache it for future messages in this session
+                accountRecoveryData.set(sender_psid, { account: accountNum });
+            }
+        } catch (e) {
+            console.error("Error fetching saved account for image processing:", e);
+        }
+    }
+    
+    // 3. If still no account, force them to provide it
     if (!accountNum) {
         userSessions.set(sender_psid, 'BILLING_STEP_1');
         return { text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it." };
@@ -1193,7 +1213,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
         // Download image and convert to Base64
         const imageResp = await fetch(imageUrl);
