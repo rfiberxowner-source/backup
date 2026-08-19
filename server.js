@@ -1329,8 +1329,8 @@ If it IS a receipt, extract:
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
             for (let docSnap of billingSnap.docs) {
                 const status = docSnap.data().status || '';
-                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'pending verification' && status.toLowerCase() !== 'pending') {
-                    await docSnap.ref.update({ status: 'Pending Verification' });
+                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'waiting' && status.toLowerCase() !== 'pending') {
+                    await docSnap.ref.update({ status: 'Waiting' });
                 }
             }
         }

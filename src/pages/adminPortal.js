@@ -2400,7 +2400,7 @@ window.renderBills = async function () {
       if (rawStatus === 'unread') rawStatus = 'pending';
 
       // Dynamic overdue check
-      if (rawStatus !== 'paid' && rawStatus !== 'completed' && b.dueDate) {
+      if (rawStatus !== 'paid' && rawStatus !== 'completed' && rawStatus !== 'waiting' && b.dueDate) {
         const dueDate = new Date(b.dueDate);
         const now = new Date();
         now.setHours(0, 0, 0, 0);

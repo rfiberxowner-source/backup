@@ -2766,7 +2766,7 @@ If a field is not found, return "TBD".`;
                   // Evaluate dynamic overdue status (based on dueDate)
                   billingEmails.forEach(be => {
                     const originalStatus = (be.status || 'pending').toLowerCase();
-                    if (originalStatus !== 'paid' && originalStatus !== 'completed') {
+                    if (originalStatus !== 'paid' && originalStatus !== 'completed' && originalStatus !== 'waiting') {
                       let isOverdue = false;
                       if (be.dueDate) {
                         const dueDate = new Date(be.dueDate);
