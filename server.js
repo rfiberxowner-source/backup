@@ -231,19 +231,46 @@ async function getAutoReply(text, sender_psid) {
     // (e.g. they are answering a step-by-step form for Billing, Tech Support, etc.)
     // =========================================================================
     if (userSessions.has(sender_psid)) {
-        if (msg === 'urgent_tech_agent') {
+        if (msg.startsWith('agent') || msg.match(/(agent|operator|tao|customer service)/i)) {
+            const currentSession = userSessions.get(sender_psid) || "";
             userSessions.delete(sender_psid);
+            accountRecoveryData.delete(sender_psid);
+            
+            let topic = "your concern";
+            if (msg.includes('no_internet') || msg.includes('urgent') || msg.includes('red') || currentSession === 'TECH_SUPPORT_STEP_2') {
+                topic = "no internet or red light flashing";
+            } else if (msg.includes('slow') || msg.includes('mabagal')) {
+                topic = "slow internet";
+            } else if (currentSession.startsWith('TECH_SUPPORT')) {
+                topic = "technical support";
+            } else if (msg.includes('billing') || currentSession.startsWith('BILLING')) {
+                topic = "billing and payments";
+            } else if (msg.includes('application') || currentSession.startsWith('APPLICATION')) {
+                topic = "your application";
+            } else if (msg.includes('relocation') || currentSession.startsWith('RELOCATION')) {
+                topic = "relocation";
+            } else if (msg.includes('area') || currentSession.startsWith('AREA_INQUIRY')) {
+                topic = "area inquiry";
+            } else if (msg.includes('password') || currentSession.startsWith('CHANGE_PASSWORD')) {
+                topic = "wifi password";
+            } else if (msg.includes('account') || currentSession.startsWith('ACCOUNT')) {
+                topic = "account inquiry";
+            } else if (msg.includes('plans') || currentSession.startsWith('PLANS')) {
+                topic = "internet plans";
+            }
+            
             return { 
-                text: "🚨 HIGH PRIORITY ALERT: Client is reporting a severe connection issue (No Internet / Red Light). I am connecting you to our technical support team immediately. Please wait.", 
+                text: `You are transferred to the agent if you want to talk about ${topic}. Please wait for our team to be with you shortly.`, 
                 isHandover: true 
             };
         }
 
         // Global escape hatch to cancel out of any flow
-        if (msg.match(/(cancel|stop|ayoko|agent|operator|tao|customer service)/i)) {
+        if (msg.match(/(cancel|stop|ayoko)/i)) {
             userSessions.delete(sender_psid);
+            accountRecoveryData.delete(sender_psid);
             return { 
-                text: "Okay, we've cancelled that request. If you need to talk to a human agent, please wait, and our team will be with you shortly. How else can I help you today?",
+                text: "Okay, we've cancelled that request. How else can I help you today?",
                 quick_replies: [
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
@@ -265,7 +292,7 @@ async function getAutoReply(text, sender_psid) {
                     text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.`,
                     quick_replies: [
                         { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
-                        { content_type: "text", title: "Agent", payload: "Agent" },
+                        { content_type: "text", title: "Agent", payload: "AGENT_SLOW_INTERNET" },
                         { content_type: "text", title: "Stop", payload: "Stop" }
                     ]
                 };
@@ -273,7 +300,7 @@ async function getAutoReply(text, sender_psid) {
                 return { 
                     text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem.`,
                     quick_replies: [
-                        { content_type: "text", title: "Agent", payload: "URGENT_TECH_AGENT" },
+                        { content_type: "text", title: "Agent", payload: "AGENT_NO_INTERNET" },
                         { content_type: "text", title: "Cancel", payload: "Cancel" }
                     ]
                 };
