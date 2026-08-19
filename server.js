@@ -822,6 +822,27 @@ Our team will check if your area is serviceable and contact you for installation
             };
 
         case 'BILLING':
+            try {
+                const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
+                
+                if (savedAccount) {
+                    accountRecoveryData.set(sender_psid, { account: savedAccount });
+                    userSessions.set(sender_psid, 'BILLING_MENU');
+                    return { 
+                        text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Balance", payload: "Balance" },
+                            { content_type: "text", title: "Payment", payload: "Payment" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" },
+                            { content_type: "text", title: "Agent", payload: "Agent" }
+                        ]
+                    };
+                }
+            } catch (err) {
+                console.error("Error checking saved account:", err);
+            }
+
             userSessions.set(sender_psid, 'BILLING_STEP_1');
             return { 
                 text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please tap 'Forgot'.",
