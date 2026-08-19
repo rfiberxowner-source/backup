@@ -768,7 +768,11 @@ Our team will check if your area is serviceable and contact you for installation
     let ai_decision = null;
     if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|technical support)/i)) {
         ai_decision = 'TECHNICAL_SUPPORT';
-    } else if (msg.match(/(lipat|relocate|relocation|transfer|move|ibang bahay)/i)) {
+    } else if (msg.match(/(change account|palit account|ibang account)/i)) {
+        ai_decision = 'CHANGE_ACCOUNT';
+    } else if (msg.match(/(remove account|tanggalin account|delete account)/i)) {
+        ai_decision = 'REMOVE_ACCOUNT';
+    } else if (msg.match(/(lipat|relocate|relocation|transfer|\bmove\b|ibang bahay)/i)) {
         ai_decision = 'RELOCATION';
     } else if (msg.match(/(bayad|magkano|gcash|payment|bill|billing|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
         ai_decision = 'BILLING';
@@ -786,10 +790,6 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'AREA_INQUIRY';
     } else if (msg.match(/(cancel|stop|ayoko)/i)) {
         ai_decision = 'CANCEL';
-    } else if (msg.match(/(change account|palit account|ibang account)/i)) {
-        ai_decision = 'CHANGE_ACCOUNT';
-    } else if (msg.match(/(remove account|tanggalin account|delete account)/i)) {
-        ai_decision = 'REMOVE_ACCOUNT';
     } else if (msg.match(/(no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
