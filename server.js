@@ -129,12 +129,14 @@ app.post('/webhook', (req, res) => {
                                             for (let msg of replyMessage) {
                                                 if (msg.isHandover) {
                                                     await psidRef.set({ is_paused: true }, { merge: true });
+                                                    delete msg.isHandover;
                                                 }
                                                 await callSendAPI(sender_psid, msg);
                                             }
                                         } else {
                                             if (replyMessage.isHandover) {
                                                 psidRef.set({ is_paused: true }, { merge: true });
+                                                delete replyMessage.isHandover;
                                             }
                                             callSendAPI(sender_psid, replyMessage);
                                         }
@@ -162,6 +164,40 @@ app.post('/webhook', (req, res) => {
 });
 
 // Smart AI Classification using Gemini
+async function getAccountDetails(accountNum, lastActive) {
+    let unpaidBillsCount = 0;
+    try {
+        const billingSnapshot = await db.collectionGroup('billing_emails').get();
+        billingSnapshot.forEach(doc => {
+            const billData = doc.data();
+            if (billData.account === accountNum || billData.accountNumber === accountNum) {
+                const status = (billData.status || '').toLowerCase();
+                if (status !== 'paid' && billData.amount) {
+                    unpaidBillsCount++;
+                }
+            }
+        });
+    } catch(e) { console.error("Error fetching bills:", e); }
+
+    let ticketCount = 0;
+    try {
+        const reportsSnapshot = await db.collection('reports').get();
+        reportsSnapshot.forEach(doc => {
+            const repData = doc.data();
+            if (repData.accountNumber === accountNum || repData.account === accountNum) {
+                ticketCount++;
+            }
+        });
+    } catch(e) { console.error("Error fetching tickets:", e); }
+
+    let details = `📌 Account Status:\n`;
+    details += `• Last Online: ${lastActive || "Account has not been activated yet"}\n`;
+    details += `• Unpaid Billing Statements: ${unpaidBillsCount > 0 ? unpaidBillsCount : "None"}\n`;
+    details += `• Support Tickets: ${ticketCount > 0 ? ticketCount : "None"}`;
+    
+    return details;
+}
+
 async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
 
@@ -505,9 +541,10 @@ Our team will check if your area is serviceable and contact you for installation
                 if (clientFullName && matchedName === clientFullName) {
                     accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                    return { text: `Great! Your Account Number is ${accountNum}.\n\nWould you also like to see your password? (Yes/No)` };
+                    const detailsStr = await getAccountDetails(accountNum, match.lastActive);
+                    return { text: `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password? (Yes/No)` };
                 } else {
-                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan });
+                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_SECURITY_TEST');
                     return { 
                         text: "For security purposes, since this account name differs from your Facebook profile, please select the exact Internet Plan associated with this account.",
@@ -558,7 +595,8 @@ Our team will check if your area is serviceable and contact you for installation
 
             if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
                 userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                return { text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\nWould you also like to see your password? (Yes/No)` };
+                const detailsStr = await getAccountDetails(data.account, data.lastActive);
+                return { text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}\n\nWould you also like to see your password? (Yes/No)` };
             } else {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
