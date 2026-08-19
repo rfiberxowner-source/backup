@@ -292,6 +292,17 @@ Our team will check if your area is serviceable and contact you for installation
                 text: "🚨 HIGH PRIORITY ALERT: Client submitted a New Connection Application. I am connecting you to our support team immediately to process this. Please wait.",
                 isHandover: true
             };
+        } else if (userSessions.get(sender_psid) === 'AREA_INQUIRY_STEP_1') {
+            if (msg.match(/(internet plans|plans)/i)) {
+                userSessions.delete(sender_psid);
+                return getAutoReply("internet plans", sender_psid);
+            } else {
+                userSessions.delete(sender_psid);
+                return {
+                    text: "🚨 HIGH PRIORITY ALERT: Client submitted an Area Inquiry. I am connecting you to our support team immediately to process this. Please wait.",
+                    isHandover: true
+                };
+            }
         } else if (userSessions.get(sender_psid) === 'CHANGE_PASSWORD_STEP_1') {
             if (msg.includes('192.168.1.1')) {
                 return {
@@ -723,16 +734,24 @@ For inquiries or applications, kindly provide your preferred plan and the follow
             };
 
         case 'AREA_INQUIRY':
+            userSessions.set(sender_psid, 'AREA_INQUIRY_STEP_1');
             return {
                 text: `Good day! To check if your location is covered by RFIBERX and available for installation, kindly provide:
 • Complete Name:
 • Phone Number:
 • Complete Address:
+• Location (e.g. Majayjay, Magdalena, or Sta. Cruz):
 • Email Address:
 
-RFIBERX service is currently available in selected areas, including Magdalena and Majayjay. Our team will verify the exact coverage, NAP/port availability, and installation feasibility at your address.
+RFIBERX service is currently available in selected areas, including Magdalena, Majayjay, and Sta. Cruz. Our team will verify the exact coverage, NAP/port availability, and installation feasibility at your address.
 
-Thank you for choosing RFIBERX Telecom!` };
+Would you also like to see our internet plans?`,
+                quick_replies: [
+                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" },
+                    { content_type: "text", title: "Agent", payload: "Agent" }
+                ]
+            };
 
         case 'ACCOUNT_INQUIRY':
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
