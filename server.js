@@ -191,7 +191,14 @@ async function getAutoReply(text, sender_psid) {
             userSessions.delete(sender_psid); // Clear memory state
 
             if (msg.match(/(slow|mabagal|bagal)/i)) {
-                return { text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.` };
+                return { 
+                    text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.`,
+                    quick_replies: [
+                        { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
+                        { content_type: "text", title: "Agent", payload: "Agent" },
+                        { content_type: "text", title: "Stop", payload: "Stop" }
+                    ]
+                };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
                 return { text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, Type "Agent" and i will redirect you to our agent team to further solve the problem.` };
             } else {
@@ -351,21 +358,32 @@ Our team will check if your area is serviceable and contact you for installation
 
                 try {
                     const billingSnapshot = await db.collectionGroup('billing_emails').get();
-                    let amountDue = null;
+                    let totalAmountDue = 0;
+                    let unpaidBillsCount = 0;
+                    
                     billingSnapshot.forEach(doc => {
                         const billData = doc.data();
-                        if ((billData.account === accountNum || billData.accountNumber === accountNum) && billData.amount) {
-                            amountDue = billData.amount;
+                        if ((billData.account === accountNum || billData.accountNumber === accountNum)) {
+                            const status = (billData.status || '').toLowerCase();
+                            if (status !== 'paid' && billData.amount) {
+                                let amt = String(billData.amount).replace(/[^0-9.-]+/g, "");
+                                let parsed = parseFloat(amt);
+                                if (!isNaN(parsed)) {
+                                    totalAmountDue += parsed;
+                                    unpaidBillsCount++;
+                                }
+                            }
                         }
                     });
 
                     userSessions.delete(sender_psid);
                     // We keep accountRecoveryData so they can upload a receipt immediately after
 
-                    if (amountDue) {
-                        return { text: `Your current outstanding balance is: ₱${amountDue}.` };
+                    if (unpaidBillsCount > 0) {
+                        const today = new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' });
+                        return { text: `As of ${today}, your total outstanding balance is: ₱${totalAmountDue.toLocaleString()}.\n\nThis is a combined total of ${unpaidBillsCount} unpaid billing statement(s).` };
                     } else {
-                        return { text: "You have no bills to pay at the moment." };
+                        return { text: "You have no unpaid bills at the moment." };
                     }
                 } catch (err) {
                     console.error("DB Error:", err);
@@ -565,7 +583,15 @@ Our team will check if your area is serviceable and contact you for installation
     switch (ai_decision) {
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
-            return { text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just type \"Agent\".)*" };
+            return { 
+                text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\".)*",
+                quick_replies: [
+                    { content_type: "text", title: "Slow Internet", payload: "Slow Internet" },
+                    { content_type: "text", title: "No Internet", payload: "No Internet" },
+                    { content_type: "text", title: "Red Light Flashing", payload: "Red Light Flashing" },
+                    { content_type: "text", title: "Agent", payload: "Agent" }
+                ]
+            };
 
         case 'RELOCATION':
             userSessions.set(sender_psid, 'RELOCATION_STEP_1');
