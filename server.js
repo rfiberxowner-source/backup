@@ -166,11 +166,13 @@ async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
 
     let clientName = "Valued Customer";
+    let clientFullName = "";
     try {
-        const response = await fetch(`https://graph.facebook.com/${sender_psid}?fields=first_name&access_token=${PAGE_ACCESS_TOKEN}`);
+        const response = await fetch(`https://graph.facebook.com/${sender_psid}?fields=first_name,last_name&access_token=${PAGE_ACCESS_TOKEN}`);
         const data = await response.json();
         if (data.first_name) {
             clientName = data.first_name;
+            clientFullName = (data.first_name + " " + (data.last_name || "")).trim().toLowerCase();
         }
     } catch (e) {
         console.error("Error fetching client name:", e);
@@ -470,7 +472,15 @@ Our team will check if your area is serviceable and contact you for installation
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_CONFIRM');
                     const firstMatch = matches[0];
                     const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
-                    return { text: `We found an account for ${matchedName}. Is this you? (Yes/No)` };
+                    return { 
+                        text: `We found an account for ${matchedName}. Is this you?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Yes", payload: "Yes" },
+                            { content_type: "text", title: "No", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" },
+                            { content_type: "text", title: "Agent", payload: "Agent" }
+                        ]
+                    };
                 } else {
                     return { text: "We couldn't find an account with that name. Please try another name or type 'Cancel' to stop." };
                 }
@@ -487,31 +497,75 @@ Our team will check if your area is serviceable and contact you for installation
 
             if (msg.match(/(yes|oo|ako|proceed)/i)) {
                 const match = data.matches[data.currentIndex];
+                const matchedName = (match.name || match.firstName || match.lastName || '').trim().toLowerCase();
                 const accountNum = match.account || match.accountNumber || 'Not found';
                 const pass = match.password || 'Not set';
+                const plan = match.plan || 'none';
                 
-                accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
-                userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                return { text: `Great! Your Account Number is ${accountNum}.\n\nWould you also like to see your password? (Yes/No)` };
+                if (clientFullName && matchedName === clientFullName) {
+                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
+                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+                    return { text: `Great! Your Account Number is ${accountNum}.\n\nWould you also like to see your password? (Yes/No)` };
+                } else {
+                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan });
+                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_SECURITY_TEST');
+                    return { 
+                        text: "For security purposes, since this account name differs from your Facebook profile, please select the exact Internet Plan associated with this account.",
+                        quick_replies: [
+                            { content_type: "text", title: "30Mbps", payload: "30Mbps" },
+                            { content_type: "text", title: "50Mbps", payload: "50Mbps" },
+                            { content_type: "text", title: "70Mbps", payload: "70Mbps" },
+                            { content_type: "text", title: "100Mbps", payload: "100Mbps" },
+                            { content_type: "text", title: "200Mbps", payload: "200Mbps" },
+                            { content_type: "text", title: "500Mbps", payload: "500Mbps" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }
+                        ]
+                    };
+                }
             } else if (msg.match(/(no|hindi)/i)) {
                 data.currentIndex++;
-                data.tries = (data.tries || 0) + 1;
                 
-                if (data.tries >= 5) {
-                    userSessions.delete(sender_psid);
-                    accountRecoveryData.delete(sender_psid);
-                    return { text: "We've reached the maximum number of attempts. Please wait, and our agent will assist you shortly." };
-                } else if (data.currentIndex < data.matches.length) {
+                if (data.currentIndex < data.matches.length) {
                     const nextMatch = data.matches[data.currentIndex];
                     const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
-                    return { text: `How about ${matchedName}? Is this you? (Yes/No)` };
+                    return { 
+                        text: `How about ${matchedName}? Is this you?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Yes", payload: "Yes" },
+                            { content_type: "text", title: "No", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" },
+                            { content_type: "text", title: "Agent", payload: "Agent" }
+                        ]
+                    };
                 } else {
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
                     accountRecoveryData.delete(sender_psid);
-                    return { text: "We couldn't find any other matching accounts. Please try a different name, or wait for an agent." };
+                    return { text: "We couldn't find any other matching accounts. Please try a different name, or type 'Cancel' to stop." };
                 }
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
+            }
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_SECURITY_TEST') {
+            const data = accountRecoveryData.get(sender_psid);
+            if (!data) {
+                userSessions.delete(sender_psid);
+                return { text: "Session expired. Please start again." };
+            }
+            
+            // Extract the numbers from both the DB plan and the user's msg to handle variations like "30Mbps", "30 Mbps", or just "30"
+            const expectedPlanNum = (String(data.plan).match(/\d+/) || [])[0];
+            const providedPlanNum = (msg.match(/\d+/) || [])[0];
+
+            if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
+                userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+                return { text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\nWould you also like to see your password? (Yes/No)` };
+            } else {
+                userSessions.delete(sender_psid);
+                accountRecoveryData.delete(sender_psid);
+                return {
+                    text: "Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.",
+                    isHandover: true
+                };
             }
         } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_PASSWORD') {
             if (msg.match(/(yes|oo|sige)/i)) {
@@ -755,7 +809,7 @@ Would you also like to see our internet plans?`,
 
         case 'ACCOUNT_INQUIRY':
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
-            return { text: "To help you find your account details, please provide your Full Name." };
+            return { text: "To help you find your account details, please provide your Full Name or the name you remember for your account." };
 
         case 'GREETING':
             return {
