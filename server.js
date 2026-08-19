@@ -257,25 +257,41 @@ Thank you for choosing RFIBERX Telecom!` };
             };
         } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_1') {
             if (msg.match(/(yes|oo|sige|proceed)/i)) {
-                userSessions.delete(sender_psid); // Clear memory state
-                return { text: `Great! Here are our available plans:
-• 30 Mbps – ₱800
-• 50 Mbps – ₱1,000
-• 70 Mbps – ₱1,300
-• 100 Mbps – ₱1,500
-• 200 Mbps – ₱2,000
-• 500 Mbps – ₱4,500
+                userSessions.set(sender_psid, 'APPLICATION_STEP_2');
+                return { text: `Great! Here are our available plans with details:
+• 30 Mbps – ₱800 (Best for light browsing & social media)
+• 50 Mbps – ₱1,000 (Ideal for work from home & HD streaming)
+• 70 Mbps – ₱1,300 (Great for multiple devices & gaming)
+• 100 Mbps – ₱1,500 (Perfect for heavy gaming & 4K streaming)
+• 200 Mbps – ₱2,000 (For large families & heavy downloads)
+• 500 Mbps – ₱4,500 (Ultra-fast for power users or small business)
 
 To proceed, please provide the following details:
-• Complete Name:
-• Complete Address (with landmarks):
-• Contact Number:
-• Preferred Plan:
+• Full Name:
+• Complete Address:
+• Phone Number:
+• Plan or Speed you want:
 
 Our team will check if your area is serviceable and contact you for installation!` };
+            } else if (msg.match(/(no|hindi|ayaw)/i)) {
+                userSessions.set(sender_psid, 'APPLICATION_STEP_2');
+                return { text: "No problem! To proceed, please provide the following details:\n\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nOur team will check if your area is serviceable and contact you for installation!" };
+            } else if (msg.length > 15) {
+                // If they provided their details immediately
+                userSessions.delete(sender_psid);
+                return {
+                    text: "🚨 HIGH PRIORITY ALERT: Client submitted a New Connection Application. I am connecting you to our support team immediately to process this. Please wait.",
+                    isHandover: true
+                };
             } else {
-                return { text: "Would you like to apply here? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
+                return { text: "Would you like to see our available plans first? Please reply with 'Yes' or 'No'." };
             }
+        } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_2') {
+            userSessions.delete(sender_psid); // Clear memory state
+            return {
+                text: "🚨 HIGH PRIORITY ALERT: Client submitted a New Connection Application. I am connecting you to our support team immediately to process this. Please wait.",
+                isHandover: true
+            };
         } else if (userSessions.get(sender_psid) === 'CHANGE_PASSWORD_STEP_1') {
             if (msg.includes('192.168.1.1')) {
                 return {
@@ -546,7 +562,9 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'PLANS';
     } else if (msg.match(/(area|location|covered ba|available ba sa|serviceable|address|sakop)/i)) {
         ai_decision = 'AREA_INQUIRY';
-    } else if (msg.match(/(cancel|stop|ayoko|no|hindi|agent|support|tao|operator|customer service)/i)) {
+    } else if (msg.match(/(cancel|stop|ayoko)/i)) {
+        ai_decision = 'CANCEL';
+    } else if (msg.match(/(no|hindi|agent|support|tao|operator|customer service)/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
 
@@ -640,7 +658,14 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
-            return { text: "Good day! Are you interested in applying for a new RFiberX internet connection? You can sign up quickly on our website: https://rfiberx.net/apply, or we can do it right here. Would you like to apply here? Please reply with 'Yes' to proceed, or 'Cancel' to stop." };
+            return { 
+                text: "Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?",
+                quick_replies: [
+                    { content_type: "text", title: "Yes", payload: "Yes" },
+                    { content_type: "text", title: "No", payload: "No" },
+                    { content_type: "text", title: "Agent", payload: "URGENT_TECH_AGENT" }
+                ]
+            };
 
         case 'BILLING':
             userSessions.set(sender_psid, 'BILLING_STEP_1');
@@ -708,6 +733,21 @@ Thank you for choosing RFIBERX Telecom!` };
         case 'GREETING':
             return {
                 text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:",
+                quick_replies: [
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Billing", payload: "Billing" },
+                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                    { content_type: "text", title: "Change Password", payload: "Change Password" },
+                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                    { content_type: "text", title: "Relocation", payload: "Relocation" },
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                ]
+            };
+
+        case 'CANCEL':
+            return {
+                text: "Okay, we've cancelled that request. How else can I help you today?",
                 quick_replies: [
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
