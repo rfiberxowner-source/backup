@@ -1316,7 +1316,7 @@ If it IS a receipt, extract:
             clientName: clientName,
             clientAccountNumber: accountNum,
             billingMonth: billingMonth,
-            status: "Pending Verification",
+            status: "Waiting",
             imageUrl: imageUrl,
             sender_psid: sender_psid, // Hidden tracker for bot notifications
             timestamp: FieldValue.serverTimestamp()
@@ -1329,7 +1329,7 @@ If it IS a receipt, extract:
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
             for (let docSnap of billingSnap.docs) {
                 const status = docSnap.data().status || '';
-                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'waiting' && status.toLowerCase() !== 'pending') {
+                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'completed' && status.toLowerCase() !== 'waiting') {
                     await docSnap.ref.update({ status: 'Waiting' });
                 }
             }
