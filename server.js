@@ -193,7 +193,19 @@ async function getAutoReply(text, sender_psid) {
         // Global escape hatch to cancel out of any flow
         if (msg.match(/(cancel|stop|ayoko|agent|operator|tao|customer service)/i)) {
             userSessions.delete(sender_psid);
-            return { text: "Okay, we've cancelled that request. If you need to talk to a human agent, please wait, and our team will be with you shortly. How else can I help you today?" };
+            return { 
+                text: "Okay, we've cancelled that request. If you need to talk to a human agent, please wait, and our team will be with you shortly. How else can I help you today?",
+                quick_replies: [
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Billing", payload: "Billing" },
+                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                    { content_type: "text", title: "Change Password", payload: "Change Password" },
+                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                    { content_type: "text", title: "Relocation", payload: "Relocation" },
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                ]
+            };
         }
 
         if (userSessions.get(sender_psid) === 'TECH_SUPPORT_STEP_1') {
@@ -697,14 +709,14 @@ Thank you for choosing RFIBERX Telecom!` };
             return {
                 text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:",
                 quick_replies: [
-                    { content_type: "text", title: "Technical Support", payload: "TECHNICAL_SUPPORT" },
-                    { content_type: "text", title: "Billing", payload: "BILLING" },
-                    { content_type: "text", title: "Apply Now", payload: "APPLICATION" },
-                    { content_type: "text", title: "Internet Plans", payload: "PLANS" },
-                    { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
-                    { content_type: "text", title: "Area Inquiry", payload: "AREA_INQUIRY" },
-                    { content_type: "text", title: "Relocation", payload: "RELOCATION" },
-                    { content_type: "text", title: "Account Inquiry", payload: "ACCOUNT_INQUIRY" }
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Billing", payload: "Billing" },
+                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                    { content_type: "text", title: "Change Password", payload: "Change Password" },
+                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                    { content_type: "text", title: "Relocation", payload: "Relocation" },
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
                 ]
             };
 
