@@ -190,8 +190,19 @@ async function getAccountDetails(accountNum, lastActive) {
         });
     } catch(e) { console.error("Error fetching tickets:", e); }
 
+    let lastActiveStr = "Account has not been activated yet";
+    if (lastActive) {
+        if (typeof lastActive === 'object' && typeof lastActive.toDate === 'function') {
+            lastActiveStr = lastActive.toDate().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+        } else if (typeof lastActive === 'object' && lastActive._seconds) {
+            lastActiveStr = new Date(lastActive._seconds * 1000).toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+        } else {
+            lastActiveStr = String(lastActive);
+        }
+    }
+
     let details = `📌 Account Status:\n`;
-    details += `• Last Online: ${lastActive || "Account has not been activated yet"}\n`;
+    details += `• Last Online: ${lastActiveStr}\n`;
     details += `• Unpaid Billing Statements: ${unpaidBillsCount > 0 ? unpaidBillsCount : "None"}\n`;
     details += `• Support Tickets: ${ticketCount > 0 ? ticketCount : "None"}`;
     
@@ -542,7 +553,13 @@ Our team will check if your area is serviceable and contact you for installation
                     accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                     const detailsStr = await getAccountDetails(accountNum, match.lastActive);
-                    return { text: `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password? (Yes/No)` };
+                    return { 
+                        text: `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Yes", payload: "Yes" },
+                            { content_type: "text", title: "No", payload: "No" }
+                        ]
+                    };
                 } else {
                     accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_SECURITY_TEST');
@@ -596,7 +613,13 @@ Our team will check if your area is serviceable and contact you for installation
             if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
                 userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                 const detailsStr = await getAccountDetails(data.account, data.lastActive);
-                return { text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}\n\nWould you also like to see your password? (Yes/No)` };
+                return { 
+                    text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
+                    quick_replies: [
+                        { content_type: "text", title: "Yes", payload: "Yes" },
+                        { content_type: "text", title: "No", payload: "No" }
+                    ]
+                };
             } else {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
@@ -615,7 +638,19 @@ Our team will check if your area is serviceable and contact you for installation
             } else if (msg.match(/(no|hindi)/i)) {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
-                return { text: "Okay! Thank you for choosing RFiberX!" };
+                return {
+                    text: "Okay, we've cancelled that request. How else can I help you today?",
+                    quick_replies: [
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Billing", payload: "Billing" },
+                        { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                        { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                        { content_type: "text", title: "Change Password", payload: "Change Password" },
+                        { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                        { content_type: "text", title: "Relocation", payload: "Relocation" },
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                    ]
+                };
             } else {
                 return { text: "Would you like to see your password? Please reply 'Yes' or 'No'." };
             }
