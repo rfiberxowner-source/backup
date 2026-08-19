@@ -1216,7 +1216,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         // Download image and convert to Base64
         const imageResp = await fetch(imageUrl);
