@@ -672,18 +672,26 @@ Our team will check if your area is serviceable and contact you for installation
             return { text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please reply with 'Forgot'." };
 
         case 'PLANS':
+            userSessions.set(sender_psid, 'APPLICATION_STEP_2');
             return {
-                text: `Good day! Here are our available RFIBERX internet plans:
-• 30 Mbps – ₱800
-• 50 Mbps – ₱1,000
-• 70 Mbps – ₱1,300
-• 100 Mbps – ₱1,500
-• 200 Mbps – ₱2,000
-• 500 Mbps – ₱4,500
+                text: `Good day! Here are our available RFIBERX internet plans with details:
+• 30 Mbps – ₱800 (Best for light browsing & social media)
+• 50 Mbps – ₱1,000 (Ideal for work from home & HD streaming)
+• 70 Mbps – ₱1,300 (Great for multiple devices & gaming)
+• 100 Mbps – ₱1,500 (Perfect for heavy gaming & 4K streaming)
+• 200 Mbps – ₱2,000 (For large families & heavy downloads)
+• 500 Mbps – ₱4,500 (Ultra-fast for power users or small business)
 
-For inquiries or applications, kindly message us with your preferred plan and contact details. Our team will assist you with the application process.
-
-Thank you for choosing RFIBERX Telecom!` };
+For inquiries or applications, kindly provide your preferred plan and the following details:
+• Full Name:
+• Complete Address:
+• Phone Number:
+• Plan or Speed you want:`,
+                quick_replies: [
+                    { content_type: "text", title: "Cancel", payload: "Cancel" },
+                    { content_type: "text", title: "Agent", payload: "Agent" }
+                ]
+            };
 
         case 'CHANGE_PASSWORD':
             userSessions.set(sender_psid, 'CHANGE_PASSWORD_STEP_1');
