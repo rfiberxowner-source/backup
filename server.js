@@ -1201,6 +1201,9 @@ async function processImageAttachment(imageUrl, sender_psid) {
 
     try {
         console.log("📸 Processing image receipt...");
+        // Send a reassuring "please wait" message
+        await callSendAPI(sender_psid, { text: "📷 We've received your image! Please wait a moment while our system securely scans and processes your receipt..." });
+
         // Fetch Gemini API key
         const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
         let apiKey = '';
@@ -1238,7 +1241,23 @@ If it IS a receipt, extract:
   "receiverName": "Name of the receiver"
 }`;
 
-        const result = await model.generateContent([prompt, imagePart]);
+        let result = null;
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                result = await model.generateContent([prompt, imagePart]);
+                break; // Success
+            } catch (apiError) {
+                if (apiError.status === 503 && retries > 1) {
+                    console.warn(`Gemini 503 Overloaded. Retrying in 3 seconds... (${retries - 1} attempts left)`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    retries--;
+                } else {
+                    throw apiError; // Throw if it's not a 503 or we ran out of retries
+                }
+            }
+        }
+
         const responseText = result.response.text();
         
         // Clean JSON formatting
