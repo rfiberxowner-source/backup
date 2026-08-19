@@ -380,7 +380,7 @@ Our team will check if your area is serviceable and contact you for installation
         } else if (userSessions.get(sender_psid) === 'BILLING_STEP_1') {
             if (msg.match(/(forgot|nakalimutan|hindi ko alam|wala)/i)) {
                 userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
-                return { text: "Please provide your Full Name so we can search our database." };
+                return { text: "Please provide your Full Name or the name you remember for your account so we can search our database." };
             } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
                 accountRecoveryData.set(sender_psid, { account: text.trim() });
                 userSessions.set(sender_psid, 'BILLING_MENU');
@@ -405,7 +405,15 @@ Our team will check if your area is serviceable and contact you for installation
                     userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_CONFIRM');
                     const firstMatch = matches[0];
                     const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
-                    return { text: `We found an account for ${matchedName}. Is this you? (Yes/No)\n\n*(If you also need your password, reply 'Yes password')*` };
+                    return { 
+                        text: `We found an account for ${matchedName}. Is this you?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Yes", payload: "Yes" },
+                            { content_type: "text", title: "No", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" },
+                            { content_type: "text", title: "Agent", payload: "Agent" }
+                        ]
+                    };
                 } else {
                     return { text: "We couldn't find an account with that name. Please try another name or type 'Cancel' to stop." };
                 }
@@ -423,30 +431,38 @@ Our team will check if your area is serviceable and contact you for installation
             if (msg.match(/(yes|oo|ako|proceed)/i)) {
                 const match = data.matches[data.currentIndex];
                 const accountNum = match.account || match.accountNumber || 'Not found';
-                const pass = match.password || 'Not set';
                 
                 accountRecoveryData.set(sender_psid, { account: accountNum });
                 userSessions.set(sender_psid, 'BILLING_MENU');
 
-                let reply = `Great! Your Account Number is ${accountNum}.\n`;
-                if (text.toLowerCase().includes('password') || text.toLowerCase().includes('pass')) {
-                    reply += `Your password is: ${pass}\n\n`;
-                }
-                reply += `Would you like to check your 'Balance' or see 'Payment' methods?`;
-                return { text: reply };
+                return { 
+                    text: `Great! Your Account Number is ${accountNum}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+                    quick_replies: [
+                        { content_type: "text", title: "Balance", payload: "Balance" },
+                        { content_type: "text", title: "Payment", payload: "Payment" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" },
+                        { content_type: "text", title: "Agent", payload: "Agent" }
+                    ]
+                };
             } else if (msg.match(/(no|hindi)/i)) {
                 data.currentIndex++;
                 if (data.currentIndex < data.matches.length) {
                     const nextMatch = data.matches[data.currentIndex];
                     const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
-                    return { text: `How about ${matchedName}? Is this you? (Yes/No)\n\n*(If you also need your password, reply 'Yes password')*` };
+                    return { 
+                        text: `How about ${matchedName}? Is this you?`,
+                        quick_replies: [
+                            { content_type: "text", title: "Yes", payload: "Yes" },
+                            { content_type: "text", title: "No", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" },
+                            { content_type: "text", title: "Agent", payload: "Agent" }
+                        ]
+                    };
                 } else {
                     userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
                     accountRecoveryData.delete(sender_psid);
-                    return { text: "We couldn't find any other matching accounts. Please try a different name, or contact our support team." };
+                    return { text: "We couldn't find any other matching accounts. Please try a different name, or type 'Cancel' to stop." };
                 }
-            } else if (msg.match(/(password|pass)/i)) {
-                return { text: "If this is you, please reply 'Yes' and I will provide your account number and password." };
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
             }
@@ -807,7 +823,14 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'BILLING':
             userSessions.set(sender_psid, 'BILLING_STEP_1');
-            return { text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please reply with 'Forgot'." };
+            return { 
+                text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please tap 'Forgot'.",
+                quick_replies: [
+                    { content_type: "text", title: "Forgot", payload: "Forgot" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" },
+                    { content_type: "text", title: "Agent", payload: "Agent" }
+                ]
+            };
 
         case 'PLANS':
             userSessions.set(sender_psid, 'APPLICATION_STEP_2');
@@ -838,26 +861,32 @@ For inquiries or applications, kindly provide your preferred plan and the follow
                     type: "template",
                     payload: {
                         template_type: "button",
-                        text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE REPLY to this chat with the correct gateway (e.g. '192.168.1.1') so I can send you the exact step-by-step tutorial!",
+                        text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE CLICK the corresponding quick reply below so I can send you the exact step-by-step tutorial!",
                         buttons: [
                             {
                                 type: "web_url",
                                 url: "http://192.168.1.1",
-                                title: "192.168.1.1"
+                                title: "Link: 192.168.1.1"
                             },
                             {
                                 type: "web_url",
                                 url: "http://192.168.100.1",
-                                title: "192.168.100.1"
+                                title: "Link: 192.168.100.1"
                             },
                             {
                                 type: "web_url",
                                 url: "http://192.168.8.1",
-                                title: "192.168.8.1"
+                                title: "Link: 192.168.8.1"
                             }
                         ]
                     }
-                }
+                },
+                quick_replies: [
+                    { content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
+                    { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
+                    { content_type: "text", title: "192.168.8.1", payload: "192.168.8.1" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                ]
             };
 
         case 'AREA_INQUIRY':
