@@ -1347,34 +1347,89 @@ If it IS a receipt, extract:
         // 3. Update the billing statement status to Pending
         if (userId) {
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
-            let unpaidCount = 0;
+            const unpaidBillsList = [];
             let waitingCount = 0;
             
             for (let docSnap of billingSnap.docs) {
-                const status = (docSnap.data().status || '').toLowerCase();
-                if (status === 'waiting') waitingCount++;
-                else if (status !== 'paid' && status !== 'completed') unpaidCount++;
+                const data = docSnap.data();
+                const status = (data.status || '').toLowerCase();
+                if (status === 'waiting') {
+                    waitingCount++;
+                } else if (status !== 'paid' && status !== 'completed') {
+                    unpaidBillsList.push({ id: docSnap.id, ref: docSnap.ref, ...data });
+                }
             }
+            
+            const unpaidCount = unpaidBillsList.length;
             
             if (unpaidCount === 0 && waitingCount > 0) {
                 return { text: `We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.` };
             } else if (unpaidCount === 0 && waitingCount === 0) {
                 return { text: `We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly from your bank or contact an agent for assistance.` };
             }
+
+            // Sort oldest to newest
+            unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
+
+            // Extract amount from receipt
+            const extractedAmount = parseFloat(String(extracted.amount).replace(/[^0-9\.]/g, ''));
             
-            for (let docSnap of billingSnap.docs) {
-                const status = (docSnap.data().status || '').toLowerCase();
-                if (status !== 'paid' && status !== 'completed' && status !== 'waiting') {
-                    await docSnap.ref.update({ 
+            // Calculate expected amounts
+            let expectedTotalAmount = 0;
+            unpaidBillsList.forEach(b => {
+                expectedTotalAmount += parseFloat(String(b.amount || 0).replace(/[^0-9\.]/g, '')) || 0;
+            });
+            const oldestBillAmt = parseFloat(String(unpaidBillsList[0].amount || 0).replace(/[^0-9\.]/g, '')) || 0;
+
+            let isTotalMatch = false;
+            let isOldestMatch = false;
+
+            if (extractedAmount > 0) {
+                // Total Match
+                if (expectedTotalAmount > 0 && extractedAmount === expectedTotalAmount) {
+                    isTotalMatch = true;
+                }
+                // Oldest Bill Match
+                else if (oldestBillAmt > 0 && extractedAmount === oldestBillAmt) {
+                    isOldestMatch = true;
+                }
+            }
+
+            if (!isTotalMatch && !isOldestMatch) {
+                let errorMsg = `🚨 INVALID AMOUNT 🚨\n\nYour receipt is for ₱${extractedAmount}.\n\n`;
+                if (unpaidCount > 1) {
+                    errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${oldestBillAmt} (for your oldest month) OR exactly ₱${expectedTotalAmount} (for your total balance). Partial payments or overpayments are not accepted.`;
+                } else {
+                    errorMsg += `Your required balance is exactly ₱${expectedTotalAmount}. Partial payments or overpayments are not accepted.`;
+                }
+                return { text: errorMsg };
+            }
+
+            // Amount is valid, update documents
+            if (isTotalMatch) {
+                for (let bill of unpaidBillsList) {
+                    await bill.ref.update({ 
                         status: 'Waiting',
                         processedBy: 'Page AI',
                         updatedAt: FieldValue.serverTimestamp()
                     });
                 }
+                return { text: "Thank you! Your payment receipt for your total balance has been successfully received. All your billing statements are now marked as 'Waiting' for Admin approval." };
+            } else if (isOldestMatch) {
+                // Update ONLY the oldest bill
+                await unpaidBillsList[0].ref.update({ 
+                    status: 'Waiting',
+                    processedBy: 'Page AI',
+                    updatedAt: FieldValue.serverTimestamp()
+                });
+                
+                let remainingCount = unpaidCount - 1;
+                if (remainingCount > 0) {
+                    return { text: `Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.` };
+                } else {
+                    return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
+                }
             }
-        }
-
-        return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
 
     } catch (err) {
         console.error("Error processing image receipt:", err);
