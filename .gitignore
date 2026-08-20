@@ -33,6 +33,5 @@ public/emails/
 
 # Secrets & Keys (Do not push!)
 client-mobile/fcm-key.json
-google-services.json
 .env
 *.txt
