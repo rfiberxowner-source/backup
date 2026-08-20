@@ -77,7 +77,7 @@ export default function OverviewScreen({ user, navigation }) {
         let status = (b.status || 'Pending').toLowerCase();
         if (status === 'unread') status = 'pending';
         let isOverdue = false;
-        if (status !== 'paid' && status !== 'completed' && b.dueDate) {
+        if (status !== 'paid' && status !== 'completed' && status !== 'waiting' && b.dueDate) {
           const dueDate = new Date(b.dueDate);
           const now = new Date();
           now.setHours(0, 0, 0, 0);

@@ -2292,7 +2292,7 @@ window.initAdminBanking = async function () {
         if (status === 'unread') status = 'pending';
 
         let isOverdue = false;
-        if (status !== 'paid' && status !== 'completed') {
+        if (status !== 'paid' && status !== 'completed' && status !== 'waiting') {
           if (b.dueDate) {
             const dueDate = new Date(b.dueDate);
             const now = new Date();
