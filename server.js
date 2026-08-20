@@ -1314,7 +1314,11 @@ If it IS a receipt, extract:
             for (let docSnap of billingSnap.docs) {
                 const status = docSnap.data().status || '';
                 if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'completed' && status.toLowerCase() !== 'waiting') {
-                    await docSnap.ref.update({ status: 'Waiting' });
+                    await docSnap.ref.update({ 
+                        status: 'Waiting',
+                        processedBy: 'Page AI',
+                        updatedAt: FieldValue.serverTimestamp()
+                    });
                 }
             }
         }
