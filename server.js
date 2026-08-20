@@ -497,9 +497,34 @@ Our team will check if your area is serviceable and contact you for installation
             if (msg.match(/(payment|bayad)/i)) {
                 userSessions.delete(sender_psid);
                 // We keep accountRecoveryData so they can upload a receipt immediately after
-                return {
-                    text: `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`
-                };
+                const data = accountRecoveryData.get(sender_psid);
+                const accountNum = data ? data.account : null;
+                
+                let replyText = `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`;
+
+                if (accountNum) {
+                    try {
+                        const billingSnapshot = await db.collectionGroup('billing_emails').get();
+                        let waitingBillsCount = 0;
+                        let unpaidBillsCount = 0;
+                        billingSnapshot.forEach(doc => {
+                            const billData = doc.data();
+                            if ((billData.account === accountNum || billData.accountNumber === accountNum)) {
+                                const status = (billData.status || '').toLowerCase();
+                                if (status === 'waiting') waitingBillsCount++;
+                                else if (status !== 'paid' && status !== 'completed') unpaidBillsCount++;
+                            }
+                        });
+                        
+                        if (unpaidBillsCount === 0 && waitingBillsCount > 0) {
+                            replyText = `We accept the following payment methods, but please note:\n\nYou currently have NO unpaid bills. However, you have ${waitingBillsCount} billing statement(s) pending admin approval. Please wait for confirmation before paying again.\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.`;
+                        } else if (waitingBillsCount > 0) {
+                            replyText += `\n\n*(Note: You currently have ${waitingBillsCount} billing statement(s) pending admin approval.)*`;
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+                return { text: replyText };
             } else if (msg.match(/(balance|magkano|balanse)/i)) {
                 const data = accountRecoveryData.get(sender_psid);
                 const accountNum = data ? data.account : null;
@@ -1322,9 +1347,24 @@ If it IS a receipt, extract:
         // 3. Update the billing statement status to Pending
         if (userId) {
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
+            let unpaidCount = 0;
+            let waitingCount = 0;
+            
             for (let docSnap of billingSnap.docs) {
-                const status = docSnap.data().status || '';
-                if (status.toLowerCase() !== 'paid' && status.toLowerCase() !== 'completed' && status.toLowerCase() !== 'waiting') {
+                const status = (docSnap.data().status || '').toLowerCase();
+                if (status === 'waiting') waitingCount++;
+                else if (status !== 'paid' && status !== 'completed') unpaidCount++;
+            }
+            
+            if (unpaidCount === 0 && waitingCount > 0) {
+                return { text: `We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.` };
+            } else if (unpaidCount === 0 && waitingCount === 0) {
+                return { text: `We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly from your bank or contact an agent for assistance.` };
+            }
+            
+            for (let docSnap of billingSnap.docs) {
+                const status = (docSnap.data().status || '').toLowerCase();
+                if (status !== 'paid' && status !== 'completed' && status !== 'waiting') {
                     await docSnap.ref.update({ 
                         status: 'Waiting',
                         processedBy: 'Page AI',
