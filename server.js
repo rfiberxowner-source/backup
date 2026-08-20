@@ -539,6 +539,7 @@ Our team will check if your area is serviceable and contact you for installation
                     let totalAmountDue = 0;
                     let unpaidBillsCount = 0;
                     let waitingBillsCount = 0;
+                    let billDetails = [];
                     
                     billingSnapshot.forEach(doc => {
                         const billData = doc.data();
@@ -547,6 +548,7 @@ Our team will check if your area is serviceable and contact you for installation
                             
                             if (status === 'waiting') {
                                 waitingBillsCount++;
+                                billDetails.push(`• ${billData.month || billData.billingMonth || billData.period || 'Unknown Month'} (Waiting Approval)`);
                             }
                             
                             if (status !== 'paid' && status !== 'completed' && billData.amount) {
@@ -554,7 +556,10 @@ Our team will check if your area is serviceable and contact you for installation
                                 let parsed = parseFloat(amt);
                                 if (!isNaN(parsed)) {
                                     totalAmountDue += parsed;
-                                    if (status !== 'waiting') unpaidBillsCount++;
+                                    if (status !== 'waiting') {
+                                        unpaidBillsCount++;
+                                        billDetails.push(`• ${billData.month || billData.billingMonth || billData.period || 'Unknown Month'}: ₱${parsed.toLocaleString()}`);
+                                    }
                                 }
                             }
                         }
@@ -565,7 +570,7 @@ Our team will check if your area is serviceable and contact you for installation
 
                     if (totalAmountDue > 0 || waitingBillsCount > 0) {
                         const today = new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' });
-                        let replyText = `As of ${today}, your total outstanding balance is: ₱${totalAmountDue.toLocaleString()}.\n\nThis is a combined total of ${unpaidBillsCount + waitingBillsCount} unpaid billing statement(s).`;
+                        let replyText = `As of ${today}, your total outstanding balance is: ₱${totalAmountDue.toLocaleString()}.\n\nThis is a combined total of ${unpaidBillsCount + waitingBillsCount} unpaid billing statement(s):\n\n${billDetails.join('\n')}`;
                         
                         if (waitingBillsCount > 0) {
                             replyText += `\n\nNote: You have ${waitingBillsCount} billing statement(s) that you recently tried to pay. It is currently in "Waiting" status pending admin approval.`;
