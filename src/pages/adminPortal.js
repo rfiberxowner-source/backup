@@ -543,7 +543,7 @@ export const adminViews = {
   },
   '/RFiberXAdminportal-banking': () => {
     const content = `
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
         <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; padding-bottom: 4.5rem; position: relative; overflow: hidden; z-index: 1;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
             <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">OUTSTANDING BALANCE</div>
@@ -577,6 +577,18 @@ export const adminViews = {
           <div style="font-size: 0.7rem; color: #f59e0b; font-weight: 500; position: relative; z-index: 2;">Needs attention</div>
           <div style="position: absolute; bottom: 1rem; left: 1.25rem; right: 1.25rem; height: 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; z-index: 1;">
             ${[60, 40, 50, 40, 60, 70, 90, 40].map(h => `<div style="flex: 1; height: ${h}%; background: #f59e0b; border-radius: 4px; box-shadow: 0 0 10px rgba(245,158,11,0.8);"></div>`).join('')}
+          </div>
+        </div>
+
+        <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; padding-bottom: 4.5rem; position: relative; overflow: hidden; z-index: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">WAITING APPROVAL</div>
+            <div style="width: 24px; height: 24px; background: rgba(16, 185, 129, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+          </div>
+          <div id="admin-waiting-bills" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
+          <div style="font-size: 0.7rem; color: #10b981; font-weight: 500; position: relative; z-index: 2;">Needs verification</div>
+          <div style="position: absolute; bottom: 1rem; left: 1.25rem; right: 1.25rem; height: 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; z-index: 1;">
+            ${[50, 60, 40, 70, 50, 40, 80, 60].map(h => `<div style="flex: 1; height: ${h}%; background: #10b981; border-radius: 4px; box-shadow: 0 0 10px rgba(16,185,129,0.8);"></div>`).join('')}
           </div>
         </div>
       </div>
@@ -2243,6 +2255,7 @@ window.initAdminBanking = async function () {
     document.getElementById('admin-outstanding-amount').innerText = '₱50,000';
     document.getElementById('admin-outstanding-accounts').innerText = 'Across 150 accounts';
     document.getElementById('admin-overdue-accounts').innerText = '15';
+    if (document.getElementById('admin-waiting-bills')) document.getElementById('admin-waiting-bills').innerText = '0';
 
     const bmTbody = document.getElementById('bm-tbody');
     const phTbody = document.getElementById('ph-tbody');
@@ -2285,15 +2298,18 @@ window.initAdminBanking = async function () {
       const outSet = new Set();
       let overdueCount = 0;
       let pendingCount = 0;
+      let waitingCount = 0;
 
       billsSnap.docs.forEach(d => {
         const b = d.data();
         let status = (b.status || 'Pending').toLowerCase();
         if (status === 'unread') status = 'pending';
 
+        if (status === 'waiting') waitingCount++;
+
         let isOverdue = false;
-        if (status !== 'paid' && status !== 'completed' && status !== 'waiting') {
-          if (b.dueDate) {
+        if (status !== 'paid' && status !== 'completed') {
+          if (b.dueDate && status !== 'waiting') {
             const dueDate = new Date(b.dueDate);
             const now = new Date();
             now.setHours(0, 0, 0, 0);
@@ -2322,6 +2338,7 @@ window.initAdminBanking = async function () {
       document.getElementById('admin-outstanding-amount').innerText = '₱' + outSum.toLocaleString();
       document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
       document.getElementById('admin-overdue-accounts').innerText = overdueCount;
+      if (document.getElementById('admin-waiting-bills')) document.getElementById('admin-waiting-bills').innerText = waitingCount;
     };
 
     window._bankUnsubs.push(
