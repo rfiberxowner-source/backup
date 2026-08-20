@@ -620,6 +620,7 @@ export const adminViews = {
           </select>
           <select id="bm-status" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; min-width: 120px;">
               <option value="">Status: All</option>
+              <option value="Waiting">Waiting</option>
               <option value="Pending">Pending</option>
               <option value="Overdue">Overdue</option>
             </select>
@@ -701,7 +702,7 @@ export const adminViews = {
 
   '/RFiberXAdminportal-reports': () => {
     const content = `
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
         <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; position: relative; overflow: hidden;">
           <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">TOTAL TICKETS</div>
           <div id="admin-total-tickets" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
@@ -721,11 +722,20 @@ export const adminViews = {
         </div>
 
         <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; position: relative; overflow: hidden;">
-          <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">SERVICE RATE</div>
-          <div id="admin-service-rate" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0.0 ★</div>
-          <div style="font-size: 0.7rem; color: #fff; font-weight: 500;">Average rating out of 5</div>
+          <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">READ TICKETS</div>
+          <div id="admin-read-tickets" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
+          <div style="font-size: 0.7rem; color: #fff; font-weight: 500;">Currently being handled</div>
           <div style="display: flex; gap: 4px; margin-top: 1rem; height: 24px; align-items: flex-end;">
-            ${Array(12).fill(0).map((_, i) => `<div style="flex: 1; background: #fbbf24; border-radius: 2px 2px 0 0; height: ${30 + Math.random() * 70}%; box-shadow: 0 0 8px rgba(251,191,36,0.4);"></div>`).join('')}
+            ${Array(12).fill(0).map((_, i) => `<div style="flex: 1; background: #3b82f6; border-radius: 2px 2px 0 0; height: ${30 + Math.random() * 70}%; box-shadow: 0 0 8px rgba(59,130,246,0.4);"></div>`).join('')}
+          </div>
+        </div>
+
+        <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; position: relative; overflow: hidden;">
+          <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.5rem;">PENDING TICKETS</div>
+          <div id="admin-pending-tickets" style="font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">0</div>
+          <div style="font-size: 0.7rem; color: #fff; font-weight: 500;">Awaiting your response</div>
+          <div style="display: flex; gap: 4px; margin-top: 1rem; height: 24px; align-items: flex-end;">
+            ${Array(12).fill(0).map((_, i) => `<div style="flex: 1; background: #f59e0b; border-radius: 2px 2px 0 0; height: ${30 + Math.random() * 70}%; box-shadow: 0 0 8px rgba(245,158,11,0.4);"></div>`).join('')}
           </div>
         </div>
       </div>
@@ -2582,6 +2592,8 @@ window.renderAdminReportsTable = async function () {
     let html = '';
     let total = snap.size;
     let resolved = 0;
+    let readCount = 0;
+    let pendingCount = 0;
 
     // Sort manually by date
     const sortedDocs = [...snap.docs].sort((a, b) => {
@@ -2598,6 +2610,10 @@ window.renderAdminReportsTable = async function () {
       if (displayStatus === 'Fixed' || displayStatus === 'Resolved') {
         resolved++;
         displayStatus = 'Fixed';
+      } else if (displayStatus === 'Read') {
+        readCount++;
+      } else if (displayStatus === 'Pending') {
+        pendingCount++;
       }
 
       if (f !== 'All' && displayStatus !== f) return;
@@ -2617,26 +2633,10 @@ window.renderAdminReportsTable = async function () {
       `;
     });
 
-    // 3. Calculate average rating directly from reports
-    let avgRating = '0.0';
-    let totalRatingScore = 0;
-    let totalRatingCount = 0;
-
-    sortedDocs.forEach(d => {
-      const ratingVal = Number(d.data().rating) || 0;
-      if (ratingVal > 0) {
-        totalRatingScore += ratingVal;
-        totalRatingCount++;
-      }
-    });
-
-    if (totalRatingCount > 0) {
-      avgRating = (totalRatingScore / totalRatingCount).toFixed(1);
-    }
-
     document.getElementById('admin-total-tickets').innerText = total;
     document.getElementById('admin-resolved-tickets').innerText = resolved;
-    document.getElementById('admin-service-rate').innerText = avgRating + ' ★';
+    if (document.getElementById('admin-read-tickets')) document.getElementById('admin-read-tickets').innerText = readCount;
+    if (document.getElementById('admin-pending-tickets')) document.getElementById('admin-pending-tickets').innerText = pendingCount;
 
     if (!html) html = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">No reports found</td></tr>';
     tb.innerHTML = html;
@@ -4319,6 +4319,25 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
 
     await firestore.addDoc(firestore.collection(db, "payments"), payData);
     await firestore.deleteDoc(billDocRef);
+
+    // Send push notification if token exists
+    const userDocRef = firestore.doc(db, "users", customerId);
+    const userDoc = await firestore.getDoc(userDocRef);
+    if (userDoc.exists()) {
+      const uData = userDoc.data();
+      if (uData.expoPushToken) {
+        fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: uData.expoPushToken,
+            sound: 'default',
+            title: 'Bill Approved ✅',
+            body: `Your bill for ₱${parseFloat(amountStr || 0).toLocaleString()} has been approved by the admin.`,
+          }),
+        }).catch(err => console.error("Push error", err));
+      }
+    }
 
     if (window.renderBills) await window.renderBills();
     if (window.renderPayments) await window.renderPayments();
