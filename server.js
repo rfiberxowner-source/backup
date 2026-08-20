@@ -1306,23 +1306,7 @@ If it IS a receipt, extract:
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-        // 2. Save exactly matching client portal schema
-        await receiptsRef.add({
-            referenceNumber: refNo,
-            amount: extracted.amount || 0,
-            date: extracted.date || '',
-            senderName: extracted.senderName || '',
-            receiverName: extracted.receiverName || '',
-            clientName: clientName,
-            clientAccountNumber: accountNum,
-            billingMonth: billingMonth,
-            status: "Waiting",
-            imageUrl: imageUrl,
-            sender_psid: sender_psid, // Hidden tracker for bot notifications
-            timestamp: FieldValue.serverTimestamp()
-        });
-
-        console.log("✅ Receipt saved successfully!");
+        console.log("✅ Receipt validated. Updating billing status...");
 
         // 3. Update the billing statement status to Pending
         if (userId) {
