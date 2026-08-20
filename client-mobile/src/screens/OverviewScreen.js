@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image, Animated, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -23,6 +23,14 @@ export default function OverviewScreen({ user, navigation }) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentMonthName = monthNames[new Date().getMonth()];
+
+  const [showBatteryModal, setShowBatteryModal] = useState(false);
+
+  useEffect(() => {
+    if (userData && userData.hasSeenTutorial && !userData.hasSetBatteryUnrestricted) {
+      setShowBatteryModal(true);
+    }
+  }, [userData]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -143,11 +151,13 @@ export default function OverviewScreen({ user, navigation }) {
 
     billsData.forEach(b => {
       if (b.status !== 'paid') {
+        const isWaiting = (b.status || '').toLowerCase() === 'waiting';
         const item = {
           id: b.id, type: 'bill', collection: 'billing_emails',
-          title: 'Billing Statement',
-          desc: `Amount due ₱${b.amount}, Due Date ${b.dueDate || '-'}`,
-          icon: 'file-document-outline', color: colors.primary,
+          title: isWaiting ? 'Payment Pending Approval' : 'Billing Statement',
+          desc: isWaiting ? `Your payment for ₱${b.amount} is waiting for admin approval.` : `Amount due ₱${b.amount}, Due Date ${b.dueDate || '-'}`,
+          icon: isWaiting ? 'clock-outline' : 'file-document-outline', 
+          color: isWaiting ? '#f59e0b' : colors.primary,
           date: new Date(b.dateSent),
           isRead: b.isRead || false,
           originalData: b
@@ -159,8 +169,8 @@ export default function OverviewScreen({ user, navigation }) {
     paymentsData.forEach(p => {
       const item = {
         id: p.id, type: 'bill', collection: 'payments',
-        title: 'Payment successful',
-        desc: `You Pay ₱${p.amount} for ${p.period || p.billingMonth || '-'}. View receipt`,
+        title: p.processedBy ? 'Payment Approved' : 'Payment successful',
+        desc: p.processedBy ? `Your payment for ₱${p.amount} has been approved. View receipt` : `You Pay ₱${p.amount} for ${p.period || p.billingMonth || '-'}. View receipt`,
         icon: 'file-document-outline', color: colors.primary,
         date: new Date(p.datePaid || p.date || 0),
         isRead: p.isRead || false,
@@ -704,6 +714,51 @@ export default function OverviewScreen({ user, navigation }) {
                 );
               })()}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Battery Optimization Modal */}
+      <Modal visible={showBatteryModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.receiptPaper, { padding: 25, alignItems: 'center' }]}>
+            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(245,158,11,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 15 }}>
+              <MaterialCommunityIcons name="battery-alert-variant-outline" size={34} color="#f59e0b" />
+            </View>
+            <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: '#1a1a1a', marginBottom: 10, textAlign: 'center' }}>Enable Background Notifications</Text>
+            <Text style={{ fontSize: 13, color: '#555', fontFamily: 'Inter_500Medium', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+              To ensure you receive important billing updates and support replies instantly, please allow RFiberX to run in the background.
+            </Text>
+            
+            <View style={{ width: '100%', backgroundColor: '#f9fafb', padding: 15, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: '#eee' }}>
+              <Text style={{ fontSize: 12, color: '#333', fontFamily: 'Inter_700Bold', marginBottom: 6 }}>Quick Instructions:</Text>
+              <Text style={{ fontSize: 12, color: '#555', fontFamily: 'Inter_500Medium', marginBottom: 4 }}>1. Tap <Text style={{ fontFamily: 'Inter_700Bold' }}>Open Settings</Text> below.</Text>
+              <Text style={{ fontSize: 12, color: '#555', fontFamily: 'Inter_500Medium', marginBottom: 4 }}>2. Go to <Text style={{ fontFamily: 'Inter_700Bold' }}>App Battery Usage</Text>.</Text>
+              <Text style={{ fontSize: 12, color: '#555', fontFamily: 'Inter_500Medium' }}>3. Select <Text style={{ fontFamily: 'Inter_700Bold', color: '#10b981' }}>Unrestricted</Text>.</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={{ backgroundColor: '#10b981', width: '100%', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginBottom: 10 }}
+              onPress={async () => {
+                await updateDoc(doc(db, "users", userData.id), { hasSetBatteryUnrestricted: true });
+                setUserData(prev => ({ ...prev, hasSetBatteryUnrestricted: true }));
+                setShowBatteryModal(false);
+                Linking.openSettings();
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' }}>Open Settings</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ paddingVertical: 10 }}
+              onPress={async () => {
+                await updateDoc(doc(db, "users", userData.id), { hasSetBatteryUnrestricted: true });
+                setUserData(prev => ({ ...prev, hasSetBatteryUnrestricted: true }));
+                setShowBatteryModal(false);
+              }}
+            >
+              <Text style={{ color: '#888', fontSize: 13, fontFamily: 'Inter_500Medium' }}>Maybe Later</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

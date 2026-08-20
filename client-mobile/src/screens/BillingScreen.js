@@ -238,7 +238,7 @@ export default function BillingScreen({ user, route, navigation }) {
       setBills(bList);
 
       const bal = bList
-        .filter(b => b.status !== 'paid')
+        .filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting')
         .reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
       setTotalBalance(bal.toFixed(2));
     }, (error) => {
@@ -599,13 +599,18 @@ If a field is not found, return "TBD".`;
         if (billExpected <= 0) continue;
 
         if (remainingAmt >= billExpected) {
-          // Fully paid: Delete the document from billing_emails
-          await deleteDoc(doc(db, "users", user.id, "billing_emails", unpaidBill.id));
+          // Fully paid: Set to waiting for admin approval
+          await updateDoc(doc(db, "users", user.id, "billing_emails", unpaidBill.id), {
+            status: 'waiting',
+            processedBy: 'Mobile App AI',
+            datePaid: new Date().toISOString()
+          });
           remainingAmt -= billExpected;
         } else {
-          // Partially paid: Update amount
+          // Partially paid: Update amount and set to waiting
           await updateDoc(doc(db, "users", user.id, "billing_emails", unpaidBill.id), {
-            status: 'partially_paid',
+            status: 'waiting',
+            processedBy: 'Mobile App AI',
             amount: billExpected - remainingAmt,
             datePaid: new Date().toISOString()
           });
@@ -751,22 +756,25 @@ If a field is not found, return "TBD".`;
                           </View>
                           <View style={styles.billRight}>
                             <Text style={styles.billAmount}>₱{b.amount}</Text>
-                            <View style={[styles.statusPill, styles.statusUnpaid]}>
-                              <Text style={[styles.statusText, styles.statusTextUnpaid]}>
-                                {b.status === 'overdue' ? 'Overdue' : 'Unpaid'}
+                            <View style={[styles.statusPill, styles.statusUnpaid, (b.status || '').toLowerCase() === 'waiting' && {backgroundColor: 'rgba(245,158,11,0.15)'}]}>
+                              <Text style={[styles.statusText, styles.statusTextUnpaid, (b.status || '').toLowerCase() === 'waiting' && {color: '#f59e0b'}]}>
+                                {(b.status || '').toLowerCase() === 'waiting' ? 'Waiting Approval' : ((b.status || '').toLowerCase() === 'overdue' ? 'Overdue' : 'Unpaid')}
                               </Text>
                             </View>
                           </View>
                         </View>
 
                         <TouchableOpacity
-                          style={styles.markPaidBtn}
+                          style={[styles.markPaidBtn, (b.status || '').toLowerCase() === 'waiting' && {backgroundColor: '#f1f5f9', borderColor: '#e2e8f0'}]}
+                          disabled={(b.status || '').toLowerCase() === 'waiting'}
                           onPress={() => {
                             setSelectedReceipt(b);
                             setReceiptVisible(true);
                           }}
                         >
-                          <Text style={styles.markPaidBtnText}>View Billing Statement</Text>
+                          <Text style={[styles.markPaidBtnText, (b.status || '').toLowerCase() === 'waiting' && {color: '#94a3b8'}]}>
+                            {(b.status || '').toLowerCase() === 'waiting' ? 'Waiting Admin Approval' : 'View Billing Statement'}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     ))}
@@ -882,11 +890,17 @@ If a field is not found, return "TBD".`;
               )}
 
               <TouchableOpacity
-                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border, opacity: (bills.filter(b => b.status !== 'paid').length === 0 || !(user.email && user.phone && user.address && user.facebook)) ? 0.5 : 1 }}
+                style={{ backgroundColor: colors.background, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: colors.border, opacity: (bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0 || !(user.email && user.phone && user.address && user.facebook)) ? 0.5 : 1 }}
                 onPress={handleUploadImage}
-                disabled={bills.filter(b => b.status !== 'paid').length === 0 || !(user.email && user.phone && user.address && user.facebook)}
+                disabled={bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0 || !(user.email && user.phone && user.address && user.facebook)}
               >
-                <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>{!(user.email && user.phone && user.address && user.facebook) ? 'Missing Profile Details' : 'Upload Payment Screenshot'}</Text>
+                <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>
+                  {!(user.email && user.phone && user.address && user.facebook) 
+                    ? 'Missing Profile Details' 
+                    : (bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0 
+                      ? 'No Unpaid Bills' 
+                      : 'Upload Payment Screenshot')}
+                </Text>
               </TouchableOpacity>
             </View>
           )}

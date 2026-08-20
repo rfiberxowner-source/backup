@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image, Modal, KeyboardAvoidingView, Platform, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, Image, Modal, KeyboardAvoidingView, Platform, DeviceEventEmitter, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -467,6 +467,32 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
               />
             </View>
           </View>
+
+          {!userData.hasSetBatteryUnrestricted && (
+            <>
+              <Text style={styles.groupTitle}>Notification Settings</Text>
+              <View style={[styles.insetGroup, { borderColor: '#f59e0b', borderWidth: 1, backgroundColor: 'rgba(245,158,11,0.05)' }]}>
+                <View style={{ flexDirection: 'row', padding: 15, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+                  <MaterialCommunityIcons name="battery-alert-variant-outline" size={24} color="#f59e0b" style={{ marginRight: 15 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 14, fontFamily: 'Inter_700Bold', marginBottom: 4 }}>Fix Background Notifications</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: 'Inter_500Medium', lineHeight: 18 }}>
+                      Your phone may block billing and support notifications to save battery. Tap below to allow RFiberX to run unrestricted.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={{ padding: 15, alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.1)' }}
+                  onPress={async () => {
+                    await updateDoc(doc(db, "users", userData.id), { hasSetBatteryUnrestricted: true });
+                    Linking.openSettings();
+                  }}
+                >
+                  <Text style={{ color: '#10b981', fontSize: 14, fontFamily: 'Inter_700Bold' }}>Open Battery Settings</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           {/* Personal Details Group */}
           <Text style={styles.groupTitle}>Personal Details</Text>
