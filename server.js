@@ -410,8 +410,38 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: "Please provide your Full Name or the name you remember for your account so we can search our database." };
             } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
                 accountRecoveryData.set(sender_psid, { account: text.trim() });
+                
+                try {
+                    const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                    if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
+                        userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        return {
+                            text: "Thank you.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
+                            attachment: {
+                                type: "image",
+                                payload: {
+                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                    is_reusable: true
+                                }
+                            },
+                            quick_replies: [
+                                { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                { content_type: "text", title: "No, not yet", payload: "No" }
+                            ]
+                        };
+                    }
+                } catch(e) {}
+
                 userSessions.set(sender_psid, 'BILLING_MENU');
-                return { text: "Thank you. Would you like to check your 'Balance' or see 'Payment' methods?" };
+                return { 
+                    text: "Thank you. Would you like to check your 'Balance' or see 'Payment' methods?",
+                    quick_replies: [
+                        { content_type: "text", title: "Balance", payload: "Balance" },
+                        { content_type: "text", title: "Payment", payload: "Payment" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" },
+                        { content_type: "text", title: "Agent", payload: "Agent" }
+                    ]
+                };
             } else {
                 return { text: "Please provide a valid Account Number, or reply with 'Forgot'." };
             }
@@ -460,6 +490,28 @@ Our team will check if your area is serviceable and contact you for installation
                 const accountNum = match.account || match.accountNumber || 'Not found';
                 
                 accountRecoveryData.set(sender_psid, { account: accountNum });
+                
+                try {
+                    const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                    if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
+                        userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        return {
+                            text: `Great! Your Account Number is ${accountNum}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
+                            attachment: {
+                                type: "image",
+                                payload: {
+                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                    is_reusable: true
+                                }
+                            },
+                            quick_replies: [
+                                { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                { content_type: "text", title: "No, not yet", payload: "No" }
+                            ]
+                        };
+                    }
+                } catch(e) {}
+
                 userSessions.set(sender_psid, 'BILLING_MENU');
 
                 return { 
@@ -493,6 +545,29 @@ Our team will check if your area is serviceable and contact you for installation
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
             }
+        } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP') {
+            let replyText = "Awesome! Let's continue.";
+            
+            if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
+                try {
+                    await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
+                } catch(e) {
+                    console.error("Error saving hasBeenAskedAboutApp:", e);
+                }
+            } else {
+                replyText = "We highly recommend downloading the RFiberX app so you can track your internet faster! Anyway, let's continue.";
+            }
+
+            userSessions.set(sender_psid, 'BILLING_MENU');
+            return {
+                text: `${replyText}\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+                quick_replies: [
+                    { content_type: "text", title: "Balance", payload: "Balance" },
+                    { content_type: "text", title: "Payment", payload: "Payment" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" },
+                    { content_type: "text", title: "Agent", payload: "Agent" }
+                ]
+            };
         } else if (userSessions.get(sender_psid) === 'BILLING_MENU') {
             if (msg.match(/(payment|bayad)/i)) {
                 userSessions.delete(sender_psid);
@@ -718,7 +793,19 @@ Our team will check if your area is serviceable and contact you for installation
                 const pass = data ? data.password : 'Not set';
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
-                return { text: `Your password is: ${pass}\n\nThank you for choosing RFiberX!` };
+                return { 
+                    text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
+                    quick_replies: [
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Billing", payload: "Billing" },
+                        { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                        { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                        { content_type: "text", title: "Change Password", payload: "Change Password" },
+                        { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                        { content_type: "text", title: "Relocation", payload: "Relocation" },
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                    ]
+                };
             } else if (msg.match(/(no|hindi)/i)) {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
@@ -771,7 +858,19 @@ Our team will check if your area is serviceable and contact you for installation
                     });
                     userSessions.delete(sender_psid);
                     accountRecoveryData.delete(sender_psid);
-                    return { text: "Success! The account has been removed from your profile." };
+                    return { 
+                        text: "Success! The account has been removed from your profile. What would you like to do next?",
+                        quick_replies: [
+                            { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                            { content_type: "text", title: "Billing", payload: "Billing" },
+                            { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                            { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                            { content_type: "text", title: "Change Password", payload: "Change Password" },
+                            { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                            { content_type: "text", title: "Relocation", payload: "Relocation" },
+                            { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                        ]
+                    };
                 } catch(e) {
                     console.error("Error deleting account:", e);
                     return { text: "An error occurred while removing your account. Please try again later." };
@@ -941,16 +1040,35 @@ Our team will check if your area is serviceable and contact you for installation
                 
                 if (savedAccount) {
                     accountRecoveryData.set(sender_psid, { account: savedAccount });
-                    userSessions.set(sender_psid, 'BILLING_MENU');
-                    return { 
-                        text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
-                        quick_replies: [
-                            { content_type: "text", title: "Balance", payload: "Balance" },
-                            { content_type: "text", title: "Payment", payload: "Payment" },
-                            { content_type: "text", title: "Cancel", payload: "Cancel" },
-                            { content_type: "text", title: "Agent", payload: "Agent" }
-                        ]
-                    };
+                    
+                    if (!psidDoc.data().hasBeenAskedAboutApp) {
+                        userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        return {
+                            text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
+                            attachment: {
+                                type: "image",
+                                payload: {
+                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                    is_reusable: true
+                                }
+                            },
+                            quick_replies: [
+                                { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                { content_type: "text", title: "No, not yet", payload: "No" }
+                            ]
+                        };
+                    } else {
+                        userSessions.set(sender_psid, 'BILLING_MENU');
+                        return { 
+                            text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+                            quick_replies: [
+                                { content_type: "text", title: "Balance", payload: "Balance" },
+                                { content_type: "text", title: "Payment", payload: "Payment" },
+                                { content_type: "text", title: "Cancel", payload: "Cancel" },
+                                { content_type: "text", title: "Agent", payload: "Agent" }
+                            ]
+                        };
+                    }
                 }
             } catch (err) {
                 console.error("Error checking saved account:", err);
