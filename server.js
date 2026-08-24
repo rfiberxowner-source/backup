@@ -279,7 +279,8 @@ async function getAutoReply(text, sender_psid) {
                     { content_type: "text", title: "Change Password", payload: "Change Password" },
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
         }
@@ -879,7 +880,8 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Change Password", payload: "Change Password" },
                         { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
-                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                     ]
                 };
             } else if (msg.match(/(no|hindi)/i)) {
@@ -895,7 +897,8 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Change Password", payload: "Change Password" },
                         { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
-                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                     ]
                 };
             } else {
@@ -944,7 +947,8 @@ Our team will check if your area is serviceable and contact you for installation
                             { content_type: "text", title: "Change Password", payload: "Change Password" },
                             { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                             { content_type: "text", title: "Relocation", payload: "Relocation" },
-                            { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                            { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                         ]
                     };
                 } catch(e) {
@@ -998,6 +1002,8 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'ACCOUNT_INQUIRY';
     } else if (msg.match(/(password|change password|wifi pass|change pass)/i)) {
         ai_decision = 'CHANGE_PASSWORD';
+    } else if (msg.match(/(mobile app|download app|install app|the app|rfiberx app)/i)) {
+        ai_decision = 'MOBILE_APP';
     } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
         ai_decision = 'GREETING';
     } else if (msg.match(/(plans|packages|magkano plan|internet plans|speeds|options)/i)) {
@@ -1035,6 +1041,7 @@ Our team will check if your area is serviceable and contact you for installation
             - CHANGE_PASSWORD (if they are asking to change their WiFi password)
             - AREA_INQUIRY (if they are asking about area installation or if their area is serviceable)
             - ACCOUNT_INQUIRY (if they are asking for their account number and password for the billing system account)
+            - MOBILE_APP (if they ask about the mobile app, downloading the app, or app links)
             - GREETING (if they say hello, hi, good morning, good evening, or thank you)
             - UNKNOWN (if they ask something completely unrelated to our ISP)
             
@@ -1075,6 +1082,26 @@ Our team will check if your area is serviceable and contact you for installation
     // the intent classified in Section 2.
     // =========================================================================
     switch (ai_decision) {
+        case 'MOBILE_APP':
+            try {
+                await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
+            } catch(e) { console.error("Error sending QR:", e); }
+            
+            return {
+                text: "Here is our mobile app! You can download it via this link:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHow else can I help you today?",
+                quick_replies: [
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Billing", payload: "Billing" },
+                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                    { content_type: "text", title: "Change Password", payload: "Change Password" },
+                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                    { content_type: "text", title: "Relocation", payload: "Relocation" },
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                    { content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                ]
+            };
+
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
             return { 
@@ -1301,7 +1328,8 @@ Would you also like to see our internet plans?`,
                     { content_type: "text", title: "Change Password", payload: "Change Password" },
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
 
@@ -1316,7 +1344,8 @@ Would you also like to see our internet plans?`,
                     { content_type: "text", title: "Change Password", payload: "Change Password" },
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" }
+                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
 
