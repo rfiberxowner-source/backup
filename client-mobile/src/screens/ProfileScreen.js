@@ -238,15 +238,23 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
               Alert.alert('GPS Disabled', 'Please turn on your device GPS (Location) to accurately save your address coordinates.');
             } else {
               try {
-                const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-                payload.rawLocation = {
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  timestamp: new Date().toISOString()
-                };
+                let location = await Location.getLastKnownPositionAsync();
+                if (!location) {
+                  location = await Promise.race([
+                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 10000))
+                  ]);
+                }
+                if (location && location.coords) {
+                  payload.rawLocation = {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    timestamp: new Date().toISOString()
+                  };
+                }
               } catch (posErr) {
                 console.error("Position error:", posErr);
-                Alert.alert('GPS Error', 'Could not fetch your exact location. Please ensure your GPS is turned on and try again.');
+                Alert.alert('GPS Error', 'Could not fetch your exact location in time. Please ensure your GPS is turned on and try again.');
               }
             }
           } else {
@@ -485,7 +493,13 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
                   style={{ padding: 15, alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.1)' }}
                   onPress={async () => {
                     await updateDoc(doc(db, "users", userData.id), { hasSetBatteryUnrestricted: true });
-                    Linking.openSettings();
+                    if (Platform.OS === 'android') {
+                      Linking.sendIntent("android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS").catch(() => {
+                        Linking.openSettings();
+                      });
+                    } else {
+                      Linking.openSettings();
+                    }
                   }}
                 >
                   <Text style={{ color: '#10b981', fontSize: 14, fontFamily: 'Inter_700Bold' }}>Open Battery Settings</Text>

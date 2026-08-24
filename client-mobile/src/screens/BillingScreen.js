@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, RefreshControl, TouchableOpacity, Modal, Dimensions, Alert, ActivityIndicator, Animated, Easing, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { Asset } from 'expo-asset';
 
 // Try to load MediaLibrary - works in APK builds but not in Expo Go
@@ -102,7 +102,7 @@ export default function BillingScreen({ user, route, navigation }) {
 
       if (MediaLibrary) {
         // APK build: save directly to gallery, no picker needed
-        const { status } = await MediaLibrary.requestPermissionsAsync();
+        const { status } = await MediaLibrary.requestPermissionsAsync(true);
         if (status !== 'granted') {
           Alert.alert('Permission Needed', 'Please grant storage permissions to save the QR code.');
           setIsSharing(false);
@@ -756,8 +756,8 @@ If a field is not found, return "TBD".`;
                           </View>
                           <View style={styles.billRight}>
                             <Text style={styles.billAmount}>₱{b.amount}</Text>
-                            <View style={[styles.statusPill, styles.statusUnpaid, (b.status || '').toLowerCase() === 'waiting' && {backgroundColor: 'rgba(245,158,11,0.15)'}]}>
-                              <Text style={[styles.statusText, styles.statusTextUnpaid, (b.status || '').toLowerCase() === 'waiting' && {color: '#f59e0b'}]}>
+                            <View style={[styles.statusPill, styles.statusUnpaid, (b.status || '').toLowerCase() === 'waiting' && { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
+                              <Text style={[styles.statusText, styles.statusTextUnpaid, (b.status || '').toLowerCase() === 'waiting' && { color: '#f59e0b' }]}>
                                 {(b.status || '').toLowerCase() === 'waiting' ? 'Waiting Approval' : ((b.status || '').toLowerCase() === 'overdue' ? 'Overdue' : 'Unpaid')}
                               </Text>
                             </View>
@@ -765,14 +765,14 @@ If a field is not found, return "TBD".`;
                         </View>
 
                         <TouchableOpacity
-                          style={[styles.markPaidBtn, (b.status || '').toLowerCase() === 'waiting' && {backgroundColor: '#f1f5f9', borderColor: '#e2e8f0'}]}
+                          style={[styles.markPaidBtn, (b.status || '').toLowerCase() === 'waiting' && { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' }]}
                           disabled={(b.status || '').toLowerCase() === 'waiting'}
                           onPress={() => {
                             setSelectedReceipt(b);
                             setReceiptVisible(true);
                           }}
                         >
-                          <Text style={[styles.markPaidBtnText, (b.status || '').toLowerCase() === 'waiting' && {color: '#94a3b8'}]}>
+                          <Text style={[styles.markPaidBtnText, (b.status || '').toLowerCase() === 'waiting' && { color: '#94a3b8' }]}>
                             {(b.status || '').toLowerCase() === 'waiting' ? 'Waiting Admin Approval' : 'View Billing Statement'}
                           </Text>
                         </TouchableOpacity>
@@ -865,7 +865,7 @@ If a field is not found, return "TBD".`;
             <MaterialCommunityIcons name="cellphone" size={30} color="#005EEA" />
             <View style={styles.methodInfo}>
               <Text style={styles.methodName}>GCash</Text>
-              <Text style={styles.methodDetails}>09058395471 (Fiber X)</Text>
+              <Text style={styles.methodDetails}>09058395471 (RFiberX)</Text>
             </View>
             <MaterialCommunityIcons name={showGcashDropdown ? "chevron-up" : "chevron-down"} size={24} color={colors.textMuted} />
           </TouchableOpacity>
@@ -895,10 +895,10 @@ If a field is not found, return "TBD".`;
                 disabled={bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0 || !(user.email && user.phone && user.address && user.facebook)}
               >
                 <Text style={{ color: colors.text, fontFamily: 'Inter_500Medium' }}>
-                  {!(user.email && user.phone && user.address && user.facebook) 
-                    ? 'Missing Profile Details' 
-                    : (bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0 
-                      ? 'No Unpaid Bills' 
+                  {!(user.email && user.phone && user.address && user.facebook)
+                    ? 'Missing Profile Details'
+                    : (bills.filter(b => b.status !== 'paid' && (b.status || '').toLowerCase() !== 'waiting').length === 0
+                      ? 'No Unpaid Bills'
                       : 'Upload Payment Screenshot')}
                 </Text>
               </TouchableOpacity>

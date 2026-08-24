@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image, Animated, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, Image, Animated, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -743,7 +743,13 @@ export default function OverviewScreen({ user, navigation }) {
                 await updateDoc(doc(db, "users", userData.id), { hasSetBatteryUnrestricted: true });
                 setUserData(prev => ({ ...prev, hasSetBatteryUnrestricted: true }));
                 setShowBatteryModal(false);
-                Linking.openSettings();
+                if (Platform.OS === 'android') {
+                  Linking.sendIntent("android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS").catch(() => {
+                    Linking.openSettings();
+                  });
+                } else {
+                  Linking.openSettings();
+                }
               }}
             >
               <Text style={{ color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' }}>Open Settings</Text>
