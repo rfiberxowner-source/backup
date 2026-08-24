@@ -413,7 +413,7 @@ Our team will check if your area is serviceable and contact you for installation
                             buttons: [
                                 {
                                     type: "web_url",
-                                    url: "https://rfiberx.net/192.168.8.1.mp4",
+                                    url: "https://rfiberx.net/videos/192.168.8.1.mp4",
                                     title: "▶️ Watch Video Tutorial"
                                 }
                             ]
