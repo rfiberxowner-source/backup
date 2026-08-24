@@ -235,14 +235,21 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
           if (status === 'granted') {
             const isLocationEnabled = await Location.hasServicesEnabledAsync();
             if (!isLocationEnabled) {
-              Alert.alert('GPS Disabled', 'Please turn on your device GPS (Location) to accurately save your address coordinates.');
+              Alert.alert(
+                'GPS Disabled', 
+                'Your GPS is currently turned off. Would you like to turn it on to accurately save your address coordinates?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Turn On GPS', onPress: () => Location.enableNetworkProviderAsync() }
+                ]
+              );
             } else {
               try {
                 let location = await Location.getLastKnownPositionAsync();
                 if (!location) {
                   location = await Promise.race([
-                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 10000))
+                    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout 20s')), 20000))
                   ]);
                 }
                 if (location && location.coords) {
@@ -254,7 +261,7 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
                 }
               } catch (posErr) {
                 console.error("Position error:", posErr);
-                Alert.alert('GPS Error', 'Could not fetch your exact location in time. Please ensure your GPS is turned on and try again.');
+                Alert.alert('GPS Error', `Could not fetch your exact location: ${posErr.message}. Please ensure your GPS is turned on and try again.`);
               }
             }
           } else {
@@ -262,6 +269,7 @@ export default function ProfileScreen({ navigation, route, user, onLogout }) {
           }
         } catch (locErr) {
           console.error("Location error:", locErr);
+          Alert.alert("Fatal Location Error", "The app crashed while requesting location permissions: " + locErr.message);
         }
       }
 
