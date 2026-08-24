@@ -555,6 +555,30 @@ Our team will check if your area is serviceable and contact you for installation
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
             }
+        } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
+            let replyText = "Awesome! Let's continue.";
+            
+            if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
+                try {
+                    await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
+                } catch(e) {
+                    console.error("Error saving hasBeenAskedAboutApp:", e);
+                }
+            } else {
+                replyText = "We highly recommend downloading the RFiberX app so you can track your internet faster! Anyway, let's continue.";
+            }
+
+            const data = accountRecoveryData.get(sender_psid);
+            const nextText = data && data.nextText ? data.nextText : "Verification successful.";
+            userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+            
+            return {
+                text: `${replyText}\n\n${nextText}\n\nWould you also like to see your password?`,
+                quick_replies: [
+                    { content_type: "text", title: "Yes", payload: "Yes" },
+                    { content_type: "text", title: "No", payload: "No" }
+                ]
+            };
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP') {
             let replyText = "Awesome! Let's continue.";
             
@@ -719,11 +743,31 @@ Our team will check if your area is serviceable and contact you for installation
                 const plan = match.plan || 'none';
                 
                 if (clientFullName && matchedName === clientFullName) {
-                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
-                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                     const detailsStr = await getAccountDetails(accountNum, match.lastActive);
+                    const nextText = `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}`;
+                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, nextText: nextText });
+                    
+                    try {
+                        const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                        if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
+                            userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
+                            try {
+                                await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
+                            } catch(e) {}
+                            
+                            return {
+                                text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
+                                quick_replies: [
+                                    { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                    { content_type: "text", title: "No, not yet", payload: "No" }
+                                ]
+                            };
+                        }
+                    } catch(e) {}
+
+                    userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                     return { 
-                        text: `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
+                        text: `${nextText}\n\nWould you also like to see your password?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
                             { content_type: "text", title: "No", payload: "No" }
@@ -780,10 +824,32 @@ Our team will check if your area is serviceable and contact you for installation
             const providedPlanNum = (msg.match(/\d+/) || [])[0];
 
             if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
-                userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                 const detailsStr = await getAccountDetails(data.account, data.lastActive);
+                const nextText = `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}`;
+                
+                accountRecoveryData.set(sender_psid, { account: data.account, password: data.password, plan: data.plan, nextText: nextText });
+
+                try {
+                    const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                    if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
+                        userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
+                        try {
+                            await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
+                        } catch(e) {}
+                        
+                        return {
+                            text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
+                            quick_replies: [
+                                { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                { content_type: "text", title: "No, not yet", payload: "No" }
+                            ]
+                        };
+                    }
+                } catch(e) {}
+
+                userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                 return { 
-                    text: `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
+                    text: `${nextText}\n\nWould you also like to see your password?`,
                     quick_replies: [
                         { content_type: "text", title: "Yes", payload: "Yes" },
                         { content_type: "text", title: "No", payload: "No" }
@@ -1188,16 +1254,33 @@ Would you also like to see our internet plans?`,
                         const accountNum = match.account || match.accountNumber || savedAccount;
                         const pass = match.password || 'Not set';
                         
-                        accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
-                        userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                         const detailsStr = await getAccountDetails(accountNum, match.lastActive);
-                        return { 
-                            text: `Welcome back! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
-                            quick_replies: [
-                                { content_type: "text", title: "Yes", payload: "Yes" },
-                                { content_type: "text", title: "No", payload: "No" }
-                            ]
-                        };
+                        const nextText = `Welcome back! Your Account Number is ${accountNum}.\n\n${detailsStr}`;
+                        accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, nextText: nextText });
+                        
+                        if (!psidDoc.data().hasBeenAskedAboutApp) {
+                            userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
+                            try {
+                                await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
+                            } catch(e) {}
+                            
+                            return {
+                                text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
+                                quick_replies: [
+                                    { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                    { content_type: "text", title: "No, not yet", payload: "No" }
+                                ]
+                            };
+                        } else {
+                            userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+                            return { 
+                                text: `${nextText}\n\nWould you also like to see your password?`,
+                                quick_replies: [
+                                    { content_type: "text", title: "Yes", payload: "Yes" },
+                                    { content_type: "text", title: "No", payload: "No" }
+                                ]
+                            };
+                        }
                     }
                 }
             } catch (err) {
