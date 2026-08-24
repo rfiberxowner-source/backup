@@ -220,12 +220,7 @@ export default function SupportScreen({ user, route, navigation }) {
           <Text style={styles.ticketDate}>{new Date(t.date).toLocaleDateString()}</Text>
         </View>
         
-        {t.status === 'Read' && (
-          <TouchableOpacity style={styles.btnAction} onPress={(e) => { e.stopPropagation(); markFixed(t.id); }}>
-            <MaterialCommunityIcons name="check-circle-outline" size={16} color="#fff" />
-            <Text style={styles.btnActionText}>Mark as Done</Text>
-          </TouchableOpacity>
-        )}
+
         {(t.status === 'Pending' || !t.status) && (
           <TouchableOpacity style={[styles.btnAction, { backgroundColor: '#e53935' }]} onPress={(e) => { e.stopPropagation(); deleteTicket(t.id); }}>
             <MaterialCommunityIcons name="delete-outline" size={16} color="#fff" />
