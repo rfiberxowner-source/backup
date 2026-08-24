@@ -409,7 +409,7 @@ Our team will check if your area is serviceable and contact you for installation
                         type: "template",
                         payload: {
                             template_type: "button",
-                            text: "Here is the tutorial for 192.168.8.1:\n\n1. Login with admin/admin.\n2. Go to Wi-Fi Basic Settings.\n3. Change Wi-Fi Password and Save.\n\n*(Note: Some modem models might have slightly different menus. Try to find the same keywords or steps shown in the tutorial!)*\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop).",
+                            text: "Here is the tutorial for 192.168.8.1:\n\n1. Login with user/user.\n2. Go to Wi-Fi Basic Settings.\n3. Change Wi-Fi Password and Save.\n\n*(Note: Some modem models might have slightly different menus. Try to find the same keywords or steps shown in the tutorial!)*\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop).",
                             buttons: [
                                 {
                                     type: "web_url",
