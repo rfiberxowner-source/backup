@@ -1434,8 +1434,10 @@ If it IS a receipt, extract:
                 } else {
                     return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
                 }
-            }
+            } // Close if (isOldestMatch)
+        } // Close if (userId)
 
+        return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
     } catch (err) {
         console.error("Error processing image receipt:", err);
         return { text: `Sorry, there was an error processing your receipt. Please try again later. (Error: ${err.message || err})` };
