@@ -390,7 +390,7 @@ Our team will check if your area is serviceable and contact you for installation
                         type: "template",
                         payload: {
                             template_type: "button",
-                            text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply 'Cancel').",
+                            text: "Here is the tutorial for 192.168.1.1:\n\n1. Login with user/user.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n*(Note: Some modem models might have slightly different menus. Try to find the same keywords or steps shown in the tutorial!)*\n\n(If this was the wrong gateway, you can reply 'Cancel').",
                             buttons: [
                                 {
                                     type: "web_url",
@@ -402,14 +402,14 @@ Our team will check if your area is serviceable and contact you for installation
                     }
                 };
             } else if (msg.includes('192.168.100.1')) {
-                return { text: "Here is the tutorial for 192.168.100.1:\n\n1. Login with telecomadmin/admintelecom.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
+                return { text: "Here is the tutorial for 192.168.100.1:\n\n1. Login with telecomadmin/admintelecom.\n2. Go to WLAN > Security.\n3. Change WPA Passphrase and Apply.\n\n*(Note: Some modem models might have slightly different menus. Try to find the same keywords or steps shown in the tutorial!)*\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop)." };
             } else if (msg.includes('192.168.8.1')) {
                 return {
                     attachment: {
                         type: "template",
                         payload: {
                             template_type: "button",
-                            text: "Here is the tutorial for 192.168.8.1:\n\n1. Login with admin/admin.\n2. Go to Wi-Fi Basic Settings.\n3. Change Wi-Fi Password and Save.\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop).",
+                            text: "Here is the tutorial for 192.168.8.1:\n\n1. Login with admin/admin.\n2. Go to Wi-Fi Basic Settings.\n3. Change Wi-Fi Password and Save.\n\n*(Note: Some modem models might have slightly different menus. Try to find the same keywords or steps shown in the tutorial!)*\n\n(If this was the wrong gateway, you can reply with a different one, or reply 'Cancel' to stop).",
                             buttons: [
                                 {
                                     type: "web_url",
