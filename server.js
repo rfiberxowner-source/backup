@@ -1235,38 +1235,43 @@ For inquiries or applications, kindly provide your preferred plan and the follow
 
         case 'CHANGE_PASSWORD':
             userSessions.set(sender_psid, 'CHANGE_PASSWORD_STEP_1');
-            return {
-                attachment: {
-                    type: "template",
-                    payload: {
-                        template_type: "button",
-                        text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE CLICK the corresponding quick reply below so I can send you the exact step-by-step tutorial!",
-                        buttons: [
-                            {
-                                type: "web_url",
-                                url: "http://192.168.1.1",
-                                title: "Link: 192.168.1.1"
-                            },
-                            {
-                                type: "web_url",
-                                url: "http://192.168.100.1",
-                                title: "Link: 192.168.100.1"
-                            },
-                            {
-                                type: "web_url",
-                                url: "http://192.168.8.1",
-                                title: "Link: 192.168.8.1"
-                            }
-                        ]
+            return [
+                {
+                    attachment: {
+                        type: "template",
+                        payload: {
+                            template_type: "button",
+                            text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE CLICK the corresponding quick reply below so I can send you the exact step-by-step tutorial!",
+                            buttons: [
+                                {
+                                    type: "web_url",
+                                    url: "http://192.168.1.1",
+                                    title: "Link: 192.168.1.1"
+                                },
+                                {
+                                    type: "web_url",
+                                    url: "http://192.168.100.1",
+                                    title: "Link: 192.168.100.1"
+                                },
+                                {
+                                    type: "web_url",
+                                    url: "http://192.168.8.1",
+                                    title: "Link: 192.168.8.1"
+                                }
+                            ]
+                        }
                     }
                 },
-                quick_replies: [
-                    { content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
-                    { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
-                    { content_type: "text", title: "192.168.8.1", payload: "192.168.8.1" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" }
-                ]
-            };
+                {
+                    text: "For the login, the username is usually 'user' and the password is 'user' (all lowercase).\n\nIf you have any problems logging in, try to contact the agent by typing 'Agent'.",
+                    quick_replies: [
+                        { content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
+                        { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
+                        { content_type: "text", title: "192.168.8.1", payload: "192.168.8.1" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }
+                    ]
+                }
+            ];
 
         case 'AREA_INQUIRY':
             userSessions.set(sender_psid, 'AREA_INQUIRY_STEP_1');
