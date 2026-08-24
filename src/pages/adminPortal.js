@@ -1285,17 +1285,16 @@ export const adminViews = {
   },
 
   '/RFiberXAdminportal-communications': () => {
-    window.sendPushNotification = async function(expoPushToken, title, body, data = {}) {
+    window.sendPushNotification = async function (expoPushToken, title, body, data = {}) {
       if (!expoPushToken) return;
       const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'text/plain' },
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
           body: JSON.stringify(message),
         });
-        console.log("Expo Push sent (opaque response).");
+        console.log("Expo Push sent.");
       } catch (error) { console.error('Error sending push notification:', error); }
     };
     window.sendDailyReminders = async function () {
@@ -1304,26 +1303,26 @@ export const adminViews = {
       btn.disabled = true;
       btn.innerHTML = 'Scanning...';
       statusEl.innerHTML = '';
-      
+
       try {
         const { db, firestore } = await window._getAdminDb();
         const usersSnap = await firestore.getDocs(firestore.collection(db, "users"));
-        
+
         const currentDay = new Date().getDate();
         let sentCount = 0;
-        
+
         for (const uDoc of usersSnap.docs) {
           const uData = uDoc.data();
           if (!uData.expoPushToken) continue;
-          
+
           const billsSnap = await firestore.getDocs(
             firestore.query(firestore.collection(db, "users", uDoc.id, "billing_emails"), firestore.orderBy("dateSent", "desc"), firestore.limit(1))
           );
-          
+
           if (billsSnap.empty) continue;
           const latestBill = billsSnap.docs[0].data();
           const bStatus = (latestBill.status || '').toLowerCase();
-          
+
           if (bStatus === 'unpaid' || bStatus === 'pending' || bStatus === 'unread') {
             if (currentDay >= 1 && currentDay <= 5) {
               await window.sendPushNotification(uData.expoPushToken, "New Billing Statement", "You have a new unpaid bill. Please check your portal for details.", { type: 'billing_unpaid' });
@@ -1340,13 +1339,13 @@ export const adminViews = {
             sentCount++;
           }
         }
-        
+
         statusEl.innerHTML = `<div style="color: #10b981;">Successfully sent ${sentCount} reminders!</div>`;
       } catch (e) {
         console.error(e);
         statusEl.innerHTML = `<div style="color: #e53935;">Error: ${e.message}</div>`;
       }
-      
+
       btn.disabled = false;
       btn.innerHTML = 'Send Daily Reminders';
     };
@@ -1403,7 +1402,7 @@ export const adminViews = {
 
         const now = new Date();
         const billingMonth = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7); 
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), 7);
         const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         let newBillId = '';
@@ -1498,18 +1497,18 @@ export const adminViews = {
         for (const docSnap of usersSnapshot.docs) {
           const userId = docSnap.id;
           const userData = docSnap.data();
-          
+
           const status = String(userData.status || '').trim().toLowerCase();
           if (status === 'disconnected') continue;
-          
+
           let rawPlan = String(userData.plan || userData.Plan || 'TBD').trim();
           if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) continue;
-          
+
           rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
           if (rawPlan === '60Mbps') rawPlan = '50Mbps';
           if (rawPlan === '20Mbps') rawPlan = '30Mbps';
           if (rawPlan === '45Mbps') rawPlan = '50Mbps';
-          
+
           let amountStr = String(userData.amount || userData.ammount || '').trim();
           let finalAmount = 0;
           if (rawPlan === '150Mbps') {
@@ -1646,7 +1645,7 @@ export const adminViews = {
         <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
           <div style="flex: 1; min-width: 250px;">
             <label style="display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Account Number</label>
-            <input type="text" id="comm-acct-number" value="312017" placeholder="e.g. 312017" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-family: 'JetBrains Mono', monospace, 'Inter', sans-serif; letter-spacing: 0.5px;" onfocus="this.style.borderColor='#E53935'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+            <input type="text" id="comm-acct-number" value="129005" placeholder="e.g. 129005" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; font-family: 'JetBrains Mono', monospace, 'Inter', sans-serif; letter-spacing: 0.5px;" onfocus="this.style.borderColor='#E53935'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
           </div>
           <button id="comm-send-btn" onclick="window.sendBillingEmail()" style="background: #E53935; color: #fff; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(229,57,53,0.3); white-space: nowrap; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#E53935'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -2409,7 +2408,7 @@ window.renderBills = async function () {
       const bData = b.data();
       const aStatus = (aData.status || 'Pending').toLowerCase();
       const bStatus = (bData.status || 'Pending').toLowerCase();
-      
+
       if (aStatus === 'waiting' && bStatus !== 'waiting') return -1;
       if (bStatus === 'waiting' && aStatus !== 'waiting') return 1;
 
@@ -2465,11 +2464,11 @@ window.renderBills = async function () {
           <td style="padding: 1rem;">${b.dueDate || '-'}</td>
           <td style="padding: 1rem;"><span style="color: ${badgeColor}; background: ${badgeColor}22; padding: 0.2rem 0.5rem; border-radius: 4px;">${displayStatus}</span></td>
           <td style="padding: 1rem;">
-            ${displayStatus === 'Waiting' ? 
-              `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '${b.processedBy || ''}', event)" style="background: #f59e0b; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Approve</button>`
-              :
-              `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>`
-            }
+            ${displayStatus === 'Waiting' ?
+          `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '${b.processedBy || ''}', event)" style="background: #f59e0b; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Approve</button>`
+          :
+          `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>`
+        }
           </td>
         </tr>
       `;
@@ -2685,7 +2684,7 @@ window.openAdminReport = async function (id) {
       try {
         await firestore.updateDoc(firestore.doc(db, "reports", id), { status: 'Read' });
         r.status = 'Read';
-        
+
         // Notify client that their ticket was read
         if (r.userId) {
           const uDoc = await firestore.getDoc(firestore.doc(db, "users", r.userId));
@@ -2877,13 +2876,13 @@ window.renderAdminClientsTable = async function () {
     // 1. Calculate plan metrics first
     snap.docs.forEach(d => {
       const u = d.data();
-      
+
       const status = String(u.status || '').trim().toLowerCase();
       if (status === 'disconnected') return; // Skip disconnected
-      
+
       let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
       if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return; // Skip invalid plans
-      
+
       // Normalize plans
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
       if (rawPlan === '60Mbps') rawPlan = '50Mbps';
@@ -2899,7 +2898,7 @@ window.renderAdminClientsTable = async function () {
         amountStr = amountStr.replace(/[^0-9.]/g, '');
         amount = parseFloat(amountStr) || 0;
       }
-      
+
       const plan = rawPlan;
 
       planCounts[plan] = (planCounts[plan] || 0) + 1;
@@ -2958,28 +2957,28 @@ window.renderAdminClientsTable = async function () {
     // 3. Render HTML rows
     sortedDocs.forEach(d => {
       const u = d.data();
-      
+
       const status = String(u.status || '').trim().toLowerCase();
-      
+
       if (statFilter !== 'All' && statFilter !== 'Newest' && statFilter !== 'Oldest') {
         if (statFilter === 'Connected' && status === 'disconnected') return;
         if (statFilter === 'Disconnected' && status !== 'disconnected') return;
       }
-      
+
       let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
-      
+
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
       if (rawPlan === '60Mbps') rawPlan = '50Mbps';
       if (rawPlan === '20Mbps') rawPlan = '30Mbps';
       if (rawPlan === '45Mbps') rawPlan = '50Mbps';
-      
+
       let amountStr = String(u.amount || u.ammount || '').trim();
       let amount = u.amount || u.ammount || 'TBD';
-      
+
       if (rawPlan === '150Mbps') {
         amount = '1700';
       }
-      
+
       if (!amountStr || amountStr === '0' || amountStr === '') amount = 'TBD';
 
       const plan = rawPlan;
@@ -3795,11 +3794,10 @@ window.sendMaintenanceAdvisory = async function () {
         // 3. Fire the HTTP POST request to Expo servers
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
-          mode: 'no-cors',
           headers: {
             'Accept': 'application/json',
             'Accept-encoding': 'gzip, deflate',
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(pushPayload),
         });
@@ -4396,7 +4394,7 @@ window.closeRevenueTaxPopup = function () {
 window._chatboxListeners = [];
 window._activeChatUser = null;
 
-window.initAdminChatbox = async function() {
+window.initAdminChatbox = async function () {
   window._chatboxListeners.forEach(unsub => unsub());
   window._chatboxListeners = [];
   window._activeChatUser = null;
@@ -4409,21 +4407,21 @@ window.initAdminChatbox = async function() {
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         if (data.role?.toLowerCase() === 'technician' || !data.role) {
-           const name = data.fullName || data.name || (data.firstName ? `${data.firstName} ${data.lastName||''}`.trim() : 'Technician');
-           users.push({ id: docSnap.id, name, ...data });
+          const name = data.fullName || data.name || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : 'Technician');
+          users.push({ id: docSnap.id, name, ...data });
         }
       });
       window._chatboxUsers = users;
       window.renderChatboxUserList();
     });
     window._chatboxListeners.push(unsubUsers);
-    
+
     const qUnread = firestore.query(firestore.collection(db, "messages"), firestore.where("status", "==", "unread"));
     const unsubUnread = firestore.onSnapshot(qUnread, (snapshot) => {
       const unreadMap = {};
       const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
       const myId = adminUser.id || 'admin_1';
-      
+
       snapshot.forEach(doc => {
         const msg = doc.data();
         if (msg.senderId !== myId) {
@@ -4439,24 +4437,24 @@ window.initAdminChatbox = async function() {
   }
 };
 
-window.renderChatboxUserList = function() {
+window.renderChatboxUserList = function () {
   const select = document.getElementById('cb-tech-select');
   if (!select) return;
   const users = window._chatboxUsers || [];
   const unreadMap = window._chatboxUnreadMap || {};
-  
+
   const currentVal = select.value;
   let html = '<option value="">Select a technician...</option>';
-  
+
   users.forEach(u => {
     const hasUnread = unreadMap[u.id] > 0;
     const name = u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
     const label = hasUnread ? `🔴 ${name} (Unread)` : name;
     html += `<option value="${u.id}">${label}</option>`;
   });
-  
+
   select.innerHTML = html;
-  
+
   if (currentVal && users.find(u => u.id === currentVal)) {
     select.value = currentVal;
   } else if (!currentVal && users.length > 0 && !window._activeChatUser) {
@@ -4465,58 +4463,58 @@ window.renderChatboxUserList = function() {
   }
 };
 
-window.chatboxSelectUser = function(userId) {
+window.chatboxSelectUser = function (userId) {
   const users = window._chatboxUsers || [];
   const user = users.find(u => u.id === userId);
-  
+
   if (!user) {
     window._activeChatUser = null;
     document.getElementById('cb-messages').innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 2rem;">Select a technician to view messages.</div>';
     return;
   }
-  
+
   window._activeChatUser = user;
-  
+
   const select = document.getElementById('cb-tech-select');
   if (select && select.value !== userId) select.value = userId;
-  
+
   window.loadChatboxMessages(userId);
 };
 
-window.loadChatboxMessages = async function(userId) {
+window.loadChatboxMessages = async function (userId) {
   if (window._currentChatUnsub) window._currentChatUnsub();
-  
+
   const { db, firestore } = await window._getAdminDb();
   const q = firestore.query(
     firestore.collection(db, "messages"),
     firestore.where("conversationId", "==", userId)
   );
-  
+
   const container = document.getElementById('cb-messages');
   container.innerHTML = '<div style="color:#64748b; text-align:center; padding:1rem;">Loading messages...</div>';
-  
+
   window._currentChatUnsub = firestore.onSnapshot(q, (snapshot) => {
     let html = '';
     const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
     const myId = adminUser.id || 'admin_1';
     const toUpdate = [];
     const msgs = [];
-    
+
     snapshot.forEach(docSnap => {
       msgs.push({ id: docSnap.id, ...docSnap.data() });
     });
-    
+
     // Sort messages ascending (oldest first)
     msgs.sort((a, b) => {
       const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : Date.now());
       const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : Date.now());
       return timeA - timeB;
     });
-    
+
     msgs.forEach(msg => {
       const msgId = msg.id;
       if (msg.senderId !== myId && msg.status === 'unread') toUpdate.push(msgId);
-      
+
       const isMe = msg.senderId === myId;
       const type = msg.type || 'text';
       let dateStr = '';
@@ -4524,7 +4522,7 @@ window.loadChatboxMessages = async function(userId) {
         const d = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp);
         dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       }
-      
+
       if (type === 'text') {
         html += `
           <div class="msg-wrapper ${isMe ? 'me' : 'them'}">
@@ -4536,28 +4534,28 @@ window.loadChatboxMessages = async function(userId) {
         html += window.renderChatboxCard(msgId, msg, isMe, dateStr);
       }
     });
-    
+
     if (snapshot.empty) html = '<div style="color:#64748b; text-align:center; padding:1rem;">No messages yet.</div>';
-    
+
     const messagesDiv = document.getElementById('cb-messages');
     if (messagesDiv) {
       messagesDiv.innerHTML = html;
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-    
+
     if (toUpdate.length > 0) {
       toUpdate.forEach(async (id) => {
-        try { await firestore.updateDoc(firestore.doc(db, "messages", id), { status: 'read' }); } catch (e) {}
+        try { await firestore.updateDoc(firestore.doc(db, "messages", id), { status: 'read' }); } catch (e) { }
       });
     }
   });
   window._chatboxListeners.push(window._currentChatUnsub);
 };
 
-window.renderChatboxCard = function(msgId, msg, isMe, dateStr) {
+window.renderChatboxCard = function (msgId, msg, isMe, dateStr) {
   const isTicket = msg.type === 'report';
   const title = isTicket ? 'SERVICE REQUEST' : 'CLIENT DETAILS';
-  
+
   let detailsHtml = '';
   if (isTicket) {
     const rawData = msg.data || msg.ticketData || {};
@@ -4572,7 +4570,7 @@ window.renderChatboxCard = function(msgId, msg, isMe, dateStr) {
       <div class="msg-card-row"><div class="msg-card-label">Status</div><div class="msg-card-value">${rawData.status || 'Pending'}</div></div>
     `;
     if (rawData.rawLocation) {
-       detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
+      detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
     }
   } else {
     const rawData = msg.data || msg.clientData || {};
@@ -4585,13 +4583,13 @@ window.renderChatboxCard = function(msgId, msg, isMe, dateStr) {
       <div class="msg-card-row"><div class="msg-card-label">Total Amount</div><div class="msg-card-value">₱${rawData.totalUnpaidAmount || 0}</div></div>
     `;
     if (rawData.rawLocation) {
-       detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
+      detailsHtml += `<button class="msg-card-btn msg-card-btn-map" onclick="window.openMap(${rawData.rawLocation.latitude}, ${rawData.rawLocation.longitude})">Show in Map</button>`;
     }
   }
 
   const targetId = isTicket ? (msg.data?.reportId || msg.reportId) : (msg.data?.clientId || msg.clientId);
   detailsHtml += `<button class="msg-card-btn msg-card-btn-delete" onclick="window.chatboxDeleteMsg('${msgId}', '${msg.type}', '${targetId}')">Delete Message</button>`;
-  
+
   return `
     <div class="msg-wrapper ${isMe ? 'me' : 'them'}">
       <div class="msg-card">
@@ -4605,22 +4603,22 @@ window.renderChatboxCard = function(msgId, msg, isMe, dateStr) {
   `;
 };
 
-window.openMap = function(lat, lng) {
+window.openMap = function (lat, lng) {
   window.open('https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng, '_blank');
 };
 
-window.chatboxSendMessage = async function() {
+window.chatboxSendMessage = async function () {
   const input = document.getElementById('cb-input');
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
   if (!window._activeChatUser) return;
-  
+
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
   const myId = adminUser.id || 'admin_1';
   const myName = adminUser.fullName || adminUser.name || 'Admin';
   const { db, firestore } = await window._getAdminDb();
-  
+
   try {
     input.value = '';
     await firestore.addDoc(firestore.collection(db, "messages"), {
@@ -4636,13 +4634,13 @@ window.chatboxSendMessage = async function() {
     // Send push notification if recipient has it enabled
     const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
     const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
-    
+
     if (tokenToUse) {
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: {
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             to: tokenToUse,
@@ -4664,19 +4662,19 @@ window.chatboxSendMessage = async function() {
   }
 };
 
-window.chatboxDeleteMsg = async function(msgId, type, targetId) {
-  const confirmText = type === 'text' 
-    ? "Are you sure you want to delete this message?" 
+window.chatboxDeleteMsg = async function (msgId, type, targetId) {
+  const confirmText = type === 'text'
+    ? "Are you sure you want to delete this message?"
     : "Are you sure you want to delete this message? This will also unassign the task/client from the technician.";
   if (!confirm(confirmText)) return;
   try {
     const { db, firestore } = await window._getAdminDb();
     await firestore.deleteDoc(firestore.doc(db, "messages", msgId));
-    
+
     if (type === 'report' && targetId) {
-       await firestore.updateDoc(firestore.doc(db, "reports", targetId), { assignedTo: null });
+      await firestore.updateDoc(firestore.doc(db, "reports", targetId), { assignedTo: null });
     } else if (type === 'client' && targetId) {
-       await firestore.updateDoc(firestore.doc(db, "users", targetId), { assignedTech: null });
+      await firestore.updateDoc(firestore.doc(db, "users", targetId), { assignedTech: null });
     }
   } catch (e) {
     console.error(e);
@@ -4684,10 +4682,10 @@ window.chatboxDeleteMsg = async function(msgId, type, targetId) {
   }
 };
 
-window.initChatboxTools = async function() {
+window.initChatboxTools = async function () {
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     // Fetch reports
     const unsubReports = firestore.onSnapshot(firestore.collection(db, 'reports'), (snapshot) => {
       const reps = [];
@@ -4696,7 +4694,7 @@ window.initChatboxTools = async function() {
       window.renderChatboxToolsView();
     });
     window._chatboxListeners.push(unsubReports);
-    
+
     // Fetch users (Clients)
     const unsubUsers = firestore.onSnapshot(firestore.collection(db, 'users'), (snapshot) => {
       const users = [];
@@ -4705,7 +4703,7 @@ window.initChatboxTools = async function() {
       window.renderChatboxToolsView();
     });
     window._chatboxListeners.push(unsubUsers);
-    
+
     // Fetch billing emails to know who has bills
     const unsubBills = firestore.onSnapshot(firestore.collectionGroup(db, 'billing_emails'), (snapshot) => {
       const ids = new Set();
@@ -4721,17 +4719,17 @@ window.initChatboxTools = async function() {
       window.renderChatboxToolsView();
     });
     window._chatboxListeners.push(unsubBills);
-    
+
   } catch (e) {
     console.error("Error initializing chatbox tools:", e);
   }
 };
 
-window.renderChatboxToolsView = function() {
+window.renderChatboxToolsView = function () {
   const select = document.getElementById('cb-tools-select');
   if (!select) return;
   const view = select.value;
-  
+
   if (view === 'Tickets') {
     document.getElementById('cb-tools-search-wrapper').style.display = 'none';
     window.renderChatboxReportsList();
@@ -4741,18 +4739,18 @@ window.renderChatboxToolsView = function() {
   }
 };
 
-window.renderChatboxReportsList = function() {
+window.renderChatboxReportsList = function () {
   const container = document.getElementById('cb-tools-content');
   if (!container) return;
   const reports = window._cbReports || [];
-  
+
   const pendingReports = reports.filter(r => (r.status || 'Pending').toLowerCase() !== 'fixed' && (r.status || 'Pending').toLowerCase() !== 'resolved');
-  
+
   if (pendingReports.length === 0) {
     container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 2rem;">No pending service requests found.</div>';
     return;
   }
-  
+
   let html = '<table class="cb-table"><tr><th>Customer</th><th>Subject</th><th>Category</th><th>Status</th><th style="text-align:right;">Action</th></tr>';
   pendingReports.forEach(r => {
     const name = r.name || r.customerName || 'Unknown';
@@ -4760,9 +4758,9 @@ window.renderChatboxReportsList = function() {
     let stColor = '#94a3b8';
     if (status.toLowerCase() === 'pending') stColor = '#f59e0b';
     if (status.toLowerCase() === 'assigned') stColor = '#3b82f6';
-    
+
     const assigned = !!r.assignedTo;
-    
+
     html += `
       <tr>
         <td>
@@ -4784,15 +4782,15 @@ window.renderChatboxReportsList = function() {
   container.innerHTML = html;
 };
 
-window.renderChatboxClientsList = function() {
+window.renderChatboxClientsList = function () {
   const container = document.getElementById('cb-tools-content');
   const searchInput = document.getElementById('cb-tools-search-input');
   if (!container || !searchInput) return;
-  
+
   const clients = window._cbClients || [];
   const billsSet = window._cbUserIdsWithBills || new Set();
   const query = searchInput.value.toLowerCase().trim();
-  
+
   const filtered = clients.filter(c => {
     if (!billsSet.has(c.id)) return false;
     if (c.role && c.role.toLowerCase() === 'technician') return false;
@@ -4800,17 +4798,17 @@ window.renderChatboxClientsList = function() {
     const name = (c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`).toLowerCase();
     return name.includes(query);
   });
-  
+
   if (filtered.length === 0) {
     container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 2rem;">No clients with active bills found.</div>';
     return;
   }
-  
+
   let html = '<table class="cb-table"><tr><th>Client Name</th><th>Account No.</th><th>Plan</th><th style="text-align:right;">Action</th></tr>';
   filtered.forEach(c => {
     const name = (c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`).trim() || 'Unknown';
     const assigned = !!c.assignedTech;
-    
+
     html += `
       <tr>
         <td style="font-weight: 600;">${name}</td>
@@ -4828,36 +4826,36 @@ window.renderChatboxClientsList = function() {
   container.innerHTML = html;
 };
 
-window.chatboxSendReport = async function(reportId) {
+window.chatboxSendReport = async function (reportId) {
   if (!window._activeChatUser) {
     alert("Please select a technician from the chat list first.");
     return;
   }
   const report = (window._cbReports || []).find(r => r.id === reportId);
   if (!report) return;
-  
+
   if (!confirm(`Send ticket for ${report.name || 'this customer'} to ${window._activeChatUser.name || 'the technician'}?`)) return;
-  
+
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
   const myId = adminUser.id || 'admin_1';
   const myName = adminUser.fullName || adminUser.name || 'Admin';
-  
+
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     // Fetch related user for location
     let location = report.rawLocation || null;
     let address = report.address || null;
     if (!location && report.userId) {
-       const userDoc = await firestore.getDoc(firestore.doc(db, "users", report.userId));
-       if (userDoc.exists()) {
-          const ud = userDoc.data();
-          if (ud.rawLocation) location = ud.rawLocation;
-          else if (ud.latitude && ud.longitude) location = { latitude: ud.latitude, longitude: ud.longitude };
-          if (!address) address = ud.address;
-       }
+      const userDoc = await firestore.getDoc(firestore.doc(db, "users", report.userId));
+      if (userDoc.exists()) {
+        const ud = userDoc.data();
+        if (ud.rawLocation) location = ud.rawLocation;
+        else if (ud.latitude && ud.longitude) location = { latitude: ud.latitude, longitude: ud.longitude };
+        if (!address) address = ud.address;
+      }
     }
-    
+
     const msgData = {
       conversationId: window._activeChatUser.id,
       senderId: myId,
@@ -4881,20 +4879,20 @@ window.chatboxSendReport = async function(reportId) {
         time: report.time || ''
       }
     };
-    
+
     await firestore.addDoc(firestore.collection(db, "messages"), msgData);
     await firestore.updateDoc(firestore.doc(db, "reports", report.id), { assignedTo: window._activeChatUser.id, status: 'Assigned' });
-    
+
     // Send push notification if recipient has it enabled
     const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
     const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
-    
+
     if (tokenToUse) {
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: {
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             to: tokenToUse,
@@ -4910,46 +4908,46 @@ window.chatboxSendReport = async function(reportId) {
         console.error('Error sending push notification for report:', pushErr);
       }
     }
-    
+
   } catch (e) {
     console.error("Error sending report:", e);
     alert("Failed to send ticket: " + e.message);
   }
 };
 
-window.chatboxSendClient = async function(clientId) {
+window.chatboxSendClient = async function (clientId) {
   if (!window._activeChatUser) {
     alert("Please select a technician from the chat list first.");
     return;
   }
   const client = (window._cbClients || []).find(c => c.id === clientId);
   if (!client) return;
-  
+
   const name = (client.name || client.fullName || `${client.firstName || ''} ${client.lastName || ''}`).trim();
   if (!confirm(`Send billing details for ${name || 'this client'} to ${window._activeChatUser.name || 'the technician'}?`)) return;
-  
+
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
   const myId = adminUser.id || 'admin_1';
   const myName = adminUser.fullName || adminUser.name || 'Admin';
-  
+
   try {
     const { db, firestore } = await window._getAdminDb();
-    
+
     let location = client.rawLocation || null;
     if (!location && client.latitude && client.longitude) location = { latitude: client.latitude, longitude: client.longitude };
-    
+
     const billsSnap = await firestore.getDocs(firestore.collection(db, `users/${client.id}/billing_emails`));
     let unpaidCount = 0;
     let totalAmt = 0;
     billsSnap.forEach(docSnap => {
-       const b = docSnap.data();
-       if ((b.status || '').toLowerCase() !== 'paid' && (b.status || '').toLowerCase() !== 'waiting') {
-          unpaidCount++;
-          const amt = parseFloat((b.totalAmount || b.amount || '0').toString().replace(/,/g, ''));
-          if (!isNaN(amt)) totalAmt += amt;
-       }
+      const b = docSnap.data();
+      if ((b.status || '').toLowerCase() !== 'paid' && (b.status || '').toLowerCase() !== 'waiting') {
+        unpaidCount++;
+        const amt = parseFloat((b.totalAmount || b.amount || '0').toString().replace(/,/g, ''));
+        if (!isNaN(amt)) totalAmt += amt;
+      }
     });
-    
+
     const msgData = {
       conversationId: window._activeChatUser.id,
       senderId: myId,
@@ -4970,20 +4968,20 @@ window.chatboxSendClient = async function(clientId) {
         rawLocation: location
       }
     };
-    
+
     await firestore.addDoc(firestore.collection(db, "messages"), msgData);
     await firestore.updateDoc(firestore.doc(db, "users", client.id), { assignedTech: window._activeChatUser.id });
-    
+
     // Send push notification if recipient has it enabled
     const freshUser = (window._chatboxUsers || []).find(u => u.id === window._activeChatUser.id);
     const tokenToUse = freshUser ? freshUser.expoPushToken : window._activeChatUser.expoPushToken;
-    
+
     if (tokenToUse) {
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: {
-            'Content-Type': 'text/plain',
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             to: tokenToUse,
