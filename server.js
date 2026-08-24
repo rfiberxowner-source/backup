@@ -415,15 +415,20 @@ Our team will check if your area is serviceable and contact you for installation
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                     if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
                         userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        try {
+                            await callSendAPI(sender_psid, {
+                                attachment: {
+                                    type: "image",
+                                    payload: {
+                                        url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                        is_reusable: true
+                                    }
+                                }
+                            });
+                        } catch(e) { console.error("Error sending QR:", e); }
+                        
                         return {
                             text: "Thank you.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
-                            attachment: {
-                                type: "image",
-                                payload: {
-                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
-                                    is_reusable: true
-                                }
-                            },
                             quick_replies: [
                                 { content_type: "text", title: "Yes, I have it", payload: "Yes" },
                                 { content_type: "text", title: "No, not yet", payload: "No" }
@@ -495,15 +500,20 @@ Our team will check if your area is serviceable and contact you for installation
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                     if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
                         userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        try {
+                            await callSendAPI(sender_psid, {
+                                attachment: {
+                                    type: "image",
+                                    payload: {
+                                        url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                        is_reusable: true
+                                    }
+                                }
+                            });
+                        } catch(e) { console.error("Error sending QR:", e); }
+                        
                         return {
                             text: `Great! Your Account Number is ${accountNum}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
-                            attachment: {
-                                type: "image",
-                                payload: {
-                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
-                                    is_reusable: true
-                                }
-                            },
                             quick_replies: [
                                 { content_type: "text", title: "Yes, I have it", payload: "Yes" },
                                 { content_type: "text", title: "No, not yet", payload: "No" }
@@ -1043,15 +1053,20 @@ Our team will check if your area is serviceable and contact you for installation
                     
                     if (!psidDoc.data().hasBeenAskedAboutApp) {
                         userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        try {
+                            await callSendAPI(sender_psid, {
+                                attachment: {
+                                    type: "image",
+                                    payload: {
+                                        url: "https://rfiberx.net/RFiberX_App_QR_new.png",
+                                        is_reusable: true
+                                    }
+                                }
+                            });
+                        } catch(e) { console.error("Error sending QR:", e); }
+                        
                         return {
                             text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
-                            attachment: {
-                                type: "image",
-                                payload: {
-                                    url: "https://rfiberx.net/RFiberX_App_QR_new.png",
-                                    is_reusable: true
-                                }
-                            },
                             quick_replies: [
                                 { content_type: "text", title: "Yes, I have it", payload: "Yes" },
                                 { content_type: "text", title: "No, not yet", payload: "No" }
