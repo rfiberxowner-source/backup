@@ -118,9 +118,12 @@ app.post('/webhook', (req, res) => {
 
                     // Auto-reply logic
                     if (webhook_event.message) {
-                        // Send the auto-reply ONLY to Rfiberx Blanco
-                        const RFIBERX_PSID = '28146825618339223';
-                        if (sender_psid === RFIBERX_PSID) {
+                        // Send the auto-reply ONLY to allowed testers
+                        const ALLOWED_TESTERS = [
+                            '28146825618339223', // Rfiberx Blanco
+                            '9562725917088194'   // Jasper Mangulabnan
+                        ];
+                        if (ALLOWED_TESTERS.includes(sender_psid)) {
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
                                 getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
