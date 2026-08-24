@@ -1289,13 +1289,17 @@ export const adminViews = {
       if (!expoPushToken) return;
       const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
       try {
-        await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify(message),
+        const { db, firestore } = await window._getAdminDb();
+        await firestore.addDoc(firestore.collection(db, "push_notifications"), {
+          to: expoPushToken,
+          title: title,
+          body: body,
+          data: data,
+          status: 'pending',
+          createdAt: firestore.serverTimestamp()
         });
-        console.log("Expo Push sent.");
-      } catch (error) { console.error('Error sending push notification:', error); }
+        console.log("Push notification queued in database.");
+      } catch (error) { console.error('Error queuing push notification:', error); }
     };
     window.sendDailyReminders = async function () {
       const btn = document.getElementById('comm-reminder-btn');
@@ -4637,23 +4641,19 @@ window.chatboxSendMessage = async function () {
 
     if (tokenToUse) {
       try {
-        await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: tokenToUse,
-            sound: 'default',
-            channelId: 'default',
-            priority: 'high',
-            title: `New Message from ${myName}`,
-            body: text,
-            data: { type: 'chat' }
-          }),
+        await firestore.addDoc(firestore.collection(db, "push_notifications"), {
+          to: tokenToUse,
+          sound: 'default',
+          channelId: 'default',
+          priority: 'high',
+          title: `New Message from ${myName}`,
+          body: text,
+          data: { type: 'chat' },
+          status: 'pending',
+          createdAt: firestore.serverTimestamp()
         });
       } catch (pushErr) {
-        console.error('Error sending push notification:', pushErr);
+        console.error('Error queuing push notification:', pushErr);
       }
     }
   } catch (error) {
@@ -4889,23 +4889,19 @@ window.chatboxSendReport = async function (reportId) {
 
     if (tokenToUse) {
       try {
-        await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: tokenToUse,
-            sound: 'default',
-            channelId: 'default',
-            priority: 'high',
-            title: `Service Request from ${myName}`,
-            body: `I have sent you a service request for ${report.name || 'a customer'}.`,
-            data: { type: 'report' }
-          }),
+        await firestore.addDoc(firestore.collection(db, "push_notifications"), {
+          to: tokenToUse,
+          sound: 'default',
+          channelId: 'default',
+          priority: 'high',
+          title: `Service Request from ${myName}`,
+          body: `I have sent you a service request for ${report.name || 'a customer'}.`,
+          data: { type: 'report' },
+          status: 'pending',
+          createdAt: firestore.serverTimestamp()
         });
       } catch (pushErr) {
-        console.error('Error sending push notification for report:', pushErr);
+        console.error('Error queuing push notification for report:', pushErr);
       }
     }
 
@@ -4978,26 +4974,21 @@ window.chatboxSendClient = async function (clientId) {
 
     if (tokenToUse) {
       try {
-        await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: tokenToUse,
-            sound: 'default',
-            channelId: 'default',
-            priority: 'high',
-            title: `Client Details from ${myName}`,
-            body: `I have sent you a client billing record for ${name || 'a customer'}.`,
-            data: { type: 'client' }
-          }),
+        await firestore.addDoc(firestore.collection(db, "push_notifications"), {
+          to: tokenToUse,
+          sound: 'default',
+          channelId: 'default',
+          priority: 'high',
+          title: `Client Details from ${myName}`,
+          body: `I have sent you a client billing record for ${name || 'a customer'}.`,
+          data: { type: 'client' },
+          status: 'pending',
+          createdAt: firestore.serverTimestamp()
         });
       } catch (pushErr) {
-        console.error('Error sending push notification for client:', pushErr);
+        console.error('Error queuing push notification for client:', pushErr);
       }
     }
-
   } catch (e) {
     console.error("Error sending client:", e);
     alert("Failed to send client details: " + e.message);
