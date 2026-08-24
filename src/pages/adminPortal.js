@@ -1287,7 +1287,15 @@ export const adminViews = {
   '/RFiberXAdminportal-communications': () => {
     window.sendPushNotification = async function (expoPushToken, title, body, data = {}) {
       if (!expoPushToken) return;
-      const message = { to: expoPushToken, sound: 'default', title: title, body: body, data: data, channelId: 'alerts' };
+      const message = { 
+        to: expoPushToken, 
+        sound: 'default', 
+        channelId: 'default', 
+        priority: 'high',
+        title: title, 
+        body: body, 
+        data: data 
+      };
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
