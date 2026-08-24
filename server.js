@@ -1177,6 +1177,33 @@ Would you also like to see our internet plans?`,
             };
 
         case 'ACCOUNT_INQUIRY':
+            try {
+                const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
+                
+                if (savedAccount) {
+                    const usersSnapshot = await db.collection('users').where('account', '==', savedAccount).limit(1).get();
+                    if (!usersSnapshot.empty) {
+                        const match = usersSnapshot.docs[0].data();
+                        const accountNum = match.account || match.accountNumber || savedAccount;
+                        const pass = match.password || 'Not set';
+                        
+                        accountRecoveryData.set(sender_psid, { account: accountNum, password: pass });
+                        userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
+                        const detailsStr = await getAccountDetails(accountNum, match.lastActive);
+                        return { 
+                            text: `Welcome back! Your Account Number is ${accountNum}.\n\n${detailsStr}\n\nWould you also like to see your password?`,
+                            quick_replies: [
+                                { content_type: "text", title: "Yes", payload: "Yes" },
+                                { content_type: "text", title: "No", payload: "No" }
+                            ]
+                        };
+                    }
+                }
+            } catch (err) {
+                console.error("Error in ACCOUNT_INQUIRY checking saved account:", err);
+            }
+
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
             return { text: "To help you find your account details, please provide your Full Name or the name you remember for your account." };
 
