@@ -2,15 +2,14 @@ const fetch = require('node-fetch');
 
 async function test() {
   try {
-    const res = await fetch('https://corsproxy.io/?https://exp.host/--/api/v2/push/send', {
+    const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Origin': 'https://rfiberx.net'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        to: "ExponentPushToken[xxxxx]",
+        to: "ExponentPushToken[rDbAGLI2K8h-JNpR3cspuI]",
         title: "Test",
         body: "Test body"
       })

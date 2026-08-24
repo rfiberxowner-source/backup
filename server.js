@@ -1263,7 +1263,7 @@ For inquiries or applications, kindly provide your preferred plan and the follow
                     }
                 },
                 {
-                    text: "For the login, the username is usually 'user' and the password is 'user' (all lowercase).\n\nIf you have any problems logging in, try to contact the agent by typing 'Agent'.",
+                    text: "For the login, the username is usually 'user' and the password is 'user' (all lowercase). If that didn't work, try 'User' and 'User' with a capital U.\n\nIf you still have problems logging in, try to contact the agent by typing 'Agent'.",
                     quick_replies: [
                         { content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
                         { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
