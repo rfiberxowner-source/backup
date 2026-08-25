@@ -1479,10 +1479,20 @@ db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
                         if (!psidSnap.empty) {
                             const psid = psidSnap.docs[0].id;
 
+                            // Build specific details
+                            const billMonth = data.month || data.billingMonth || data.period || 'your recent billing';
+                            const billAmount = data.amount ? `₱${parseFloat(String(data.amount).replace(/[^0-9.-]/g, '')).toLocaleString()}` : '';
+                            const approvedDate = new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
+                            let message = `🎉 Great news! Your payment for ${billMonth}`;
+                            if (billAmount) {
+                                message += ` (${billAmount})`;
+                            }
+                            message += ` has been verified and approved by the admin on ${approvedDate}.`;
+                            message += `\n\nYour billing statement is now officially marked as ✅ Paid. Thank you for your prompt payment!`;
+
                             // Send proactive message
-                            await callSendAPI(psid, {
-                                text: `🎉 Great news! Your recent payment has been verified and your billing statement is now officially marked as Paid. Thank you!`
-                            });
+                            await callSendAPI(psid, { text: message });
 
                             // Mark as notified so it doesn't spam
                             await change.doc.ref.update({ botNotifiedPaid: true });
