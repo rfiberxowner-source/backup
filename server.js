@@ -1047,7 +1047,7 @@ Our team will check if your area is serviceable and contact you for installation
             if (!apiKey) throw new Error("Gemini API Key missing from Firestore");
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+            const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
             const prompt = `You are an intelligent classifier for an ISP called RFiberX. 
             Read the user's message in Tagalog, English, or Taglish. 
             You must reply with exactly ONE word from this list that best matches their intent:
@@ -1556,10 +1556,10 @@ async function processImageAttachment(imageUrl, sender_psid) {
         
         // Define an array of models to try in sequence
         const modelsToTry = [
-            "gemini-2.5-flash",       // 1st attempt: Fast default
-            "gemini-2.5-pro",         // 2nd attempt: Powerful fallback
-            "gemini-flash-latest",    // 3rd attempt: Older flash model fallback
-            "gemini-2.5-flash"        // 4th attempt: One last try
+            "gemini-3.6-flash",       // 1st attempt: ✅ Confirmed working
+            "gemini-3.7-flash",       // 2nd attempt: ✅ Confirmed working
+            "gemini-3.5-flash",       // 3rd attempt: ✅ Confirmed working
+            "gemini-3.5-flash-lite"   // 4th attempt: Lightweight last resort
         ];
 
         // Download image and convert to Base64
