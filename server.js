@@ -212,6 +212,37 @@ async function getAccountDetails(accountNum, lastActive) {
     return details;
 }
 
+
+function returnBillingMenuOrReceipt(sender_psid, prefixText) {
+    const data = accountRecoveryData.get(sender_psid);
+    const pendingUrl = data ? data.pendingReceiptUrl : null;
+    
+    if (pendingUrl) {
+        if (data) {
+            delete data.pendingReceiptUrl;
+            accountRecoveryData.set(sender_psid, data);
+        }
+        userSessions.delete(sender_psid);
+        
+        processImageAttachment(pendingUrl, sender_psid).then(replyMessage => {
+            if (replyMessage) callSendAPI(sender_psid, replyMessage);
+        }).catch(err => console.error(err));
+
+        return { text: `${prefixText}\n\nI am now securely scanning and processing the receipt you uploaded earlier. Please wait a moment...` };
+    }
+    
+    userSessions.set(sender_psid, 'BILLING_MENU');
+    return {
+        text: `${prefixText}\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+        quick_replies: [
+            { content_type: "text", title: "Balance", payload: "Balance" },
+            { content_type: "text", title: "Payment", payload: "Payment" },
+            { content_type: "text", title: "Cancel", payload: "Cancel" },
+            { content_type: "text", title: "Agent", payload: "Agent" }
+        ]
+    };
+}
+
 async function getAutoReply(text, sender_psid) {
     const msg = text.toLowerCase().trim();
 
@@ -457,16 +488,7 @@ Our team will check if your area is serviceable and contact you for installation
                     }
                 } catch (e) { }
 
-                userSessions.set(sender_psid, 'BILLING_MENU');
-                return {
-                    text: "Thank you. Would you like to check your 'Balance' or see 'Payment' methods?",
-                    quick_replies: [
-                        { content_type: "text", title: "Balance", payload: "Balance" },
-                        { content_type: "text", title: "Payment", payload: "Payment" },
-                        { content_type: "text", title: "Cancel", payload: "Cancel" },
-                        { content_type: "text", title: "Agent", payload: "Agent" }
-                    ]
-                };
+                return returnBillingMenuOrReceipt(sender_psid, "Thank you.");
             } else {
                 return { text: "Please provide a valid Account Number, or reply with 'Forgot'." };
             }
@@ -575,7 +597,48 @@ Our team will check if your area is serviceable and contact you for installation
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
             }
-        } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
+        
+        } else if (userSessions.get(sender_psid) === 'ACCOUNT_RECOVERY_SECURITY_TEST') {
+            const data = accountRecoveryData.get(sender_psid);
+            if (!data) {
+                userSessions.delete(sender_psid);
+                return { text: "Session expired. Please start again." };
+            }
+
+            const expectedPlanNum = (String(data.plan).match(/\d+/) || [])[0];
+            const providedPlanNum = (msg.match(/\d+/) || [])[0];
+
+            if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
+                accountRecoveryData.set(sender_psid, { account: data.pendingAccount, pendingReceiptUrl: data.pendingReceiptUrl });
+
+                try {
+                    const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
+                    if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
+                        userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
+                        try {
+                            await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
+                        } catch (e) { }
+
+                        return {
+                            text: `Verification successful!\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
+                            quick_replies: [
+                                { content_type: "text", title: "Yes, I have it", payload: "Yes" },
+                                { content_type: "text", title: "No, not yet", payload: "No" }
+                            ]
+                        };
+                    }
+                } catch (e) { }
+
+                return returnBillingMenuOrReceipt(sender_psid, `Verification successful!`);
+            } else {
+                userSessions.delete(sender_psid);
+                accountRecoveryData.delete(sender_psid);
+                return {
+                    text: "Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.",
+                    isHandover: true
+                };
+            }
+else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
             let replyText = "Awesome! Let's continue.";
 
             if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
@@ -612,16 +675,7 @@ Our team will check if your area is serviceable and contact you for installation
                 replyText = "We highly recommend downloading the RFiberX app so you can track your internet faster! Anyway, let's continue.";
             }
 
-            userSessions.set(sender_psid, 'BILLING_MENU');
-            return {
-                text: `${replyText}\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
-                quick_replies: [
-                    { content_type: "text", title: "Balance", payload: "Balance" },
-                    { content_type: "text", title: "Payment", payload: "Payment" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" },
-                    { content_type: "text", title: "Agent", payload: "Agent" }
-                ]
-            };
+            return returnBillingMenuOrReceipt(sender_psid, replyText);
         } else if (userSessions.get(sender_psid) === 'BILLING_MENU') {
             if (msg.match(/(payment|bayad)/i)) {
                 userSessions.delete(sender_psid);
@@ -814,7 +868,7 @@ Our team will check if your area is serviceable and contact you for installation
                         ]
                     };
                 } else {
-                    accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
+                    accountRecoveryData.set(sender_psid, { pendingAccount: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_SECURITY_TEST');
                     return {
                         text: "For security purposes, since this account name differs from your Facebook profile, please select the exact Internet Plan associated with this account.",
@@ -864,10 +918,10 @@ Our team will check if your area is serviceable and contact you for installation
             const providedPlanNum = (msg.match(/\d+/) || [])[0];
 
             if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
-                const detailsStr = await getAccountDetails(data.account, data.lastActive);
-                const nextText = `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}`;
+                const detailsStr = await getAccountDetails(data.pendingAccount, data.lastActive);
+                const nextText = `Verification successful!\n\nYour Account Number is ${data.pendingAccount}.\n\n${detailsStr}`;
 
-                accountRecoveryData.set(sender_psid, { account: data.account, password: data.password, plan: data.plan, nextText: nextText });
+                accountRecoveryData.set(sender_psid, { account: data.pendingAccount, password: data.password, plan: data.plan, nextText: nextText });
 
                 try {
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
@@ -1565,6 +1619,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
     // 3. If still no account, force them to provide it
     if (!accountNum) {
         userSessions.set(sender_psid, 'BILLING_STEP_1');
+        accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
         return { 
             text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
             quick_replies: [
