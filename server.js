@@ -1565,7 +1565,14 @@ async function processImageAttachment(imageUrl, sender_psid) {
     // 3. If still no account, force them to provide it
     if (!accountNum) {
         userSessions.set(sender_psid, 'BILLING_STEP_1');
-        return { text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it." };
+        return { 
+            text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
+            quick_replies: [
+                { content_type: "text", title: "Forgot", payload: "Forgot" },
+                { content_type: "text", title: "Agent", payload: "AGENT" },
+                { content_type: "text", title: "Cancel", payload: "CANCEL" }
+            ]
+        };
     }
 
     try {
