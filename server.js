@@ -95,7 +95,7 @@ app.post('/webhook', (req, res) => {
                     // Save new timestamp and state to Firestore
                     const recoveryData = accountRecoveryData.get(sender_psid);
                     const linkedAccount = recoveryData ? recoveryData.account : null;
-                    
+
                     let psidPayload = {
                         psid: sender_psid,
                         lastMessage: webhook_event.message?.text || "",
@@ -180,7 +180,7 @@ async function getAccountDetails(accountNum, lastActive) {
                 }
             }
         });
-    } catch(e) { console.error("Error fetching bills:", e); }
+    } catch (e) { console.error("Error fetching bills:", e); }
 
     let ticketCount = 0;
     try {
@@ -191,7 +191,7 @@ async function getAccountDetails(accountNum, lastActive) {
                 ticketCount++;
             }
         });
-    } catch(e) { console.error("Error fetching tickets:", e); }
+    } catch (e) { console.error("Error fetching tickets:", e); }
 
     let lastActiveStr = "Account has not been activated yet";
     if (lastActive) {
@@ -208,7 +208,7 @@ async function getAccountDetails(accountNum, lastActive) {
     details += `• Last Online: ${lastActiveStr}\n`;
     details += `• Unpaid Billing Statements: ${unpaidBillsCount > 0 ? unpaidBillsCount : "None"}\n`;
     details += `• Support Tickets: ${ticketCount > 0 ? ticketCount : "None"}`;
-    
+
     return details;
 }
 
@@ -238,7 +238,7 @@ async function getAutoReply(text, sender_psid) {
             const currentSession = userSessions.get(sender_psid) || "";
             userSessions.delete(sender_psid);
             accountRecoveryData.delete(sender_psid);
-            
+
             let topic = "your concern";
             if (msg.includes('no_internet') || msg.includes('urgent') || msg.includes('red') || currentSession === 'TECH_SUPPORT_STEP_2') {
                 topic = "no internet or red light flashing";
@@ -261,10 +261,10 @@ async function getAutoReply(text, sender_psid) {
             } else if (msg.includes('plans') || currentSession.startsWith('PLANS')) {
                 topic = "internet plans";
             }
-            
-            return { 
-                text: `You are transferred to the agent if you want to talk about ${topic}. Please wait for our team to be with you shortly.`, 
-                isHandover: true 
+
+            return {
+                text: `You are transferred to the agent if you want to talk about ${topic}. Please wait for our team to be with you shortly.`,
+                isHandover: true
             };
         }
 
@@ -272,7 +272,7 @@ async function getAutoReply(text, sender_psid) {
         if (msg.match(/(cancel|stop|ayoko)/i)) {
             userSessions.delete(sender_psid);
             accountRecoveryData.delete(sender_psid);
-            return { 
+            return {
                 text: "Okay, we've cancelled that request. How else can I help you today?",
                 quick_replies: [
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -283,7 +283,7 @@ async function getAutoReply(text, sender_psid) {
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
                     { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                    { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
         }
@@ -292,7 +292,7 @@ async function getAutoReply(text, sender_psid) {
             userSessions.delete(sender_psid); // Clear memory state
 
             if (msg.match(/(slow|mabagal|bagal)/i)) {
-                return { 
+                return {
                     text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support.`,
                     quick_replies: [
                         { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
@@ -301,7 +301,7 @@ async function getAutoReply(text, sender_psid) {
                     ]
                 };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
-                return { 
+                return {
                     text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem.`,
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT_NO_INTERNET" },
@@ -338,7 +338,8 @@ Thank you for choosing RFIBERX Telecom!` };
         } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_1') {
             if (msg.match(/(yes|oo|sige|proceed)/i)) {
                 userSessions.set(sender_psid, 'APPLICATION_STEP_2');
-                return { text: `Great! Here are our available plans with details:
+                return {
+                    text: `Great! Here are our available plans with details:
 • 30 Mbps – ₱800 (Best for light browsing & social media)
 • 50 Mbps – ₱1,000 (Ideal for work from home & HD streaming)
 • 70 Mbps – ₱1,300 (Great for multiple devices & gaming)
@@ -429,7 +430,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: "Please provide your Full Name or the name you remember for your account so we can search our database." };
             } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
                 accountRecoveryData.set(sender_psid, { account: text.trim() });
-                
+
                 try {
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                     if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
@@ -444,8 +445,8 @@ Our team will check if your area is serviceable and contact you for installation
                                     }
                                 }
                             });
-                        } catch(e) { console.error("Error sending QR:", e); }
-                        
+                        } catch (e) { console.error("Error sending QR:", e); }
+
                         return {
                             text: "Thank you.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                             quick_replies: [
@@ -454,10 +455,10 @@ Our team will check if your area is serviceable and contact you for installation
                             ]
                         };
                     }
-                } catch(e) {}
+                } catch (e) { }
 
                 userSessions.set(sender_psid, 'BILLING_MENU');
-                return { 
+                return {
                     text: "Thank you. Would you like to check your 'Balance' or see 'Payment' methods?",
                     quick_replies: [
                         { content_type: "text", title: "Balance", payload: "Balance" },
@@ -486,7 +487,7 @@ Our team will check if your area is serviceable and contact you for installation
                     userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_CONFIRM');
                     const firstMatch = matches[0];
                     const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
-                    return { 
+                    return {
                         text: `We found an account for ${matchedName}. Is this you?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
@@ -512,9 +513,9 @@ Our team will check if your area is serviceable and contact you for installation
             if (msg.match(/(yes|oo|ako|proceed)/i)) {
                 const match = data.matches[data.currentIndex];
                 const accountNum = match.account || match.accountNumber || 'Not found';
-                
+
                 accountRecoveryData.set(sender_psid, { account: accountNum });
-                
+
                 try {
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                     if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
@@ -529,8 +530,8 @@ Our team will check if your area is serviceable and contact you for installation
                                     }
                                 }
                             });
-                        } catch(e) { console.error("Error sending QR:", e); }
-                        
+                        } catch (e) { console.error("Error sending QR:", e); }
+
                         return {
                             text: `Great! Your Account Number is ${accountNum}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
                             quick_replies: [
@@ -539,11 +540,11 @@ Our team will check if your area is serviceable and contact you for installation
                             ]
                         };
                     }
-                } catch(e) {}
+                } catch (e) { }
 
                 userSessions.set(sender_psid, 'BILLING_MENU');
 
-                return { 
+                return {
                     text: `Great! Your Account Number is ${accountNum}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
                     quick_replies: [
                         { content_type: "text", title: "Balance", payload: "Balance" },
@@ -557,7 +558,7 @@ Our team will check if your area is serviceable and contact you for installation
                 if (data.currentIndex < data.matches.length) {
                     const nextMatch = data.matches[data.currentIndex];
                     const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
-                    return { 
+                    return {
                         text: `How about ${matchedName}? Is this you?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
@@ -576,11 +577,11 @@ Our team will check if your area is serviceable and contact you for installation
             }
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
             let replyText = "Awesome! Let's continue.";
-            
+
             if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
                 try {
                     await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
-                } catch(e) {
+                } catch (e) {
                     console.error("Error saving hasBeenAskedAboutApp:", e);
                 }
             } else {
@@ -590,7 +591,7 @@ Our team will check if your area is serviceable and contact you for installation
             const data = accountRecoveryData.get(sender_psid);
             const nextText = data && data.nextText ? data.nextText : "Verification successful.";
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-            
+
             return {
                 text: `${replyText}\n\n${nextText}\n\nWould you also like to see your password?`,
                 quick_replies: [
@@ -600,11 +601,11 @@ Our team will check if your area is serviceable and contact you for installation
             };
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP') {
             let replyText = "Awesome! Let's continue.";
-            
+
             if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
                 try {
                     await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
-                } catch(e) {
+                } catch (e) {
                     console.error("Error saving hasBeenAskedAboutApp:", e);
                 }
             } else {
@@ -627,7 +628,7 @@ Our team will check if your area is serviceable and contact you for installation
                 // We keep accountRecoveryData so they can upload a receipt immediately after
                 const data = accountRecoveryData.get(sender_psid);
                 const accountNum = data ? data.account : null;
-                
+
                 let replyText = `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`;
 
                 if (accountNum) {
@@ -643,7 +644,7 @@ Our team will check if your area is serviceable and contact you for installation
                                 else if (status !== 'paid' && status !== 'completed') unpaidBillsCount++;
                             }
                         });
-                        
+
                         if (unpaidBillsCount === 0 && waitingBillsCount > 0) {
                             replyText = `We accept the following payment methods, but please note:\n\nYou currently have NO unpaid bills. However, you have ${waitingBillsCount} billing statement(s) pending admin approval. Please wait for confirmation before paying again.\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.`;
                         } else if (waitingBillsCount > 0) {
@@ -656,7 +657,7 @@ Our team will check if your area is serviceable and contact you for installation
             } else if (msg.match(/(balance|magkano|balanse)/i)) {
                 const data = accountRecoveryData.get(sender_psid);
                 const accountNum = data ? data.account : null;
-                
+
                 if (!accountNum) {
                     userSessions.delete(sender_psid);
                     return { text: "We lost your account number. Please try the billing process again." };
@@ -668,17 +669,17 @@ Our team will check if your area is serviceable and contact you for installation
                     let unpaidBillsCount = 0;
                     let waitingBillsCount = 0;
                     let billDetails = [];
-                    
+
                     billingSnapshot.forEach(doc => {
                         const billData = doc.data();
                         if ((billData.account === accountNum || billData.accountNumber === accountNum)) {
                             const status = (billData.status || '').toLowerCase();
-                            
+
                             if (status === 'waiting') {
                                 waitingBillsCount++;
                                 billDetails.push(`• ${billData.month || billData.billingMonth || billData.period || 'Unknown Month'} (Waiting Approval)`);
                             }
-                            
+
                             if (status !== 'paid' && status !== 'completed' && billData.amount) {
                                 let amt = String(billData.amount).replace(/[^0-9.-]+/g, "");
                                 let parsed = parseFloat(amt);
@@ -686,7 +687,27 @@ Our team will check if your area is serviceable and contact you for installation
                                     totalAmountDue += parsed;
                                     if (status !== 'waiting') {
                                         unpaidBillsCount++;
-                                        billDetails.push(`• ${billData.month || billData.billingMonth || billData.period || 'Unknown Month'}: ₱${parsed.toLocaleString()}`);
+                                        const billMonth = billData.month || billData.billingMonth || billData.period || 'Unknown Month';
+
+                                        // Determine if overdue (due date is the 7th of the billing month)
+                                        let billLabel = 'Unpaid';
+                                        let dueDateStr = '';
+                                        try {
+                                            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+                                            const billDate = new Date(billMonth + ' 7');
+                                            if (!isNaN(billDate.getTime())) {
+                                                dueDateStr = billDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+                                                if (now > billDate) {
+                                                    billLabel = '⚠️ OVERDUE';
+                                                }
+                                            }
+                                        } catch (e) { }
+
+                                        if (dueDateStr) {
+                                            billDetails.push(`• ${billMonth}: ₱${parsed.toLocaleString()} — ${billLabel} (Due: ${dueDateStr})`);
+                                        } else {
+                                            billDetails.push(`• ${billMonth}: ₱${parsed.toLocaleString()} — ${billLabel}`);
+                                        }
                                     }
                                 }
                             }
@@ -699,7 +720,7 @@ Our team will check if your area is serviceable and contact you for installation
                     if (totalAmountDue > 0 || waitingBillsCount > 0) {
                         const today = new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' });
                         let replyText = `As of ${today}, your total outstanding balance is: ₱${totalAmountDue.toLocaleString()}.\n\nThis is a combined total of ${unpaidBillsCount + waitingBillsCount} unpaid billing statement(s):\n\n${billDetails.join('\n')}`;
-                        
+
                         if (waitingBillsCount > 0) {
                             replyText += `\n\nNote: You have ${waitingBillsCount} billing statement(s) that you recently tried to pay. It is currently in "Waiting" status pending admin approval.`;
                         }
@@ -731,7 +752,7 @@ Our team will check if your area is serviceable and contact you for installation
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_CONFIRM');
                     const firstMatch = matches[0];
                     const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
-                    return { 
+                    return {
                         text: `We found an account for ${matchedName}. Is this you?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
@@ -760,20 +781,20 @@ Our team will check if your area is serviceable and contact you for installation
                 const accountNum = match.account || match.accountNumber || 'Not found';
                 const pass = match.password || 'Not set';
                 const plan = match.plan || 'none';
-                
+
                 if (clientFullName && matchedName === clientFullName) {
                     const detailsStr = await getAccountDetails(accountNum, match.lastActive);
                     const nextText = `Great! Your Account Number is ${accountNum}.\n\n${detailsStr}`;
                     accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, nextText: nextText });
-                    
+
                     try {
                         const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                         if (!psidDoc.exists || !psidDoc.data().hasBeenAskedAboutApp) {
                             userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
                             try {
                                 await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
-                            } catch(e) {}
-                            
+                            } catch (e) { }
+
                             return {
                                 text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                                 quick_replies: [
@@ -782,10 +803,10 @@ Our team will check if your area is serviceable and contact you for installation
                                 ]
                             };
                         }
-                    } catch(e) {}
+                    } catch (e) { }
 
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                    return { 
+                    return {
                         text: `${nextText}\n\nWould you also like to see your password?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
@@ -795,7 +816,7 @@ Our team will check if your area is serviceable and contact you for installation
                 } else {
                     accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
                     userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_SECURITY_TEST');
-                    return { 
+                    return {
                         text: "For security purposes, since this account name differs from your Facebook profile, please select the exact Internet Plan associated with this account.",
                         quick_replies: [
                             { content_type: "text", title: "30Mbps", payload: "30Mbps" },
@@ -810,11 +831,11 @@ Our team will check if your area is serviceable and contact you for installation
                 }
             } else if (msg.match(/(no|hindi)/i)) {
                 data.currentIndex++;
-                
+
                 if (data.currentIndex < data.matches.length) {
                     const nextMatch = data.matches[data.currentIndex];
                     const matchedName = nextMatch.name || nextMatch.firstName || nextMatch.lastName || 'Unknown';
-                    return { 
+                    return {
                         text: `How about ${matchedName}? Is this you?`,
                         quick_replies: [
                             { content_type: "text", title: "Yes", payload: "Yes" },
@@ -837,7 +858,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 return { text: "Session expired. Please start again." };
             }
-            
+
             // Extract the numbers from both the DB plan and the user's msg to handle variations like "30Mbps", "30 Mbps", or just "30"
             const expectedPlanNum = (String(data.plan).match(/\d+/) || [])[0];
             const providedPlanNum = (msg.match(/\d+/) || [])[0];
@@ -845,7 +866,7 @@ Our team will check if your area is serviceable and contact you for installation
             if (expectedPlanNum && providedPlanNum && expectedPlanNum === providedPlanNum) {
                 const detailsStr = await getAccountDetails(data.account, data.lastActive);
                 const nextText = `Verification successful!\n\nYour Account Number is ${data.account}.\n\n${detailsStr}`;
-                
+
                 accountRecoveryData.set(sender_psid, { account: data.account, password: data.password, plan: data.plan, nextText: nextText });
 
                 try {
@@ -854,8 +875,8 @@ Our team will check if your area is serviceable and contact you for installation
                         userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
                         try {
                             await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
-                        } catch(e) {}
-                        
+                        } catch (e) { }
+
                         return {
                             text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                             quick_replies: [
@@ -864,10 +885,10 @@ Our team will check if your area is serviceable and contact you for installation
                             ]
                         };
                     }
-                } catch(e) {}
+                } catch (e) { }
 
                 userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                return { 
+                return {
                     text: `${nextText}\n\nWould you also like to see your password?`,
                     quick_replies: [
                         { content_type: "text", title: "Yes", payload: "Yes" },
@@ -888,7 +909,7 @@ Our team will check if your area is serviceable and contact you for installation
                 const pass = data ? data.password : 'Not set';
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
-                return { 
+                return {
                     text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
                     quick_replies: [
                         { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -899,7 +920,7 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
                         { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                        { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                     ]
                 };
             } else if (msg.match(/(no|hindi)/i)) {
@@ -916,7 +937,7 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
                         { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                        { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                     ]
                 };
             } else {
@@ -938,7 +959,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 return { text: "Session expired. Please try again." };
             }
-            
+
             let accountName = "Unknown";
             try {
                 const usersSnapshot = await db.collection('users').where('account', '==', savedAccountNum).limit(1).get();
@@ -946,8 +967,8 @@ Our team will check if your area is serviceable and contact you for installation
                     const userData = usersSnapshot.docs[0].data();
                     accountName = (userData.name || userData.firstName || userData.lastName || '').trim().toLowerCase();
                 }
-            } catch (err) {}
-            
+            } catch (err) { }
+
             if (msg === savedAccountNum.toLowerCase() || (accountName !== "unknown" && msg.includes(accountName))) {
                 try {
                     await db.collection('messenger_psids').doc(sender_psid).update({
@@ -955,7 +976,7 @@ Our team will check if your area is serviceable and contact you for installation
                     });
                     userSessions.delete(sender_psid);
                     accountRecoveryData.delete(sender_psid);
-                    return { 
+                    return {
                         text: "Success! The account has been removed from your profile. What would you like to do next?",
                         quick_replies: [
                             { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -966,10 +987,10 @@ Our team will check if your area is serviceable and contact you for installation
                             { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                             { content_type: "text", title: "Relocation", payload: "Relocation" },
                             { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                            { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                         ]
                     };
-                } catch(e) {
+                } catch (e) {
                     console.error("Error deleting account:", e);
                     return { text: "An error occurred while removing your account. Please try again later." };
                 }
@@ -1103,8 +1124,8 @@ Our team will check if your area is serviceable and contact you for installation
         case 'MOBILE_APP':
             try {
                 await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
-            } catch(e) { console.error("Error sending QR:", e); }
-            
+            } catch (e) { console.error("Error sending QR:", e); }
+
             return {
                 text: "Here is our mobile app! You can download it via this link:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHow else can I help you today?",
                 quick_replies: [
@@ -1122,7 +1143,7 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
-            return { 
+            return {
                 text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\".)*",
                 quick_replies: [
                     { content_type: "text", title: "Slow Internet", payload: "Slow Internet" },
@@ -1135,7 +1156,7 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'RELOCATION':
             userSessions.set(sender_psid, 'RELOCATION_STEP_1');
-            return { 
+            return {
                 text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just tap \"Agent\".)*",
                 quick_replies: [
                     { content_type: "text", title: "Yes", payload: "Yes" },
@@ -1146,7 +1167,7 @@ Our team will check if your area is serviceable and contact you for installation
 
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
-            return { 
+            return {
                 text: "Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?",
                 quick_replies: [
                     { content_type: "text", title: "Yes", payload: "Yes" },
@@ -1159,10 +1180,10 @@ Our team will check if your area is serviceable and contact you for installation
             try {
                 const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                 const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
-                
+
                 if (savedAccount) {
                     accountRecoveryData.set(sender_psid, { account: savedAccount });
-                    
+
                     if (!psidDoc.data().hasBeenAskedAboutApp) {
                         userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP');
                         try {
@@ -1175,8 +1196,8 @@ Our team will check if your area is serviceable and contact you for installation
                                     }
                                 }
                             });
-                        } catch(e) { console.error("Error sending QR:", e); }
-                        
+                        } catch (e) { console.error("Error sending QR:", e); }
+
                         return {
                             text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
                             quick_replies: [
@@ -1186,7 +1207,7 @@ Our team will check if your area is serviceable and contact you for installation
                         };
                     } else {
                         userSessions.set(sender_psid, 'BILLING_MENU');
-                        return { 
+                        return {
                             text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
                             quick_replies: [
                                 { content_type: "text", title: "Balance", payload: "Balance" },
@@ -1202,7 +1223,7 @@ Our team will check if your area is serviceable and contact you for installation
             }
 
             userSessions.set(sender_psid, 'BILLING_STEP_1');
-            return { 
+            return {
                 text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please tap 'Forgot'.",
                 quick_replies: [
                     { content_type: "text", title: "Forgot", payload: "Forgot" },
@@ -1297,24 +1318,24 @@ Would you also like to see our internet plans?`,
             try {
                 const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                 const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
-                
+
                 if (savedAccount) {
                     const usersSnapshot = await db.collection('users').where('account', '==', savedAccount).limit(1).get();
                     if (!usersSnapshot.empty) {
                         const match = usersSnapshot.docs[0].data();
                         const accountNum = match.account || match.accountNumber || savedAccount;
                         const pass = match.password || 'Not set';
-                        
+
                         const detailsStr = await getAccountDetails(accountNum, match.lastActive);
                         const nextText = `Welcome back! Your Account Number is ${accountNum}.\n\n${detailsStr}`;
                         accountRecoveryData.set(sender_psid, { account: accountNum, password: pass, nextText: nextText });
-                        
+
                         if (!psidDoc.data().hasBeenAskedAboutApp) {
                             userSessions.set(sender_psid, 'ASK_DOWNLOAD_APP_INQUIRY');
                             try {
                                 await callSendAPI(sender_psid, { attachment: { type: "image", payload: { url: "https://rfiberx.net/RFiberX_App_QR_new.png", is_reusable: true } } });
-                            } catch(e) {}
-                            
+                            } catch (e) { }
+
                             return {
                                 text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                                 quick_replies: [
@@ -1324,7 +1345,7 @@ Would you also like to see our internet plans?`,
                             };
                         } else {
                             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
-                            return { 
+                            return {
                                 text: `${nextText}\n\nWould you also like to see your password?`,
                                 quick_replies: [
                                     { content_type: "text", title: "Yes", payload: "Yes" },
@@ -1353,7 +1374,7 @@ Would you also like to see our internet plans?`,
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
                     { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                    { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
 
@@ -1369,7 +1390,7 @@ Would you also like to see our internet plans?`,
                     { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
                     { content_type: "text", title: "Relocation", payload: "Relocation" },
                     { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-{ content_type: "text", title: "Mobile App", payload: "Mobile App" }
+                    { content_type: "text", title: "Mobile App", payload: "Mobile App" }
                 ]
             };
 
@@ -1394,7 +1415,7 @@ Would you also like to see our internet plans?`,
 
                 accountRecoveryData.set(sender_psid, { accountToRemove: savedAccount });
                 userSessions.set(sender_psid, 'REMOVE_ACCOUNT_CONFIRM');
-                return { 
+                return {
                     text: `Are you sure you want to remove the currently saved account (${accountName}) from your profile?`,
                     quick_replies: [
                         { content_type: "text", title: "Yes", payload: "Yes" },
@@ -1416,7 +1437,7 @@ Would you also like to see our internet plans?`,
 
 // Intercept getAutoReply to append persistent reminder
 const originalGetAutoReply = getAutoReply;
-getAutoReply = async function(text, sender_psid) {
+getAutoReply = async function (text, sender_psid) {
     let reply = await originalGetAutoReply(text, sender_psid);
     if (!reply) return null;
 
@@ -1428,7 +1449,7 @@ getAutoReply = async function(text, sender_psid) {
                 .where('accountNumber', '==', recovery.account)
                 .where('status', '==', 'Pending Verification')
                 .limit(1).get();
-                
+
             if (!pendingQuery.empty) {
                 reply.text += "\n\n*(Reminder: Your billing statement is currently Waiting for approval.)*";
             }
@@ -1447,7 +1468,7 @@ db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
     snapshot.docChanges().forEach(async (change) => {
         if (change.type === 'modified') {
             const data = change.doc.data();
-            
+
             // If the status was just changed to Paid and hasn't been notified yet
             if (data.status === 'Paid' && data.botNotifiedPaid !== true) {
                 try {
@@ -1457,17 +1478,17 @@ db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
                         const psidSnap = await db.collection('messenger_psids').where('account', '==', acct).limit(1).get();
                         if (!psidSnap.empty) {
                             const psid = psidSnap.docs[0].id;
-                            
+
                             // Send proactive message
-                            await callSendAPI(psid, { 
-                                text: `🎉 Great news! Your recent payment has been verified and your billing statement is now officially marked as Paid. Thank you!` 
+                            await callSendAPI(psid, {
+                                text: `🎉 Great news! Your recent payment has been verified and your billing statement is now officially marked as Paid. Thank you!`
                             });
-                            
+
                             // Mark as notified so it doesn't spam
                             await change.doc.ref.update({ botNotifiedPaid: true });
                         }
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error("Failed to send paid notification:", e);
                 }
             }
@@ -1509,7 +1530,7 @@ async function callSendAPI(sender_psid, response) {
 // Process Image Attachment using Gemini Vision
 async function processImageAttachment(imageUrl, sender_psid) {
     let accountNum = null;
-    
+
     // 1. Check current session memory
     const data = accountRecoveryData.get(sender_psid);
     if (data && data.account) {
@@ -1529,7 +1550,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
             console.error("Error fetching saved account for image processing:", e);
         }
     }
-    
+
     // 3. If still no account, force them to provide it
     if (!accountNum) {
         userSessions.set(sender_psid, 'BILLING_STEP_1');
@@ -1553,7 +1574,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        
+
         // Define an array of models to try in sequence
         const modelsToTry = [
             "gemini-3.6-flash",       // 1st attempt: ✅ Confirmed working
@@ -1566,7 +1587,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
         const imageResp = await fetch(imageUrl);
         const buffer = await imageResp.arrayBuffer();
         const base64Data = Buffer.from(buffer).toString("base64");
-        
+
         const imagePart = {
             inlineData: {
                 data: base64Data,
@@ -1587,26 +1608,26 @@ If it IS a receipt, extract:
 
         let result = null;
         let finalError = null;
-        
+
         for (let i = 0; i < modelsToTry.length; i++) {
             try {
                 const currentModelName = modelsToTry[i];
                 const model = genAI.getGenerativeModel({ model: currentModelName });
                 console.log(`[Receipt Scan] Attempt ${i + 1}/${modelsToTry.length} using model: ${currentModelName}`);
-                
+
                 result = await model.generateContent([prompt, imagePart]);
                 break; // Success! Break out of the retry loop.
             } catch (apiError) {
                 finalError = apiError;
                 const isOverloaded = apiError.status === 503 || (apiError.message && apiError.message.includes('503'));
-                
+
                 if (isOverloaded && i < modelsToTry.length - 1) {
                     const delayMs = (i + 1) * 2000; // 2s, 4s, 6s
                     console.warn(`[Receipt Scan] Gemini 503 Overloaded on ${modelsToTry[i]}. Falling back in ${delayMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                 } else {
                     // If it's a non-503 error (e.g. 400 Bad Request), or we ran out of retries, we stop trying.
-                    break; 
+                    break;
                 }
             }
         }
@@ -1616,7 +1637,7 @@ If it IS a receipt, extract:
         }
 
         const responseText = result.response.text();
-        
+
         // Clean JSON formatting
         let jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         let extracted = JSON.parse(jsonStr);
@@ -1642,7 +1663,7 @@ If it IS a receipt, extract:
         // 1. Fetch Client Details
         let clientName = 'Unknown';
         let userId = null;
-        
+
         const usersSnap = await db.collection('users').where('accountNumber', '==', accountNum).limit(1).get();
         if (!usersSnap.empty) {
             const userDoc = usersSnap.docs[0];
@@ -1670,7 +1691,7 @@ If it IS a receipt, extract:
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
             const unpaidBillsList = [];
             let waitingCount = 0;
-            
+
             for (let docSnap of billingSnap.docs) {
                 const data = docSnap.data();
                 const status = (data.status || '').toLowerCase();
@@ -1680,13 +1701,25 @@ If it IS a receipt, extract:
                     unpaidBillsList.push({ id: docSnap.id, ref: docSnap.ref, ...data });
                 }
             }
-            
+
             const unpaidCount = unpaidBillsList.length;
-            
+
             if (unpaidCount === 0 && waitingCount > 0) {
-                return { text: `We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.` };
+                return {
+                    text: `We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.`,
+                    quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "AGENT" },
+                        { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                    ]
+                };
             } else if (unpaidCount === 0 && waitingCount === 0) {
-                return { text: `We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly from your bank or contact an agent for assistance.` };
+                return {
+                    text: `We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly and contact an agent for assistance.`,
+                    quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "AGENT" },
+                        { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                    ]
+                };
             }
 
             // Sort oldest to newest
@@ -1694,7 +1727,7 @@ If it IS a receipt, extract:
 
             // Extract amount from receipt
             const extractedAmount = parseFloat(String(extracted.amount).replace(/[^0-9\.]/g, ''));
-            
+
             // Calculate expected amounts
             let expectedTotalAmount = 0;
             unpaidBillsList.forEach(b => {
@@ -1723,40 +1756,76 @@ If it IS a receipt, extract:
                 } else {
                     errorMsg += `Your required balance is exactly ₱${expectedTotalAmount}. Partial payments or overpayments are not accepted.`;
                 }
-                return { text: errorMsg };
+                return {
+                    text: errorMsg,
+                    quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "AGENT" },
+                        { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                    ]
+                };
             }
 
             // Amount is valid, update documents
             if (isTotalMatch) {
                 for (let bill of unpaidBillsList) {
-                    await bill.ref.update({ 
+                    await bill.ref.update({
                         status: 'Waiting',
                         processedBy: 'Page AI',
                         updatedAt: FieldValue.serverTimestamp()
                     });
                 }
-                return { text: "Thank you! Your payment receipt for your total balance has been successfully received. All your billing statements are now marked as 'Waiting' for Admin approval." };
+                return {
+                    text: "Thank you! Your payment receipt for your total balance has been successfully received. All your billing statements are now marked as 'Waiting' for Admin approval.",
+                    quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "AGENT" },
+                        { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                    ]
+                };
             } else if (isOldestMatch) {
                 // Update ONLY the oldest bill
-                await unpaidBillsList[0].ref.update({ 
+                await unpaidBillsList[0].ref.update({
                     status: 'Waiting',
                     processedBy: 'Page AI',
                     updatedAt: FieldValue.serverTimestamp()
                 });
-                
+
                 let remainingCount = unpaidCount - 1;
                 if (remainingCount > 0) {
-                    return { text: `Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.` };
+                    return {
+                        text: `Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.`,
+                        quick_replies: [
+                            { content_type: "text", title: "Agent", payload: "AGENT" },
+                            { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                        ]
+                    };
                 } else {
-                    return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
+                    return {
+                        text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval.",
+                        quick_replies: [
+                            { content_type: "text", title: "Agent", payload: "AGENT" },
+                            { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                        ]
+                    };
                 }
             } // Close if (isOldestMatch)
         } // Close if (userId)
 
-        return { text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval." };
+        return {
+            text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval.",
+            quick_replies: [
+                { content_type: "text", title: "Agent", payload: "AGENT" },
+                { content_type: "text", title: "Cancel", payload: "CANCEL" }
+            ]
+        };
     } catch (err) {
         console.error("Error processing image receipt:", err);
-        return { text: `Sorry, there was an error processing your receipt. Please try again later. (Error: ${err.message || err})` };
+        return {
+            text: `Sorry, there was an error processing your receipt. Please try again later. (Error: ${err.message || err})`,
+            quick_replies: [
+                { content_type: "text", title: "Agent", payload: "AGENT" },
+                { content_type: "text", title: "Cancel", payload: "CANCEL" }
+            ]
+        };
     }
 }
 
