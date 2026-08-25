@@ -460,7 +460,8 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
                 return { text: "Please provide your Full Name or the name you remember for your account so we can search our database." };
             } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
-                accountRecoveryData.set(sender_psid, { account: text.trim() });
+                const curData = accountRecoveryData.get(sender_psid) || {};
+                accountRecoveryData.set(sender_psid, { ...curData, account: text.trim() });
 
                 try {
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
@@ -505,7 +506,8 @@ Our team will check if your area is serviceable and contact you for installation
                 });
 
                 if (matches.length > 0) {
-                    accountRecoveryData.set(sender_psid, { matches: matches, currentIndex: 0 });
+                    const curData = accountRecoveryData.get(sender_psid) || {};
+                    accountRecoveryData.set(sender_psid, { ...curData, matches: matches, currentIndex: 0 });
                     userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_CONFIRM');
                     const firstMatch = matches[0];
                     const matchedName = firstMatch.name || firstMatch.firstName || firstMatch.lastName || 'Unknown';
