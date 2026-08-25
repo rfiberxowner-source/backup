@@ -1553,7 +1553,14 @@ async function processImageAttachment(imageUrl, sender_psid) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        
+        // Define an array of models to try in sequence
+        const modelsToTry = [
+            "gemini-1.5-flash",       // 1st attempt: Fast default
+            "gemini-1.5-pro",         // 2nd attempt: Powerful fallback
+            "gemini-1.5-flash-8b",    // 3rd attempt: Lightweight fallback
+            "gemini-1.5-flash"        // 4th attempt: One last try at flash
+        ];
 
         // Download image and convert to Base64
         const imageResp = await fetch(imageUrl);
@@ -1579,20 +1586,33 @@ If it IS a receipt, extract:
 }`;
 
         let result = null;
-        let retries = 3;
-        while (retries > 0) {
+        let finalError = null;
+        
+        for (let i = 0; i < modelsToTry.length; i++) {
             try {
+                const currentModelName = modelsToTry[i];
+                const model = genAI.getGenerativeModel({ model: currentModelName });
+                console.log(`[Receipt Scan] Attempt ${i + 1}/${modelsToTry.length} using model: ${currentModelName}`);
+                
                 result = await model.generateContent([prompt, imagePart]);
-                break; // Success
+                break; // Success! Break out of the retry loop.
             } catch (apiError) {
-                if (apiError.status === 503 && retries > 1) {
-                    console.warn(`Gemini 503 Overloaded. Retrying in 3 seconds... (${retries - 1} attempts left)`);
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    retries--;
+                finalError = apiError;
+                const isOverloaded = apiError.status === 503 || (apiError.message && apiError.message.includes('503'));
+                
+                if (isOverloaded && i < modelsToTry.length - 1) {
+                    const delayMs = (i + 1) * 2000; // 2s, 4s, 6s
+                    console.warn(`[Receipt Scan] Gemini 503 Overloaded on ${modelsToTry[i]}. Falling back in ${delayMs}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
                 } else {
-                    throw apiError; // Throw if it's not a 503 or we ran out of retries
+                    // If it's a non-503 error (e.g. 400 Bad Request), or we ran out of retries, we stop trying.
+                    break; 
                 }
             }
+        }
+
+        if (!result) {
+            throw finalError || new Error("Failed to process receipt after trying all fallback models.");
         }
 
         const responseText = result.response.text();
