@@ -538,7 +538,8 @@ Our team will check if your area is serviceable and contact you for installation
                 const match = data.matches[data.currentIndex];
                 const accountNum = match.account || match.accountNumber || 'Not found';
 
-                accountRecoveryData.set(sender_psid, { account: accountNum });
+                const curData = accountRecoveryData.get(sender_psid) || {};
+                accountRecoveryData.set(sender_psid, { ...curData, account: accountNum });
 
                 try {
                     const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
@@ -566,17 +567,7 @@ Our team will check if your area is serviceable and contact you for installation
                     }
                 } catch (e) { }
 
-                userSessions.set(sender_psid, 'BILLING_MENU');
-
-                return {
-                    text: `Great! Your Account Number is ${accountNum}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
-                    quick_replies: [
-                        { content_type: "text", title: "Balance", payload: "Balance" },
-                        { content_type: "text", title: "Payment", payload: "Payment" },
-                        { content_type: "text", title: "Cancel", payload: "Cancel" },
-                        { content_type: "text", title: "Agent", payload: "Agent" }
-                    ]
-                };
+                return returnBillingMenuOrReceipt(sender_psid, `Great! Your Account Number is ${accountNum}.`);
             } else if (msg.match(/(no|hindi)/i)) {
                 data.currentIndex++;
                 if (data.currentIndex < data.matches.length) {
