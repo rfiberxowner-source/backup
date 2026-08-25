@@ -1469,8 +1469,9 @@ db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
         if (change.type === 'modified') {
             const data = change.doc.data();
 
-            // If the status was just changed to Paid and hasn't been notified yet
-            if (data.status === 'Paid' && data.botNotifiedPaid !== true) {
+            const status = (data.status || '').toLowerCase();
+            // If the status was just changed to paid/completed and hasn't been notified yet
+            if ((status === 'paid' || status === 'completed') && data.botNotifiedPaid !== true) {
                 try {
                     // Find the client's PSID using the account number
                     const acct = data.accountNumber || data.account;
