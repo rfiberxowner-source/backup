@@ -1097,7 +1097,7 @@ export const mainViews = {
         <p>RFiberX reserves the right to update this Privacy Notice at any time. Significant changes will be communicated through our website or via email notification to active subscribers.</p>
         
         <div style="margin-top: 3rem;">
-          <button class="btn btn-outline" onclick="window.history.back()">+? Back</button>
+          <button class="btn btn-outline" onclick="window.history.back()">Back to the RFiberX Portal</button>
         </div>
       </div>
     </section>
