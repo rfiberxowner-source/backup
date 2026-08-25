@@ -638,7 +638,8 @@ Our team will check if your area is serviceable and contact you for installation
                     isHandover: true
                 };
             }
-else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
+            }
+        } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
             let replyText = "Awesome! Let's continue.";
 
             if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
