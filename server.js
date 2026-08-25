@@ -1556,10 +1556,10 @@ async function processImageAttachment(imageUrl, sender_psid) {
         
         // Define an array of models to try in sequence
         const modelsToTry = [
-            "gemini-1.5-flash",       // 1st attempt: Fast default
-            "gemini-1.5-pro",         // 2nd attempt: Powerful fallback
-            "gemini-1.5-flash-8b",    // 3rd attempt: Lightweight fallback
-            "gemini-1.5-flash"        // 4th attempt: One last try at flash
+            "gemini-flash-latest",       // 1st attempt: Fast default
+            "gemini-1.5-pro-latest",     // 2nd attempt: Powerful fallback
+            "gemini-pro",                // 3rd attempt: Older pro model fallback
+            "gemini-flash-latest"        // 4th attempt: One last try at flash
         ];
 
         // Download image and convert to Base64
