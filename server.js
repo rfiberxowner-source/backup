@@ -22,6 +22,14 @@ initializeApp({
 const db = getFirestore();
 const userSessions = new Map();
 const accountRecoveryData = new Map();
+const originalSet = accountRecoveryData.set.bind(accountRecoveryData);
+accountRecoveryData.set = function(key, value) {
+    if (value && value.account) {
+        db.collection('messenger_psids').doc(key).set({ account: value.account }, { merge: true })
+          .catch(err => console.error("Error persistently saving PSID:", err));
+    }
+    return originalSet(key, value);
+};
 
 const app = express();
 app.use(express.json());
