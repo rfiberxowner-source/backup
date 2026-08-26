@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <p>We implement reasonable organizational, technical, and physical security measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction. Access to subscriber data is restricted to authorized personnel only.</p>
 
         <h3 style="color:#fff; margin: 1.5rem 0 0.75rem; font-size:1.1rem;">6. Your Rights</h3>
-        <p>Under the Data Privacy Act of 2012, you have the right to access, correct, and request the deletion of your personal data. You may also withdraw consent or object to certain processing activities. To exercise any of these rights, please contact us at <span style="color:var(--accent-color);">technicians@rfiberx.net</span>.</p>
+        <p>Under the Data Privacy Act of 2012, you have the right to access, correct, and request the deletion of your personal data. You may also withdraw consent or object to certain processing activities. To exercise any of these rights, please contact us at <span style="color:var(--accent-color);">support@rfiberx.net</span>.</p>
 
         <h3 style="color:#fff; margin: 1.5rem 0 0.75rem; font-size:1.1rem;">7. Changes to This Notice</h3>
         <p>RFiberX reserves the right to update this Privacy Notice at any time. Significant changes will be communicated through our website or via email notification to active subscribers.</p>
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <p><strong style="color:#fff;">RFiberX Network and Data Solution</strong></p>
         <p>Salasad, Magdalena, Laguna, Philippines</p>
         <p style="margin-top:0.5rem;">Phone: <span style="color:var(--accent-color);">+63 09058395471</span></p>
-        <p>Email: <span style="color:var(--accent-color);">technicians@rfiberx.net</span></p>
+        <p>Email: <span style="color:var(--accent-color);">support@rfiberx.net</span></p>
 
         <h3 style="color:#fff; margin: 1.5rem 0 0.75rem; font-size:1.1rem;">Current Coverage Areas</h3>
         <p>RFiberX currently provides fiber-optic internet services across <strong style="color:#fff;">21 barangays</strong> in Magdalena, Laguna and the surrounding municipalities. Our network is actively expanding to bring seamless connectivity to more communities.</p>
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div style="margin-top:2rem; padding:1.5rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:12px;">
           <p style="color:var(--accent-color); font-weight:bold; margin-bottom:0.5rem;">Need a coverage check?</p>
-          <p style="margin:0;">Call us at <strong style="color:#fff;">+63 09058395471</strong> or email <strong style="color:#fff;">technicians@rfiberx.net</strong> and our team will verify availability in your area within the same day.</p>
+          <p style="margin:0;">Call us at <strong style="color:#fff;">+63 09058395471</strong> or email <strong style="color:#fff;">support@rfiberx.net</strong> and our team will verify availability in your area within the same day.</p>
         </div>
       `
     }

@@ -602,7 +602,7 @@ export const mainViews = {
           <div style="margin-bottom: 2.5rem; display: flex; gap: 1rem;">
             <div>
               <h3 style="margin-bottom: 0.5rem;">Email Us</h3>
-              <p style="color: var(--text-secondary); font-size: 1.1rem;">technicians@rfiberx.net</p>
+              <p style="color: var(--text-secondary); font-size: 1.1rem;">support@rfiberx.net</p>
               <p style="color: var(--text-secondary); font-size: 0.9rem;">We aim to reply within 2 hours.</p>
             </div>
           </div>
@@ -1088,7 +1088,7 @@ export const mainViews = {
         <p>We implement reasonable organizational, technical, and physical security measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction. Access to subscriber data is restricted to authorized personnel only.</p>
 
         <h3 style="color:#fff; margin: 1.5rem 0 0.75rem; font-size:1.1rem;">6. Your Rights</h3>
-        <p>Under the Data Privacy Act of 2012, you have the right to access, correct, and request the deletion of your personal data. You may also withdraw consent or object to certain processing activities. To exercise any of these rights, please contact us at <span style="color:var(--accent-color);">technicians@rfiberx.net</span>.</p>
+        <p>Under the Data Privacy Act of 2012, you have the right to access, correct, and request the deletion of your personal data. You may also withdraw consent or object to certain processing activities. To exercise any of these rights, please contact us at <span style="color:var(--accent-color);">support@rfiberx.net</span>.</p>
 
         <h3 style="color:#fff; margin: 1.5rem 0 0.75rem; font-size:1.1rem;">7. Facebook Messenger Bot & Account Linking</h3>
         <p>When you interact with the RFiberX Facebook Messenger bot, we collect basic information provided by the Facebook platform, including your public profile name and Messenger ID (PSID). If you provide account details or billing statements for processing, this data is temporarily stored to fulfill your requests. Your Messenger account will be securely linked to your RFiberX internet account for easier future interactions. We do not sell or trade this information, and it is strictly protected in our secure database.</p>

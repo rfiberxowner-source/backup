@@ -309,7 +309,7 @@ Submitted at: ${time}
 
     if (typeof emailjs !== 'undefined' && emailjs.send) {
       emailjs.send('service_pg8s2oz', 'template_m960j5j', {
-        to_email: 'clients@rfiberx.net',
+        to_email: 'support@rfiberx.net',
         email: email,
         phone_number: phone,
         name: name,
