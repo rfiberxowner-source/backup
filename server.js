@@ -1186,8 +1186,8 @@ Our team will check if your area is serviceable and contact you for installation
             return {
                 text: "Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n\nYou can contact our agent directly through these channels.",
                 quick_replies: [
-                    { content_type: "text", title: "Main Menu", payload: "Main Menu" },
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" }
+                    { content_type: "text", title: "Agent", payload: "Agent" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }
                 ]
             };
 
