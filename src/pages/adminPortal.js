@@ -936,6 +936,13 @@ export const adminViews = {
                 <option value="100Mbps">100Mbps</option>
                 <option value="200Mbps">200Mbps</option>
               </select>
+              <select id="admin-clients-location-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
+                <option value="All Locations">All Locations</option>
+                <option value="Magdalena">Magdalena</option>
+                <option value="Majayjay">Majayjay</option>
+                <option value="Sta .Cruz">Sta .Cruz</option>
+                <option value="Victoria">Victoria</option>
+              </select>
               <button id="client-logout-mode-btn" onclick="window.toggleClientLogoutMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-right: 0.5rem;">Enable Force Logout</button>
               <button id="client-delete-mode-btn" onclick="window.toggleClientDeleteMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s;">Enable Deletion Mode</button>
             </div>
@@ -1140,6 +1147,15 @@ export const adminViews = {
                   <select id="modal-client-status-input" onchange="window.checkAdminClientChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: pointer;">
                     <option style="background: #0f131f; color: #fff;" value="Connected">Connected</option>
                     <option style="background: #0f131f; color: #fff;" value="Disconnected">Disconnected</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Location</label>
+                  <select id="modal-client-location-input" onchange="window.checkAdminClientChanges()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: pointer;">
+                    <option style="background: #0f131f; color: #fff;" value="Magdalena">Magdalena</option>
+                    <option style="background: #0f131f; color: #fff;" value="Majayjay">Majayjay</option>
+                    <option style="background: #0f131f; color: #fff;" value="Sta .Cruz">Sta .Cruz</option>
+                    <option style="background: #0f131f; color: #fff;" value="Victoria">Victoria</option>
                   </select>
                 </div>
                 <div>
@@ -2870,6 +2886,7 @@ window.renderAdminClientsTable = async function () {
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-clients-search').value || '').toLowerCase();
     const p = document.getElementById('admin-clients-plan-filter').value;
+    const l = document.getElementById('admin-clients-location-filter').value;
 
     const snap = window._adminUsersSnap;
     if (!snap) {
@@ -3019,6 +3036,10 @@ window.renderAdminClientsTable = async function () {
 
       // Apply filters
       if (p !== 'All' && plan !== p) return;
+      
+      const loc = String(u.Location || u.location || 'Magdalena').trim();
+      if (l !== 'All Locations' && loc !== l) return;
+
       if (s && !(fullName).toLowerCase().includes(s) && !(email).toLowerCase().includes(s) && !(accNum).toLowerCase().includes(s)) return;
 
       // Plan to Amount logic
@@ -3535,6 +3556,14 @@ window.openAdminClientModal = async function (id) {
     else stat = 'Connected';
     document.getElementById('modal-client-status-input').value = stat;
 
+    let loc = String(u.Location || u.location || 'Magdalena').trim();
+    const locSel = document.getElementById('modal-client-location-input');
+    if (Array.from(locSel.options).some(o => o.value === loc)) {
+      locSel.value = loc;
+    } else {
+      locSel.value = 'Magdalena';
+    }
+
     // Initialize dataset values for change tracking
     const acctName = u.accountname || u.accountName || u.name || '';
     document.getElementById('modal-client-accountname-input').value = acctName;
@@ -3543,6 +3572,7 @@ window.openAdminClientModal = async function (id) {
     document.getElementById('modal-client-amount-input').dataset.original = document.getElementById('modal-client-amount-input').value;
     document.getElementById('modal-client-password-input').dataset.original = document.getElementById('modal-client-password-input').value;
     document.getElementById('modal-client-status-input').dataset.original = document.getElementById('modal-client-status-input').value;
+    document.getElementById('modal-client-location-input').dataset.original = document.getElementById('modal-client-location-input').value;
     document.getElementById('modal-client-accountname-input').dataset.original = document.getElementById('modal-client-accountname-input').value;
 
     if (window.checkAdminClientChanges) window.checkAdminClientChanges();
@@ -3604,12 +3634,14 @@ window.requestAdminClientUpdate = async function () {
   const amountInput = document.getElementById('modal-client-amount-input');
   const passInput = document.getElementById('modal-client-password-input');
   const statusInput = document.getElementById('modal-client-status-input');
+  const locInput = document.getElementById('modal-client-location-input');
   const acctNameInput = document.getElementById('modal-client-accountname-input');
 
   const plan = planInput.value;
   const amount = amountInput.value;
   const pass = passInput.value;
   const status = statusInput.value;
+  const locVal = locInput.value;
   const acctName = acctNameInput.value;
 
   let changes = [];
@@ -3617,6 +3649,7 @@ window.requestAdminClientUpdate = async function () {
   if (amount !== amountInput.dataset.original) changes.push('Amount');
   if (pass !== passInput.dataset.original) changes.push('Password');
   if (status !== statusInput.dataset.original) changes.push('Status');
+  if (locVal !== locInput.dataset.original) changes.push('Location');
   if (acctName !== acctNameInput.dataset.original) changes.push('Account Name');
 
   if (changes.length === 0) {
@@ -3642,6 +3675,7 @@ window.requestAdminClientUpdate = async function () {
         amount: amount,
         password: pass,
         status: status,
+        Location: locVal,
         Plan: firestore.deleteField(),
         ammount: firestore.deleteField(),
         plan_price: firestore.deleteField(),
