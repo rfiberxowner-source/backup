@@ -132,6 +132,7 @@ app.post('/webhook', (req, res) => {
                             '9562725917088194'   // Jasper Mangulabnan
                         ];
                         if (ALLOWED_TESTERS.includes(sender_psid)) {
+                            console.log("✔️ Allowed PSID chatting: " + sender_psid);
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
                                 getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
@@ -161,6 +162,8 @@ app.post('/webhook', (req, res) => {
                                     }
                                 }).catch(err => console.error("Error processing image:", err));
                             }
+                        } else {
+                            console.log("❌ REJECTED UNKNOWN PSID: " + sender_psid + " (Tell Jasper to copy this exact number!)");
                         }
                     }
                 }).catch(err => console.error("Error getting PSID:", err));
