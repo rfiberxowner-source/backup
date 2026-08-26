@@ -129,7 +129,7 @@ app.post('/webhook', (req, res) => {
                         // Send the auto-reply ONLY to allowed testers
                         const ALLOWED_TESTERS = [
                             '28146825618339223', // Rfiberx Blanco
-                            '9562725917088194'   // Jasper Mangulabnan
+                            '27076770378611516'  // Jasper Mangulabnan
                         ];
                         if (ALLOWED_TESTERS.includes(sender_psid)) {
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
