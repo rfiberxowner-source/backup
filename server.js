@@ -79,11 +79,13 @@ app.post('/webhook', (req, res) => {
                     let lastInteractionTime = 0;
                     let existingName = null;
                     let active_complaint_id = null;
+                    let active_apply_id = null;
                     if (doc.exists) {
                         const data = doc.data();
                         is_paused = data.is_paused === true;
                         existingName = data.name;
                         active_complaint_id = data.active_complaint_id || null;
+                        active_apply_id = data.active_apply_id || null;
                         if (data.lastInteraction) {
                             lastInteractionTime = data.lastInteraction.toMillis();
                         }
@@ -105,6 +107,7 @@ app.post('/webhook', (req, res) => {
                     
                     if (is_session_expired || isGlobalStopper) {
                         active_complaint_id = null;
+                        active_apply_id = null;
                     }
 
                     // 1-minute timer logic
@@ -171,7 +174,31 @@ app.post('/webhook', (req, res) => {
                         });
                     }
 
+                    // Handle application tracking creation and message logging
+                    const isApplyTrigger = incomingPayload.match(/(apply now|application|apply|pakabit)/i);
+                    // Wait, applying trigger happens in the menu payload "Apply Now" or text "application"
+                    if (!active_apply_id && isApplyTrigger && !isGlobalStopper) {
+                        const newApplyRef = db.collection('applications').doc();
+                        active_apply_id = newApplyRef.id;
+                        await newApplyRef.set({
+                            psid: sender_psid,
+                            name: existingName || psidPayload.name || "Unknown Client",
+                            status: "Unread",
+                            createdAt: FieldValue.serverTimestamp()
+                        });
+                    }
+
+                    if (active_apply_id && incomingText && !isGlobalStopper) {
+                        await db.collection('applications').doc(active_apply_id).set({ status: "Unread" }, { merge: true });
+                        await db.collection('applications').doc(active_apply_id).collection('messages').add({
+                            sender: 'client',
+                            text: incomingText,
+                            timestamp: FieldValue.serverTimestamp()
+                        });
+                    }
+
                     psidPayload.active_complaint_id = active_complaint_id;
+                    psidPayload.active_apply_id = active_apply_id;
 
                     psidRef.set(psidPayload, { merge: true })
                         .then(() => console.log(`✅ PSID ${sender_psid} timestamp updated.`))
@@ -230,12 +257,22 @@ app.post('/webhook', (req, res) => {
                                     }
                                 }).catch(err => console.error("Error generating reply:", err));
                             } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
-                                const imageUrl = webhook_event.message.attachments[0].payload.url;
-                                processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
-                                    if (replyMessage) {
-                                        callSendAPI(sender_psid, replyMessage);
-                                    }
-                                }).catch(err => console.error("Error processing image:", err));
+                                if (active_apply_id) {
+                                    // Log the image attachment in the apply session and skip AI
+                                    db.collection('applications').doc(active_apply_id).set({ status: "Unread" }, { merge: true });
+                                    db.collection('applications').doc(active_apply_id).collection('messages').add({
+                                        sender: 'client',
+                                        text: '[Image Attachment]',
+                                        timestamp: FieldValue.serverTimestamp()
+                                    });
+                                } else {
+                                    const imageUrl = webhook_event.message.attachments[0].payload.url;
+                                    processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
+                                        if (replyMessage) {
+                                            callSendAPI(sender_psid, replyMessage);
+                                        }
+                                    }).catch(err => console.error("Error processing image:", err));
+                                }
                             }
                         } else {
                             console.log("❌ REJECTED UNKNOWN PSID: " + sender_psid + " (Tell Jasper to copy this exact number!)");
@@ -470,16 +507,22 @@ To proceed, please provide the following details:
 • Complete Address:
 • Phone Number:
 • Plan or Speed you want:
+• A picture or photocopy of a valid ID:
+
+Note: There is a ₱500 installation fee and an advance one-month payment required.
 
 Our team will check if your area is serviceable and contact you for installation!` };
             } else if (msg.match(/(no|hindi|ayaw)/i)) {
                 userSessions.set(sender_psid, 'APPLICATION_STEP_2');
-                return { text: "No problem! To proceed, please provide the following details:\n\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nOur team will check if your area is serviceable and contact you for installation!" };
+                return { text: "No problem! To proceed, please provide the following details:\n\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n• A picture or photocopy of a valid ID:\n\nNote: There is a ₱500 installation fee and an advance one-month payment required.\n\nOur team will check if your area is serviceable and contact you for installation!" };
             } else if (msg.length > 15) {
                 // If they provided their details immediately
                 userSessions.delete(sender_psid);
                 return {
-                    text: "🚨 HIGH PRIORITY ALERT: Client submitted a New Connection Application. I am connecting you to our support team immediately to process this. Please wait.",
+                    text: "Thank you for applying for a new connection! Your details have been received. Please wait for an agent to respond to your application and discuss the next steps.\n\nIf you want to cancel this application or start a new topic, you can click the 'Cancel' button below or type 'Cancel'.",
+                    quick_replies: [
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }
+                    ],
                     isHandover: true
                 };
             } else {
@@ -488,7 +531,10 @@ Our team will check if your area is serviceable and contact you for installation
         } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_2') {
             userSessions.delete(sender_psid); // Clear memory state
             return {
-                text: "🚨 HIGH PRIORITY ALERT: Client submitted a New Connection Application. I am connecting you to our support team immediately to process this. Please wait.",
+                text: "Thank you for applying for a new connection! Your details have been received. Please wait for an agent to respond to your application and discuss the next steps.\n\nIf you want to cancel this application or start a new topic, you can click the 'Cancel' button below or type 'Cancel'.",
+                quick_replies: [
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                ],
                 isHandover: true
             };
         } else if (userSessions.get(sender_psid) === 'AREA_INQUIRY_STEP_1') {

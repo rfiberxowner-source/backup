@@ -43,6 +43,62 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
     })();
   }
 
+  // --- Start Global Unread Complaints & Applications Listener ---
+  if (isAdmin && !window._globalUnreadUnsub) {
+    (async function() {
+      try {
+        const { db, firestore } = await window._getAdminDb();
+        
+        // Listen to complaints
+        const unsubComplaints = firestore.onSnapshot(
+          firestore.collection(db, "complaints"),
+          (snap) => {
+            let hasUnread = false;
+            snap.forEach(doc => {
+               const r = doc.data();
+               if ((r.status || 'Unread') === 'Unread') hasUnread = true;
+            });
+            window._adminHasUnreadComplaints = hasUnread;
+            updateGlobalUnreadDot();
+          }
+        );
+
+        // Listen to applications
+        const unsubApply = firestore.onSnapshot(
+          firestore.collection(db, "applications"),
+          (snap) => {
+            let hasUnread = false;
+            snap.forEach(doc => {
+               const r = doc.data();
+               if ((r.status || 'Unread') === 'Unread') hasUnread = true;
+            });
+            window._adminHasUnreadApply = hasUnread;
+            updateGlobalUnreadDot();
+          }
+        );
+
+        window._globalUnreadUnsub = () => { unsubComplaints(); unsubApply(); };
+
+        function updateGlobalUnreadDot() {
+            const hasAnyUnread = window._adminHasUnreadComplaints || window._adminHasUnreadApply;
+            const dot = document.getElementById('global-reports-unread-dot');
+            if (dot) {
+               dot.style.display = hasAnyUnread ? 'inline-block' : 'none';
+            }
+            
+            // Also try to update the dropdown if it exists on the Reports page
+            const select = document.getElementById('admin-reports-view-mode');
+            if (select) {
+                const compOpt = select.querySelector('option[value="Complaints"]');
+                const appOpt = select.querySelector('option[value="Apply"]');
+                if (compOpt) compOpt.innerHTML = (window._adminHasUnreadComplaints ? '🔴 ' : '') + 'Complaints Session';
+                if (appOpt) appOpt.innerHTML = (window._adminHasUnreadApply ? '🔴 ' : '') + 'Apply Session';
+            }
+        }
+      } catch (e) {}
+    })();
+  }
+
   // RBAC checks for routing
   if (adminRole === 'OJT' && ['accounts', 'communications'].includes(activeRoute)) {
     setTimeout(() => window.router.navigate('/RFiberXAdminportal-dashboard'), 0);
@@ -92,7 +148,7 @@ window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
             <nav style="display: flex; flex-direction: column; gap: 0.25rem; padding: 0 1rem;">
               ${['Admin', 'Technician', 'OJT', 'Minimal'].includes(adminRole) ? navItem('Dashboard', '/RFiberXAdminportal-dashboard', iconCommand, activeRoute === 'dashboard') : ''}
               ${['Admin', 'Technician', 'OJT', 'Minimal'].includes(adminRole) ? navItem('Payment Management', '/RFiberXAdminportal-banking', iconBanking, activeRoute === 'banking') : ''}
-              ${['Admin', 'Technician', 'OJT'].includes(adminRole) ? navItem('Reports', '/RFiberXAdminportal-reports', iconReports, activeRoute === 'reports') : ''}
+              ${['Admin', 'Technician', 'OJT'].includes(adminRole) ? navItem(`Reports <div id="global-reports-unread-dot" style="display:${(window._adminHasUnreadComplaints || window._adminHasUnreadApply) ? 'inline-block' : 'none'}; width:8px; height:8px; background:#ef4444; border-radius:50%; margin-left:8px; box-shadow:0 0 8px #ef4444;"></div>`, '/RFiberXAdminportal-reports', iconReports, activeRoute === 'reports') : ''}
             </nav>
           </div>
           <div>
@@ -746,17 +802,20 @@ export const adminViews = {
             <h3 id="admin-table-title" style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Client Service Requests</h3>
             <div id="admin-table-ticket-count" style="background: rgba(16,185,129,0.1); color: #10b981; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600;">0</div>
             
-            <div style="margin-left: 1rem; display: flex; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 2px;">
-              <button id="btn-view-requests" onclick="window._adminReportViewMode='Requests'; document.getElementById('btn-view-requests').style.background='#2563eb'; document.getElementById('btn-view-requests').style.color='#fff'; document.getElementById('btn-view-complaints').style.background='transparent'; document.getElementById('btn-view-complaints').style.color='#94a3b8'; document.querySelectorAll('.request-opt').forEach(el=>el.style.display=''); document.querySelectorAll('.complaint-opt').forEach(el=>el.style.display='none'); document.getElementById('admin-table-title').innerText='Client Service Requests'; document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();" style="background: #2563eb; color: #fff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;">Requests</button>
-              <button id="btn-view-complaints" onclick="window._adminReportViewMode='Complaints'; document.getElementById('btn-view-complaints').style.background='#ef4444'; document.getElementById('btn-view-complaints').style.color='#fff'; document.getElementById('btn-view-requests').style.background='transparent'; document.getElementById('btn-view-requests').style.color='#94a3b8'; document.querySelectorAll('.request-opt').forEach(el=>el.style.display='none'); document.querySelectorAll('.complaint-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Complaints'; document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();" style="background: transparent; color: #94a3b8; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;">Complaints</button>
+            <div style="margin-left: 1rem; display: flex;">
+              <select id="admin-reports-view-mode" style="background: #2563eb; color: #fff; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; outline: none; cursor: pointer; transition: 0.2s;" onchange="window._adminReportViewMode = this.value; document.querySelectorAll('.request-opt, .session-opt').forEach(el=>el.style.display='none'); if(this.value==='Requests'){ document.querySelectorAll('.request-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Service Requests'; } else if(this.value==='Complaints'){ document.querySelectorAll('.session-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Complaints'; } else { document.querySelectorAll('.session-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Applications'; } document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();">
+                <option value="Requests" style="background: #151a27; color: #fff;">Service Requests</option>
+                <option value="Complaints" style="background: #151a27; color: #fff;">Complaints Session</option>
+                <option value="Apply" style="background: #151a27; color: #fff;">Apply Session</option>
+              </select>
             </div>
           </div>
           <div style="display: flex; gap: 1rem;">
             <input type="text" id="admin-reports-search" placeholder="Search client name..." style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; outline: none;" onkeyup="if(window.renderAdminReportsTable) window.renderAdminReportsTable()">
             <select id="admin-reports-filter" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="if(window.renderAdminReportsTable) window.renderAdminReportsTable()">
               <option value="All" style="background: #151a27; color: #fff;">All Statuses</option>
-              <option value="Unread" class="complaint-opt" style="background: #151a27; color: #fff; display:none;">Unread</option>
-              <option value="Read" class="complaint-opt" style="background: #151a27; color: #fff; display:none;">Read</option>
+              <option value="Unread" class="session-opt" style="background: #151a27; color: #fff; display:none;">Unread</option>
+              <option value="Read" class="session-opt" style="background: #151a27; color: #fff; display:none;">Read</option>
               <option value="Pending" class="request-opt" style="background: #151a27; color: #fff;">Pending</option>
               <option value="Read" class="request-opt" style="background: #151a27; color: #fff;">Read</option>
               <option value="Fixed" class="request-opt" style="background: #151a27; color: #fff;">Fixed</option>
@@ -854,7 +913,7 @@ export const adminViews = {
           <!-- Header -->
           <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: #151a27;">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0;">Complaint Session</h2>
+              <h2 id="modal-complaint-title" style="color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0;">Complaint Session</h2>
               <span id="modal-complaint-id" style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; color: #94a3b8; font-family: monospace; font-size: 0.75rem;"></span>
             </div>
             <button onclick="window.closeAdminComplaint()" style="background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">&times;</button>
@@ -2618,6 +2677,7 @@ window.initAdminReports = async function () {
     if (window._adminReportsUnsub) window._adminReportsUnsub();
     if (window._adminRatingsUnsub) window._adminRatingsUnsub();
     if (window._adminComplaintsUnsub) window._adminComplaintsUnsub();
+    if (window._adminApplyUnsub) window._adminApplyUnsub();
 
     window._adminReportsUnsub = firestore.onSnapshot(firestore.collection(db, "reports"), snap => {
       window._adminReportsSnap = snap;
@@ -2631,6 +2691,11 @@ window.initAdminReports = async function () {
 
     window._adminComplaintsUnsub = firestore.onSnapshot(firestore.collection(db, "complaints"), snap => {
       window._adminComplaintsSnap = snap;
+      if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+    });
+
+    window._adminApplyUnsub = firestore.onSnapshot(firestore.collection(db, "applications"), snap => {
+      window._adminApplySnap = snap;
       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
     });
   } catch (e) {
@@ -2648,7 +2713,7 @@ window.renderAdminReportsTable = async function () {
     const f = document.getElementById('admin-reports-filter').value;
     const viewMode = window._adminReportViewMode || 'Requests';
 
-    const snap = viewMode === 'Complaints' ? window._adminComplaintsSnap : window._adminReportsSnap;
+    const snap = viewMode === 'Complaints' ? window._adminComplaintsSnap : (viewMode === 'Apply' ? window._adminApplySnap : window._adminReportsSnap);
     if (!snap) {
       tb.innerHTML = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">Loading...</td></tr>';
       return;
@@ -2662,7 +2727,7 @@ window.renderAdminReportsTable = async function () {
     let unreadCount = 0;
 
     const sortedDocs = [...snap.docs].sort((a, b) => {
-      if (viewMode === 'Complaints') {
+      if (viewMode === 'Complaints' || viewMode === 'Apply') {
         const statusA = (a.data().status || 'Unread').toLowerCase();
         const statusB = (b.data().status || 'Unread').toLowerCase();
         if (statusA === 'unread' && statusB !== 'unread') return -1;
@@ -2679,7 +2744,7 @@ window.renderAdminReportsTable = async function () {
 
     sortedDocs.forEach(d => {
       const r = d.data();
-      let rawStatus = (r.status || (viewMode === 'Complaints' ? 'Unread' : 'Pending')).toLowerCase();
+      let rawStatus = (r.status || ((viewMode === 'Complaints' || viewMode === 'Apply') ? 'Unread' : 'Pending')).toLowerCase();
       let displayStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
 
       if (displayStatus === 'Fixed' || displayStatus === 'Resolved') {
@@ -2699,14 +2764,14 @@ window.renderAdminReportsTable = async function () {
       const stColor = displayStatus === 'Pending' ? '#f59e0b' : (displayStatus === 'Read' ? '#3b82f6' : (displayStatus === 'Unread' ? '#ef4444' : '#10b981'));
       const rId = r.reportId || d.id;
 
-      if (viewMode === 'Complaints') {
+      if (viewMode === 'Complaints' || viewMode === 'Apply') {
         const redDot = displayStatus === 'Unread' ? `<div style="width:8px;height:8px;background:#ef4444;border-radius:50%;box-shadow:0 0 8px #ef4444;display:inline-block;margin-right:8px;"></div>` : '';
         const dateStr = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : 'Unknown Date';
         html += `
-          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="window.openAdminComplaint('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="window.openAdminComplaint('${d.id}', '${viewMode}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
             <td style="padding: 1rem; font-family: monospace; color: #94a3b8;">${rId.substring(0,8)}...</td>
             <td style="padding: 1rem;">${redDot}<div style="display:inline-block; color: #fff; font-weight: 600;">${r.name || 'Unknown'}</div><div style="font-size: 0.7rem; color: #94a3b8; margin-left: ${displayStatus === 'Unread' ? '16px' : '0'};">PSID: ${r.psid || '-'}</div></td>
-            <td style="padding: 1rem; color: #fff;">Client Complaint Session</td>
+            <td style="padding: 1rem; color: #fff;">Client ${viewMode === 'Complaints' ? 'Complaint' : 'Apply'} Session</td>
             <td style="padding: 1rem;">${dateStr}</td>
             <td style="padding: 1rem;"><span style="color: ${stColor}; background: ${stColor}22; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem;">${displayStatus}</span></td>
           </tr>
@@ -2727,17 +2792,18 @@ window.renderAdminReportsTable = async function () {
     document.getElementById('admin-total-tickets').innerText = total;
     document.getElementById('admin-resolved-tickets').innerText = resolved;
     if (document.getElementById('admin-read-tickets')) document.getElementById('admin-read-tickets').innerText = readCount;
-    if (document.getElementById('admin-pending-tickets')) document.getElementById('admin-pending-tickets').innerText = viewMode === 'Complaints' ? unreadCount : pendingCount;
+    if (document.getElementById('admin-pending-tickets')) document.getElementById('admin-pending-tickets').innerText = (viewMode === 'Complaints' || viewMode === 'Apply') ? unreadCount : pendingCount;
 
     if (!html) html = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">No items found</td></tr>';
     tb.innerHTML = html;
   } catch (e) { console.error(e); }
 };
 
-window.openAdminComplaint = async function (id) {
+window.openAdminComplaint = async function (id, viewMode = 'Complaints') {
   try {
     const { db, firestore } = await window._getAdminDb();
-    const docRef = firestore.doc(db, "complaints", id);
+    const collectionName = viewMode === 'Apply' ? 'applications' : 'complaints';
+    const docRef = firestore.doc(db, collectionName, id);
     const docSnap = await firestore.getDoc(docRef);
     
     if (!docSnap.exists()) return;
@@ -2747,6 +2813,7 @@ window.openAdminComplaint = async function (id) {
       await firestore.updateDoc(docRef, { status: 'Read' });
     }
 
+    document.getElementById('modal-complaint-title').innerText = viewMode === 'Apply' ? 'Application Session' : 'Complaint Session';
     document.getElementById('modal-complaint-id').innerText = id.substring(0,8) + '...';
     document.getElementById('modal-complaint-name').innerText = data.name || 'Unknown Client';
     document.getElementById('modal-complaint-psid').innerText = data.psid || '-';
@@ -2756,7 +2823,7 @@ window.openAdminComplaint = async function (id) {
 
     document.getElementById('admin-complaint-modal').style.display = 'flex';
 
-    const msgsSnap = await firestore.getDocs(firestore.collection(db, "complaints", id, "messages"));
+    const msgsSnap = await firestore.getDocs(firestore.collection(db, collectionName, id, "messages"));
     let mHtml = '';
     
     const sortedMsgs = [...msgsSnap.docs].sort((a, b) => {
@@ -2770,7 +2837,7 @@ window.openAdminComplaint = async function (id) {
     } else {
       sortedMsgs.forEach(mDoc => {
         const m = mDoc.data();
-        const tStr = m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+        const tStr = m.timestamp?.toDate ? m.timestamp.toDate().toLocaleString([], {month: 'numeric', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : '';
         mHtml += `
           <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 0.75rem; align-self: flex-start; max-width: 85%;">
             <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${m.text}</div>
