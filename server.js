@@ -90,10 +90,15 @@ app.post('/webhook', (req, res) => {
                     const now = Date.now();
                     let shouldProcessMessage = true;
 
+                    const INACTIVITY_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
+                    let is_session_expired = false;
+                    if (lastInteractionTime && (now - lastInteractionTime > INACTIVITY_TIMEOUT_MS)) {
+                        is_session_expired = true;
+                    }
+
                     // 10-second timer logic
                     if (is_paused) {
-                        const PAUSE_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
-                        if (lastInteractionTime && (now - lastInteractionTime > PAUSE_TIMEOUT_MS)) {
+                        if (is_session_expired) {
                             // Wake up silently!
                             is_paused = false;
                         } else {
@@ -153,6 +158,22 @@ app.post('/webhook', (req, res) => {
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
+                                
+                                if (is_session_expired) {
+                                    console.log(`⏳ Session expired for PSID ${sender_psid}. Resetting session.`);
+                                    userSessions.delete(sender_psid);
+                                    accountRecoveryData.delete(sender_psid);
+                                    incomingMsg = "hello"; // Trigger the greeting menu
+                                    
+                                    try {
+                                        await callSendAPI(sender_psid, { 
+                                            text: "Welcome! Just a quick reminder: If you ever get stuck, you can type 'cancel' or 'stop' to start over, and use the menu buttons below to navigate." 
+                                        });
+                                    } catch (e) {
+                                        console.error("Error sending intro:", e);
+                                    }
+                                }
+
                                 getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
                                     if (replyMessage) {
                                         if (Array.isArray(replyMessage)) {
