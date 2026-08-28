@@ -78,10 +78,12 @@ app.post('/webhook', (req, res) => {
                     let is_paused = false;
                     let lastInteractionTime = 0;
                     let existingName = null;
+                    let active_complaint_id = null;
                     if (doc.exists) {
                         const data = doc.data();
                         is_paused = data.is_paused === true;
                         existingName = data.name;
+                        active_complaint_id = data.active_complaint_id || null;
                         if (data.lastInteraction) {
                             lastInteractionTime = data.lastInteraction.toMillis();
                         }
@@ -90,13 +92,22 @@ app.post('/webhook', (req, res) => {
                     const now = Date.now();
                     let shouldProcessMessage = true;
 
-                    const INACTIVITY_TIMEOUT_MS = 10 * 1000; // 10 seconds for testing
+                    const INACTIVITY_TIMEOUT_MS = 60 * 1000; // 1 minute
                     let is_session_expired = false;
                     if (lastInteractionTime && (now - lastInteractionTime > INACTIVITY_TIMEOUT_MS)) {
                         is_session_expired = true;
                     }
 
-                    // 10-second timer logic
+                    // Reset complaint tracking if session expired OR global stopper used
+                    const incomingText = webhook_event.message?.text || "";
+                    const incomingPayload = webhook_event.message?.quick_reply ? webhook_event.message.quick_reply.payload : incomingText;
+                    const isGlobalStopper = incomingPayload.match(/(cancel|stop|ayoko)/i);
+                    
+                    if (is_session_expired || isGlobalStopper) {
+                        active_complaint_id = null;
+                    }
+
+                    // 1-minute timer logic
                     if (is_paused) {
                         if (is_session_expired) {
                             // Wake up silently!
@@ -136,6 +147,31 @@ app.post('/webhook', (req, res) => {
                     if (linkedAccount) {
                         psidPayload.account = linkedAccount;
                     }
+
+                    // Handle complaint tracking creation and message logging
+                    const isComplaintTrigger = incomingPayload.match(/(no internet|wala|putol|los|red|flashing|agent)/i);
+                    if (!active_complaint_id && isComplaintTrigger && !isGlobalStopper) {
+                        const newComplaintRef = db.collection('complaints').doc();
+                        active_complaint_id = newComplaintRef.id;
+                        await newComplaintRef.set({
+                            psid: sender_psid,
+                            name: existingName || psidPayload.name || "Unknown Client",
+                            status: "Unread",
+                            createdAt: FieldValue.serverTimestamp()
+                        });
+                    }
+
+                    if (active_complaint_id && incomingText && !isGlobalStopper) {
+                        // Mark as Unread again if they send a new message
+                        await db.collection('complaints').doc(active_complaint_id).set({ status: "Unread" }, { merge: true });
+                        await db.collection('complaints').doc(active_complaint_id).collection('messages').add({
+                            sender: 'client',
+                            text: incomingText,
+                            timestamp: FieldValue.serverTimestamp()
+                        });
+                    }
+
+                    psidPayload.active_complaint_id = active_complaint_id;
 
                     psidRef.set(psidPayload, { merge: true })
                         .then(() => console.log(`✅ PSID ${sender_psid} timestamp updated.`))

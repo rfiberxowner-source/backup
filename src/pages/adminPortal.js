@@ -743,16 +743,23 @@ export const adminViews = {
       <div style="margin-top: 2rem; background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
           <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Client Service Requests</h3>
+            <h3 id="admin-table-title" style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Client Service Requests</h3>
             <div id="admin-table-ticket-count" style="background: rgba(16,185,129,0.1); color: #10b981; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600;">0</div>
+            
+            <div style="margin-left: 1rem; display: flex; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 2px;">
+              <button id="btn-view-requests" onclick="window._adminReportViewMode='Requests'; document.getElementById('btn-view-requests').style.background='#2563eb'; document.getElementById('btn-view-requests').style.color='#fff'; document.getElementById('btn-view-complaints').style.background='transparent'; document.getElementById('btn-view-complaints').style.color='#94a3b8'; document.querySelectorAll('.request-opt').forEach(el=>el.style.display=''); document.querySelectorAll('.complaint-opt').forEach(el=>el.style.display='none'); document.getElementById('admin-table-title').innerText='Client Service Requests'; document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();" style="background: #2563eb; color: #fff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;">Requests</button>
+              <button id="btn-view-complaints" onclick="window._adminReportViewMode='Complaints'; document.getElementById('btn-view-complaints').style.background='#ef4444'; document.getElementById('btn-view-complaints').style.color='#fff'; document.getElementById('btn-view-requests').style.background='transparent'; document.getElementById('btn-view-requests').style.color='#94a3b8'; document.querySelectorAll('.request-opt').forEach(el=>el.style.display='none'); document.querySelectorAll('.complaint-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Complaints'; document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();" style="background: transparent; color: #94a3b8; border: none; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;">Complaints</button>
+            </div>
           </div>
           <div style="display: flex; gap: 1rem;">
             <input type="text" id="admin-reports-search" placeholder="Search client name..." style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; outline: none;" onkeyup="if(window.renderAdminReportsTable) window.renderAdminReportsTable()">
             <select id="admin-reports-filter" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="if(window.renderAdminReportsTable) window.renderAdminReportsTable()">
               <option value="All" style="background: #151a27; color: #fff;">All Statuses</option>
-              <option value="Pending" style="background: #151a27; color: #fff;">Pending</option>
-              <option value="Read" style="background: #151a27; color: #fff;">Read</option>
-              <option value="Fixed" style="background: #151a27; color: #fff;">Fixed</option>
+              <option value="Unread" class="complaint-opt" style="background: #151a27; color: #fff; display:none;">Unread</option>
+              <option value="Read" class="complaint-opt" style="background: #151a27; color: #fff; display:none;">Read</option>
+              <option value="Pending" class="request-opt" style="background: #151a27; color: #fff;">Pending</option>
+              <option value="Read" class="request-opt" style="background: #151a27; color: #fff;">Read</option>
+              <option value="Fixed" class="request-opt" style="background: #151a27; color: #fff;">Fixed</option>
             </select>
           </div>
         </div>
@@ -836,6 +843,33 @@ export const adminViews = {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
               <div style="font-size: 0.75rem; color: #64748b;">Submitted: <span id="modal-ticket-date"></span></div>
               <div id="modal-ticket-status-badge"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Complaint Details Modal -->
+      <div id="admin-complaint-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+          <!-- Header -->
+          <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: #151a27;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <h2 style="color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0;">Complaint Session</h2>
+              <span id="modal-complaint-id" style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; color: #94a3b8; font-family: monospace; font-size: 0.75rem;"></span>
+            </div>
+            <button onclick="window.closeAdminComplaint()" style="background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#64748b'">&times;</button>
+          </div>
+          <!-- Body -->
+          <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Client Info</div>
+            <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem; display: flex; justify-content: space-between;">
+              <div id="modal-complaint-name" style="color: #fff; font-weight: 600; font-size: 1rem;"></div>
+              <div id="modal-complaint-psid" style="color: #94a3b8; font-family: monospace; font-size: 0.85rem;"></div>
+            </div>
+            
+            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Chat History</div>
+            <div id="modal-complaint-messages" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <!-- Messages go here -->
             </div>
           </div>
         </div>
@@ -2583,6 +2617,7 @@ window.initAdminReports = async function () {
 
     if (window._adminReportsUnsub) window._adminReportsUnsub();
     if (window._adminRatingsUnsub) window._adminRatingsUnsub();
+    if (window._adminComplaintsUnsub) window._adminComplaintsUnsub();
 
     window._adminReportsUnsub = firestore.onSnapshot(firestore.collection(db, "reports"), snap => {
       window._adminReportsSnap = snap;
@@ -2591,6 +2626,11 @@ window.initAdminReports = async function () {
 
     window._adminRatingsUnsub = firestore.onSnapshot(firestore.collectionGroup(db, "ratings"), snap => {
       window._adminRatingsSnap = snap;
+      if (window.renderAdminReportsTable) window.renderAdminReportsTable();
+    });
+
+    window._adminComplaintsUnsub = firestore.onSnapshot(firestore.collection(db, "complaints"), snap => {
+      window._adminComplaintsSnap = snap;
       if (window.renderAdminReportsTable) window.renderAdminReportsTable();
     });
   } catch (e) {
@@ -2606,8 +2646,9 @@ window.renderAdminReportsTable = async function () {
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-reports-search').value || '').toLowerCase();
     const f = document.getElementById('admin-reports-filter').value;
+    const viewMode = window._adminReportViewMode || 'Requests';
 
-    const snap = window._adminReportsSnap;
+    const snap = viewMode === 'Complaints' ? window._adminComplaintsSnap : window._adminReportsSnap;
     if (!snap) {
       tb.innerHTML = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">Loading...</td></tr>';
       return;
@@ -2618,17 +2659,27 @@ window.renderAdminReportsTable = async function () {
     let resolved = 0;
     let readCount = 0;
     let pendingCount = 0;
+    let unreadCount = 0;
 
-    // Sort manually by date
     const sortedDocs = [...snap.docs].sort((a, b) => {
-      const da = a.data().date || '';
-      const db = b.data().date || '';
-      return db.localeCompare(da);
+      if (viewMode === 'Complaints') {
+        const statusA = (a.data().status || 'Unread').toLowerCase();
+        const statusB = (b.data().status || 'Unread').toLowerCase();
+        if (statusA === 'unread' && statusB !== 'unread') return -1;
+        if (statusB === 'unread' && statusA !== 'unread') return 1;
+        const da = a.data().createdAt?.toMillis ? a.data().createdAt.toMillis() : 0;
+        const dbTime = b.data().createdAt?.toMillis ? b.data().createdAt.toMillis() : 0;
+        return dbTime - da;
+      } else {
+        const da = a.data().date || '';
+        const dbTime = b.data().date || '';
+        return dbTime.localeCompare(da);
+      }
     });
 
     sortedDocs.forEach(d => {
       const r = d.data();
-      let rawStatus = (r.status || 'Pending').toLowerCase();
+      let rawStatus = (r.status || (viewMode === 'Complaints' ? 'Unread' : 'Pending')).toLowerCase();
       let displayStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
 
       if (displayStatus === 'Fixed' || displayStatus === 'Resolved') {
@@ -2638,33 +2689,106 @@ window.renderAdminReportsTable = async function () {
         readCount++;
       } else if (displayStatus === 'Pending') {
         pendingCount++;
+      } else if (displayStatus === 'Unread') {
+        unreadCount++;
       }
 
       if (f !== 'All' && displayStatus !== f) return;
       if (s && !(r.name || '').toLowerCase().includes(s)) return;
 
-      const stColor = displayStatus === 'Pending' ? '#f59e0b' : (displayStatus === 'Read' ? '#3b82f6' : '#10b981');
+      const stColor = displayStatus === 'Pending' ? '#f59e0b' : (displayStatus === 'Read' ? '#3b82f6' : (displayStatus === 'Unread' ? '#ef4444' : '#10b981'));
       const rId = r.reportId || d.id;
 
-      html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="window.openAdminReport('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-          <td style="padding: 1rem; font-family: monospace; color: #94a3b8;">${rId}</td>
-          <td style="padding: 1rem;"><div style="color: #fff; font-weight: 600;">${r.name || 'Unknown'}</div><div style="font-size: 0.7rem;">${r.accountNumber || '-'}</div></td>
-          <td style="padding: 1rem; color: #fff;">${r.subject || 'No Subject'}</td>
-          <td style="padding: 1rem;">${r.category || 'General'}</td>
-          <td style="padding: 1rem;"><span style="color: ${stColor}; background: ${stColor}22; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem;">${displayStatus}</span></td>
-        </tr>
-      `;
+      if (viewMode === 'Complaints') {
+        const redDot = displayStatus === 'Unread' ? `<div style="width:8px;height:8px;background:#ef4444;border-radius:50%;box-shadow:0 0 8px #ef4444;display:inline-block;margin-right:8px;"></div>` : '';
+        const dateStr = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : 'Unknown Date';
+        html += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="window.openAdminComplaint('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 1rem; font-family: monospace; color: #94a3b8;">${rId.substring(0,8)}...</td>
+            <td style="padding: 1rem;">${redDot}<div style="display:inline-block; color: #fff; font-weight: 600;">${r.name || 'Unknown'}</div><div style="font-size: 0.7rem; color: #94a3b8; margin-left: ${displayStatus === 'Unread' ? '16px' : '0'};">PSID: ${r.psid || '-'}</div></td>
+            <td style="padding: 1rem; color: #fff;">Client Complaint Session</td>
+            <td style="padding: 1rem;">${dateStr}</td>
+            <td style="padding: 1rem;"><span style="color: ${stColor}; background: ${stColor}22; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem;">${displayStatus}</span></td>
+          </tr>
+        `;
+      } else {
+        html += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="window.openAdminReport('${d.id}')" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 1rem; font-family: monospace; color: #94a3b8;">${rId}</td>
+            <td style="padding: 1rem;"><div style="color: #fff; font-weight: 600;">${r.name || 'Unknown'}</div><div style="font-size: 0.7rem;">${r.accountNumber || '-'}</div></td>
+            <td style="padding: 1rem; color: #fff;">${r.subject || 'No Subject'}</td>
+            <td style="padding: 1rem;">${r.category || 'General'}</td>
+            <td style="padding: 1rem;"><span style="color: ${stColor}; background: ${stColor}22; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem;">${displayStatus}</span></td>
+          </tr>
+        `;
+      }
     });
 
     document.getElementById('admin-total-tickets').innerText = total;
     document.getElementById('admin-resolved-tickets').innerText = resolved;
     if (document.getElementById('admin-read-tickets')) document.getElementById('admin-read-tickets').innerText = readCount;
-    if (document.getElementById('admin-pending-tickets')) document.getElementById('admin-pending-tickets').innerText = pendingCount;
+    if (document.getElementById('admin-pending-tickets')) document.getElementById('admin-pending-tickets').innerText = viewMode === 'Complaints' ? unreadCount : pendingCount;
 
-    if (!html) html = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">No reports found</td></tr>';
+    if (!html) html = '<tr><td colspan="5" style="padding: 2rem; text-align:center;">No items found</td></tr>';
     tb.innerHTML = html;
   } catch (e) { console.error(e); }
+};
+
+window.openAdminComplaint = async function (id) {
+  try {
+    const { db, firestore } = await window._getAdminDb();
+    const docRef = firestore.doc(db, "complaints", id);
+    const docSnap = await firestore.getDoc(docRef);
+    
+    if (!docSnap.exists()) return;
+    const data = docSnap.data();
+
+    if (data.status !== "Read") {
+      await firestore.updateDoc(docRef, { status: 'Read' });
+    }
+
+    document.getElementById('modal-complaint-id').innerText = id.substring(0,8) + '...';
+    document.getElementById('modal-complaint-name').innerText = data.name || 'Unknown Client';
+    document.getElementById('modal-complaint-psid').innerText = data.psid || '-';
+
+    const msgsContainer = document.getElementById('modal-complaint-messages');
+    msgsContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:1rem;">Loading messages...</div>';
+
+    document.getElementById('admin-complaint-modal').style.display = 'flex';
+
+    const msgsSnap = await firestore.getDocs(firestore.collection(db, "complaints", id, "messages"));
+    let mHtml = '';
+    
+    const sortedMsgs = [...msgsSnap.docs].sort((a, b) => {
+      const ta = a.data().timestamp?.toMillis ? a.data().timestamp.toMillis() : 0;
+      const tb = b.data().timestamp?.toMillis ? b.data().timestamp.toMillis() : 0;
+      return ta - tb;
+    });
+
+    if (sortedMsgs.length === 0) {
+       mHtml = '<div style="color:#64748b; text-align:center; padding:1rem;">No messages recorded.</div>';
+    } else {
+      sortedMsgs.forEach(mDoc => {
+        const m = mDoc.data();
+        const tStr = m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+        mHtml += `
+          <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 0.75rem; align-self: flex-start; max-width: 85%;">
+            <div style="color: #fff; font-size: 0.9rem; line-height: 1.4;">${m.text}</div>
+            <div style="color: #64748b; font-size: 0.65rem; text-align: right; margin-top: 0.25rem;">${tStr}</div>
+          </div>
+        `;
+      });
+    }
+
+    msgsContainer.innerHTML = mHtml;
+
+  } catch (err) {
+    console.error("Error opening complaint:", err);
+  }
+};
+
+window.closeAdminComplaint = function() {
+  document.getElementById('admin-complaint-modal').style.display = 'none';
 };
 
 window.openAdminReport = async function (id) {
