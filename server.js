@@ -1671,17 +1671,26 @@ getAutoReply = async function (text, sender_psid) {
 // REAL-TIME PAID LISTENER
 // Proactively notifies clients when their bill is approved
 // -------------------------------------------------------------------------
-db.collectionGroup('billing_emails').onSnapshot((snapshot) => {
+db.collection('payments').onSnapshot((snapshot) => {
     snapshot.docChanges().forEach(async (change) => {
-        if (change.type === 'modified') {
+        if (change.type === 'added') {
             const data = change.doc.data();
 
             const status = (data.status || '').toLowerCase();
-            // If the status was just changed to paid/completed and hasn't been notified yet
+            // If the status was just added as paid/completed and hasn't been notified yet
             if ((status === 'paid' || status === 'completed') && data.botNotifiedPaid !== true) {
                 try {
                     // Find the client's PSID using the account number
-                    const acct = data.accountNumber || data.account;
+                    let acct = data.accountNumber || data.account;
+                    
+                    // Fallback: If not on the payment doc, get it from the user document
+                    if (!acct && data.userId) {
+                        const userDoc = await db.collection('users').doc(data.userId).get();
+                        if (userDoc.exists) {
+                            acct = userDoc.data().accountNumber || userDoc.data().account;
+                        }
+                    }
+
                     if (acct) {
                         const psidSnap = await db.collection('messenger_psids').where('account', '==', acct).limit(1).get();
                         if (!psidSnap.empty) {
