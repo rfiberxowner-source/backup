@@ -94,7 +94,7 @@ app.post('/webhook', (req, res) => {
                     const now = Date.now();
                     let shouldProcessMessage = true;
 
-                    const INACTIVITY_TIMEOUT_MS = 60 * 1000; // 1 minute
+                    const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
                     let is_session_expired = false;
                     if (lastInteractionTime && (now - lastInteractionTime > INACTIVITY_TIMEOUT_MS)) {
                         is_session_expired = true;
@@ -217,7 +217,8 @@ app.post('/webhook', (req, res) => {
                             '28146825618339223', // Rfiberx Blanco
                             '27076770378611516'  // Jasper Mangulabnan
                         ];
-                        if (ALLOWED_TESTERS.includes(sender_psid)) {
+                        // if (ALLOWED_TESTERS.includes(sender_psid)) {
+                        if (true) { // Responds to anyone uniquely
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
@@ -1092,6 +1093,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return {
                     text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
                     quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "Agent" },
                         { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
@@ -1110,6 +1112,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return {
                     text: "Okay, we've cancelled that request. How else can I help you today?",
                     quick_replies: [
+                        { content_type: "text", title: "Agent", payload: "Agent" },
                         { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
@@ -1161,7 +1164,8 @@ Our team will check if your area is serviceable and contact you for installation
                     return {
                         text: "Success! The account has been removed from your profile. What would you like to do next?",
                         quick_replies: [
-                            { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                            { content_type: "text", title: "Agent", payload: "Agent" },
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                             { content_type: "text", title: "Billing", payload: "Billing" },
                             { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                             { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
