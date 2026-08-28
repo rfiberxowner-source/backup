@@ -430,6 +430,7 @@ async function getAutoReply(text, sender_psid) {
             return {
                 text: "Okay, we've cancelled that request. How else can I help you today?",
                 quick_replies: [
+                    { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
                     { content_type: "text", title: "Apply Now", payload: "Apply Now" },
@@ -1094,7 +1095,7 @@ Our team will check if your area is serviceable and contact you for installation
                     text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
-                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                         { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1113,7 +1114,7 @@ Our team will check if your area is serviceable and contact you for installation
                     text: "Okay, we've cancelled that request. How else can I help you today?",
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
-                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                         { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1165,7 +1166,7 @@ Our team will check if your area is serviceable and contact you for installation
                         text: "Success! The account has been removed from your profile. What would you like to do next?",
                         quick_replies: [
                             { content_type: "text", title: "Agent", payload: "Agent" },
-                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                             { content_type: "text", title: "Billing", payload: "Billing" },
                             { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                             { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1327,6 +1328,7 @@ Our team will check if your area is serviceable and contact you for installation
             return {
                 text: "Here is our mobile app! You can download it via this link:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHow else can I help you today?",
                 quick_replies: [
+                    { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
                     { content_type: "text", title: "Apply Now", payload: "Apply Now" },
@@ -1567,6 +1569,7 @@ Would you also like to see our internet plans?`,
             return {
                 text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:",
                 quick_replies: [
+                    { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
                     { content_type: "text", title: "Apply Now", payload: "Apply Now" },
@@ -1584,6 +1587,7 @@ Would you also like to see our internet plans?`,
             return {
                 text: "Okay, we've cancelled that request. How else can I help you today?",
                 quick_replies: [
+                    { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                     { content_type: "text", title: "Billing", payload: "Billing" },
                     { content_type: "text", title: "Apply Now", payload: "Apply Now" },
