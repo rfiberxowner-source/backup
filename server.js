@@ -74,12 +74,14 @@ app.post('/webhook', (req, res) => {
 
                 // Fetch PSID from Firestore to check pause state BEFORE updating timestamp
                 const psidRef = db.collection('messenger_psids').doc(sender_psid);
-                psidRef.get().then(doc => {
+                psidRef.get().then(async doc => {
                     let is_paused = false;
                     let lastInteractionTime = 0;
+                    let existingName = null;
                     if (doc.exists) {
                         const data = doc.data();
                         is_paused = data.is_paused === true;
+                        existingName = data.name;
                         if (data.lastInteraction) {
                             lastInteractionTime = data.lastInteraction.toMillis();
                         }
@@ -110,6 +112,22 @@ app.post('/webhook', (req, res) => {
                         lastInteraction: FieldValue.serverTimestamp(),
                         is_paused: is_paused
                     };
+
+                    // Fetch Facebook name if we don't have it saved yet
+                    if (!existingName) {
+                        try {
+                            const response = await fetch(`https://graph.facebook.com/${sender_psid}?fields=first_name,last_name,name&access_token=${PAGE_ACCESS_TOKEN}`);
+                            const data = await response.json();
+                            if (data.name) {
+                                psidPayload.name = data.name;
+                            } else if (data.first_name) {
+                                psidPayload.name = (data.first_name + " " + (data.last_name || "")).trim();
+                            }
+                        } catch (e) {
+                            console.error("Error fetching Facebook name:", e);
+                        }
+                    }
+
                     if (linkedAccount) {
                         psidPayload.account = linkedAccount;
                     }
