@@ -23,10 +23,10 @@ const db = getFirestore();
 const userSessions = new Map();
 const accountRecoveryData = new Map();
 const originalSet = accountRecoveryData.set.bind(accountRecoveryData);
-accountRecoveryData.set = function(key, value) {
+accountRecoveryData.set = function (key, value) {
     if (value && value.account) {
         db.collection('messenger_psids').doc(key).set({ account: value.account }, { merge: true })
-          .catch(err => console.error("Error persistently saving PSID:", err));
+            .catch(err => console.error("Error persistently saving PSID:", err));
     }
     return originalSet(key, value);
 };
@@ -104,7 +104,7 @@ app.post('/webhook', (req, res) => {
                     const incomingText = webhook_event.message?.text || "";
                     const incomingPayload = webhook_event.message?.quick_reply ? webhook_event.message.quick_reply.payload : incomingText;
                     const isGlobalStopper = incomingPayload.match(/(cancel|stop|ayoko)/i);
-                    
+
                     if (is_session_expired || isGlobalStopper) {
                         active_complaint_id = null;
                         active_apply_id = null;
@@ -222,16 +222,16 @@ app.post('/webhook', (req, res) => {
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
-                                
+
                                 if (is_session_expired) {
                                     console.log(`⏳ Session expired for PSID ${sender_psid}. Resetting session.`);
                                     userSessions.delete(sender_psid);
                                     accountRecoveryData.delete(sender_psid);
                                     incomingMsg = "hello"; // Trigger the greeting menu
-                                    
+
                                     try {
-                                        await callSendAPI(sender_psid, { 
-                                            text: "Welcome! Just a quick reminder: If you ever get stuck, you can type 'cancel' or 'stop' to start over, and use the menu buttons below to navigate." 
+                                        await callSendAPI(sender_psid, {
+                                            text: "Welcome! Just a quick reminder: If you ever get stuck, you can type 'cancel' or 'stop' to start over, and use the menu buttons below to navigate."
                                         });
                                     } catch (e) {
                                         console.error("Error sending intro:", e);
@@ -340,21 +340,21 @@ async function getAccountDetails(accountNum, lastActive) {
 function returnBillingMenuOrReceipt(sender_psid, prefixText) {
     const data = accountRecoveryData.get(sender_psid);
     const pendingUrl = data ? data.pendingReceiptUrl : null;
-    
+
     if (pendingUrl) {
         if (data) {
             delete data.pendingReceiptUrl;
             accountRecoveryData.set(sender_psid, data);
         }
         userSessions.delete(sender_psid);
-        
+
         processImageAttachment(pendingUrl, sender_psid).then(replyMessage => {
             if (replyMessage) callSendAPI(sender_psid, replyMessage);
         }).catch(err => console.error(err));
 
         return { text: `${prefixText}\n\nI am now securely scanning and processing the receipt you uploaded earlier. Please wait a moment...` };
     }
-    
+
     userSessions.set(sender_psid, 'BILLING_MENU');
     return {
         text: `${prefixText}\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
@@ -725,7 +725,7 @@ Our team will check if your area is serviceable and contact you for installation
             } else {
                 return { text: "Please reply with 'Yes' if this is your account, or 'No' to check the next match." };
             }
-        
+
         } else if (userSessions.get(sender_psid) === 'ACCOUNT_RECOVERY_SECURITY_TEST') {
             const data = accountRecoveryData.get(sender_psid);
             if (!data) {
@@ -1095,7 +1095,7 @@ Our team will check if your area is serviceable and contact you for installation
                     text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                         { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1104,7 +1104,7 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
                         { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
                         { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" }
+                        { content_type: "text", title: "Contacts", payload: "Contacts" }
                     ]
                 };
             } else if (msg.match(/(no|hindi)/i)) {
@@ -1114,7 +1114,7 @@ Our team will check if your area is serviceable and contact you for installation
                     text: "Okay, we've cancelled that request. How else can I help you today?",
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                         { content_type: "text", title: "Billing", payload: "Billing" },
                         { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                         { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1123,7 +1123,7 @@ Our team will check if your area is serviceable and contact you for installation
                         { content_type: "text", title: "Relocation", payload: "Relocation" },
                         { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
                         { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" }
+                        { content_type: "text", title: "Contacts", payload: "Contacts" }
                     ]
                 };
             } else {
@@ -1166,7 +1166,7 @@ Our team will check if your area is serviceable and contact you for installation
                         text: "Success! The account has been removed from your profile. What would you like to do next?",
                         quick_replies: [
                             { content_type: "text", title: "Agent", payload: "Agent" },
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                            { content_type: "text", title: "Technical Support", payload: "Technical Support" },
                             { content_type: "text", title: "Billing", payload: "Billing" },
                             { content_type: "text", title: "Apply Now", payload: "Apply Now" },
                             { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
@@ -1175,7 +1175,7 @@ Our team will check if your area is serviceable and contact you for installation
                             { content_type: "text", title: "Relocation", payload: "Relocation" },
                             { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
                             { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" }
+                            { content_type: "text", title: "Contacts", payload: "Contacts" }
                         ]
                     };
                 } catch (e) {
@@ -1797,7 +1797,7 @@ async function processImageAttachment(imageUrl, sender_psid) {
     if (!accountNum) {
         userSessions.set(sender_psid, 'BILLING_STEP_1');
         accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
-        return { 
+        return {
             text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
             quick_replies: [
                 { content_type: "text", title: "Forgot", payload: "Forgot" },
