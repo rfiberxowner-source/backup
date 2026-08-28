@@ -1709,7 +1709,22 @@ db.collection('payments').onSnapshot((snapshot) => {
                             message += `\n\nYour billing statement is now officially marked as ✅ Paid. Thank you for your prompt payment!`;
 
                             // Send proactive message
-                            await callSendAPI(psid, { text: message });
+                            await callSendAPI(psid, { 
+                                text: message,
+                                quick_replies: [
+                                    { content_type: "text", title: "Agent", payload: "Agent" },
+                                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                                    { content_type: "text", title: "Billing", payload: "Billing" },
+                                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                                    { content_type: "text", title: "Change Password", payload: "Change Password" },
+                                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                                    { content_type: "text", title: "Relocation", payload: "Relocation" },
+                                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                                    { content_type: "text", title: "Mobile App", payload: "Mobile App" },
+                                    { content_type: "text", title: "Contacts", payload: "Contacts" }
+                                ]
+                            });
 
                             // Mark as notified so it doesn't spam
                             await change.doc.ref.update({ botNotifiedPaid: true });
