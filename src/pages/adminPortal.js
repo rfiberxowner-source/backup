@@ -921,14 +921,9 @@ export const adminViews = {
           <!-- Body -->
           <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
             <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Client Info</div>
-            <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div id="modal-complaint-name" style="color: #fff; font-weight: 600; font-size: 1rem;"></div>
-                <div id="modal-complaint-psid" style="color: #94a3b8; font-family: monospace; font-size: 0.85rem;"></div>
-              </div>
-              <button id="modal-complaint-pause-btn" style="background: #3b82f6; border: none; color: #fff; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: background 0.2s; display: none; align-items: center; gap: 0.5rem;" onclick="window.toggleChatbotPause(this.dataset.psid, this.dataset.paused === 'true')">
-                <span id="modal-complaint-pause-icon">⏸️</span> <span id="modal-complaint-pause-text">Pause Chatbot</span>
-              </button>
+            <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem; display: flex; justify-content: space-between;">
+              <div id="modal-complaint-name" style="color: #fff; font-weight: 600; font-size: 1rem;"></div>
+              <div id="modal-complaint-psid" style="color: #94a3b8; font-family: monospace; font-size: 0.85rem;"></div>
             </div>
             
             <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 1rem;">Chat History</div>
@@ -2823,21 +2818,6 @@ window.openAdminComplaint = async function (id, viewMode = 'Complaints') {
     document.getElementById('modal-complaint-name').innerText = data.name || 'Unknown Client';
     document.getElementById('modal-complaint-psid').innerText = data.psid || '-';
 
-    const pauseBtn = document.getElementById('modal-complaint-pause-btn');
-    if (data.psid) {
-      pauseBtn.style.display = 'flex';
-      pauseBtn.dataset.psid = data.psid;
-      // Fetch pause status
-      const psidDoc = await firestore.getDoc(firestore.doc(db, "messenger_psids", data.psid));
-      const isPaused = psidDoc.exists() && psidDoc.data().is_paused === true;
-      pauseBtn.dataset.paused = isPaused ? 'true' : 'false';
-      document.getElementById('modal-complaint-pause-icon').innerText = isPaused ? '▶️' : '⏸️';
-      document.getElementById('modal-complaint-pause-text').innerText = isPaused ? 'Resume Chatbot' : 'Pause Chatbot';
-      pauseBtn.style.background = isPaused ? '#10b981' : '#f59e0b';
-    } else {
-      pauseBtn.style.display = 'none';
-    }
-
     const msgsContainer = document.getElementById('modal-complaint-messages');
     msgsContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:1rem;">Loading messages...</div>';
 
@@ -2876,32 +2856,6 @@ window.openAdminComplaint = async function (id, viewMode = 'Complaints') {
 
 window.closeAdminComplaint = function() {
   document.getElementById('admin-complaint-modal').style.display = 'none';
-};
-
-window.toggleChatbotPause = async function(psid, currentPaused) {
-  if (!psid) return;
-  try {
-    const { db, firestore } = await window._getAdminDb();
-    const newPausedState = !currentPaused;
-    
-    // Optimistic UI update
-    const pauseBtn = document.getElementById('modal-complaint-pause-btn');
-    pauseBtn.dataset.paused = newPausedState ? 'true' : 'false';
-    document.getElementById('modal-complaint-pause-icon').innerText = newPausedState ? '▶️' : '⏸️';
-    document.getElementById('modal-complaint-pause-text').innerText = newPausedState ? 'Resume Chatbot' : 'Pause Chatbot';
-    pauseBtn.style.background = newPausedState ? '#10b981' : '#f59e0b';
-    
-    await firestore.updateDoc(firestore.doc(db, "messenger_psids", psid), { is_paused: newPausedState });
-    
-    if (window.showAdminAlert) {
-      window.showAdminAlert("Success", newPausedState ? "Chatbot paused. You can now chat manually." : "Chatbot resumed.", "success");
-    }
-  } catch (err) {
-    console.error("Error toggling pause state:", err);
-    if (window.showAdminAlert) {
-      window.showAdminAlert("Error", "Failed to change chatbot state.", "error");
-    }
-  }
 };
 
 window.openAdminReport = async function (id) {

@@ -64,6 +64,19 @@ app.post('/webhook', (req, res) => {
             // Get the webhook event
             let webhook_event = entry.messaging[0];
 
+            if (webhook_event.message && webhook_event.message.is_echo) {
+                const appId = String(webhook_event.message.app_id || "");
+                const BOT_APP_ID = "987564787660975"; // The exact App ID from your Meta dashboard
+
+                // If the message wasn't sent by our bot, it means a human agent typed it in the Page Inbox!
+                if (appId !== BOT_APP_ID) {
+                    const recipient_psid = webhook_event.recipient.id;
+                    console.log("🧑‍💼 HUMAN AGENT DETECTED! Automatically pausing chatbot for PSID: " + recipient_psid);
+                    db.collection('messenger_psids').doc(recipient_psid).set({ is_paused: true }, { merge: true }).catch(e => console.error(e));
+                }
+                return; // Stop processing this echo event
+            }
+
             if (webhook_event.sender) {
                 // Extract the sender's PSID
                 let sender_psid = webhook_event.sender.id;
