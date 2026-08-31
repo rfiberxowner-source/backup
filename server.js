@@ -240,20 +240,40 @@ app.post('/webhook', (req, res) => {
 
                                 getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
                                     if (replyMessage) {
+                                        const handleHandover = async () => {
+                                            await psidRef.set({ is_paused: true }, { merge: true });
+                                            if (!active_complaint_id) {
+                                                const newComplaintRef = db.collection('complaints').doc();
+                                                active_complaint_id = newComplaintRef.id;
+                                                await newComplaintRef.set({
+                                                    psid: sender_psid,
+                                                    name: existingName || psidPayload.name || "Unknown Client",
+                                                    status: "Unread",
+                                                    createdAt: FieldValue.serverTimestamp()
+                                                });
+                                                await db.collection('complaints').doc(active_complaint_id).collection('messages').add({
+                                                    sender: 'client',
+                                                    text: incomingMsg,
+                                                    timestamp: FieldValue.serverTimestamp()
+                                                });
+                                                await psidRef.set({ active_complaint_id: active_complaint_id }, { merge: true });
+                                            }
+                                        };
+
                                         if (Array.isArray(replyMessage)) {
                                             for (let msg of replyMessage) {
                                                 if (msg.isHandover) {
-                                                    await psidRef.set({ is_paused: true }, { merge: true });
+                                                    await handleHandover();
                                                     delete msg.isHandover;
                                                 }
                                                 await callSendAPI(sender_psid, msg);
                                             }
                                         } else {
                                             if (replyMessage.isHandover) {
-                                                psidRef.set({ is_paused: true }, { merge: true });
+                                                await handleHandover();
                                                 delete replyMessage.isHandover;
                                             }
-                                            callSendAPI(sender_psid, replyMessage);
+                                            await callSendAPI(sender_psid, replyMessage);
                                         }
                                     }
                                 }).catch(err => console.error("Error generating reply:", err));
@@ -1682,7 +1702,7 @@ db.collection('payments').onSnapshot((snapshot) => {
                 try {
                     // Find the client's PSID using the account number
                     let acct = data.accountNumber || data.account;
-                    
+
                     // Fallback: If not on the payment doc, get it from the user document
                     if (!acct && data.userId) {
                         const userDoc = await db.collection('users').doc(data.userId).get();
@@ -1709,7 +1729,7 @@ db.collection('payments').onSnapshot((snapshot) => {
                             message += `\n\nYour billing statement is now officially marked as ✅ Paid. Thank you for your prompt payment!`;
 
                             // Send proactive message
-                            await callSendAPI(psid, { 
+                            await callSendAPI(psid, {
                                 text: message,
                                 quick_replies: [
                                     { content_type: "text", title: "Agent", payload: "Agent" },
@@ -1793,24 +1813,10 @@ async function processImageAttachment(imageUrl, sender_psid) {
         }
     }
 
-    // 3. If still no account, force them to provide it
-    if (!accountNum) {
-        userSessions.set(sender_psid, 'BILLING_STEP_1');
-        accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
-        return {
-            text: "We received an image, but we need your Account Number first. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
-            quick_replies: [
-                { content_type: "text", title: "Forgot", payload: "Forgot" },
-                { content_type: "text", title: "Agent", payload: "AGENT" },
-                { content_type: "text", title: "Cancel", payload: "CANCEL" }
-            ]
-        };
-    }
+    // 3. (Moved check for missing account number AFTER Gemini scan)
 
     try {
         console.log("📸 Processing image receipt...");
-        // Send a reassuring "please wait" message
-        await callSendAPI(sender_psid, { text: "📷 We've received your image! Please wait a moment while our system securely scans and processes your receipt..." });
 
         // Fetch Gemini API key
         const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
@@ -1895,6 +1901,20 @@ If it IS a receipt, extract:
         if (extracted.error === "NOT_A_RECEIPT") {
             console.log("❌ Image is not a receipt. Ignoring.");
             return null; // silently ignore
+        }
+
+        // Now that we know it IS a receipt, if we still don't have an account, force them to provide it
+        if (!accountNum) {
+            userSessions.set(sender_psid, 'BILLING_STEP_1');
+            accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
+            return {
+                text: "We received your receipt, but we need your Account Number to process it. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
+                quick_replies: [
+                    { content_type: "text", title: "Forgot", payload: "Forgot" },
+                    { content_type: "text", title: "Agent", payload: "AGENT" },
+                    { content_type: "text", title: "Cancel", payload: "CANCEL" }
+                ]
+            };
         }
 
         const refNo = extracted.referenceNumber ? String(extracted.referenceNumber).replace(/[^0-9]/g, '') : '';
