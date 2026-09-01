@@ -21,6 +21,7 @@ initializeApp({
 });
 const db = getFirestore();
 const userSessions = new Map();
+const pendingTextMessages = new Map();
 const accountRecoveryData = new Map();
 const originalSet = accountRecoveryData.set.bind(accountRecoveryData);
 accountRecoveryData.set = function (key, value) {
@@ -279,46 +280,63 @@ app.post('/webhook', (req, res) => {
                                     incomingMsg = 'get started'; // Simulate greeting
                                 }
 
-                                getAutoReply(incomingMsg, sender_psid, language).then(async replyMessage => {
-                                    if (replyMessage) {
-                                        const handleHandover = async () => {
-                                            await psidRef.set({ is_paused: true }, { merge: true });
-                                            if (!active_complaint_id) {
-                                                const newComplaintRef = db.collection('complaints').doc();
-                                                active_complaint_id = newComplaintRef.id;
-                                                await newComplaintRef.set({
-                                                    psid: sender_psid,
-                                                    name: existingName || psidPayload.name || "Unknown Client",
-                                                    status: "Unread",
-                                                    createdAt: FieldValue.serverTimestamp()
-                                                });
-                                                await db.collection('complaints').doc(active_complaint_id).collection('messages').add({
-                                                    sender: 'client',
-                                                    text: incomingMsg,
-                                                    timestamp: FieldValue.serverTimestamp()
-                                                });
-                                                await psidRef.set({ active_complaint_id: active_complaint_id }, { merge: true });
-                                            }
-                                        };
-
-                                        if (Array.isArray(replyMessage)) {
-                                            for (let msg of replyMessage) {
-                                                if (msg.isHandover) {
-                                                    await handleHandover();
-                                                    delete msg.isHandover;
+                                const processText = () => {
+                                    getAutoReply(incomingMsg, sender_psid, language).then(async replyMessage => {
+                                        if (replyMessage) {
+                                            const handleHandover = async () => {
+                                                await psidRef.set({ is_paused: true }, { merge: true });
+                                                if (!active_complaint_id) {
+                                                    const newComplaintRef = db.collection('complaints').doc();
+                                                    active_complaint_id = newComplaintRef.id;
+                                                    await newComplaintRef.set({
+                                                        psid: sender_psid,
+                                                        name: existingName || psidPayload.name || "Unknown Client",
+                                                        status: "Unread",
+                                                        createdAt: FieldValue.serverTimestamp()
+                                                    });
+                                                    await db.collection('complaints').doc(active_complaint_id).collection('messages').add({
+                                                        sender: 'client',
+                                                        text: incomingMsg,
+                                                        timestamp: FieldValue.serverTimestamp()
+                                                    });
+                                                    await psidRef.set({ active_complaint_id: active_complaint_id }, { merge: true });
                                                 }
-                                                await callSendAPI(sender_psid, msg);
+                                            };
+
+                                            if (Array.isArray(replyMessage)) {
+                                                for (let msg of replyMessage) {
+                                                    if (msg.isHandover) {
+                                                        await handleHandover();
+                                                        delete msg.isHandover;
+                                                    }
+                                                    await callSendAPI(sender_psid, msg);
+                                                }
+                                            } else {
+                                                if (replyMessage.isHandover) {
+                                                    await handleHandover();
+                                                    delete replyMessage.isHandover;
+                                                }
+                                                await callSendAPI(sender_psid, replyMessage);
                                             }
-                                        } else {
-                                            if (replyMessage.isHandover) {
-                                                await handleHandover();
-                                                delete replyMessage.isHandover;
-                                            }
-                                            await callSendAPI(sender_psid, replyMessage);
                                         }
-                                    }
-                                }).catch(err => console.error("Error generating reply:", err));
+                                    }).catch(err => console.error("Error generating reply:", err));
+                                };
+
+                                if (pendingTextMessages.has(sender_psid)) {
+                                    clearTimeout(pendingTextMessages.get(sender_psid));
+                                }
+                                const timeoutId = setTimeout(() => {
+                                    pendingTextMessages.delete(sender_psid);
+                                    processText();
+                                }, 1500);
+                                pendingTextMessages.set(sender_psid, timeoutId);
                             } else if (webhook_event.message.attachments && webhook_event.message.attachments[0].type === 'image') {
+                                if (pendingTextMessages.has(sender_psid)) {
+                                    clearTimeout(pendingTextMessages.get(sender_psid));
+                                    pendingTextMessages.delete(sender_psid);
+                                    console.log(`Cancelled text reply for ${sender_psid} because an image was received.`);
+                                }
+
                                 if (active_apply_id) {
                                     // Log the image attachment in the apply session and skip AI
                                     db.collection('applications').doc(active_apply_id).set({ status: "Unread" }, { merge: true });
