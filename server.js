@@ -139,6 +139,7 @@ app.post('/webhook', (req, res) => {
                     const isGlobalStopper = incomingPayload.match(/(cancel|stop|ayoko)/i);
 
                     if (isGlobalStopper) {
+                        is_paused = false;
                         active_complaint_id = null;
                         active_apply_id = null;
                     }
