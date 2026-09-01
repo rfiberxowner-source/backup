@@ -426,9 +426,10 @@ function returnBillingMenuOrReceipt(sender_psid, prefixText) {
     };
 }
 
-async function getAutoReply(text, sender_psid) {
+async function getAutoReply(text, sender_psid, language) {
+    const tl = language === 'tl';
+    const T = (en, tag) => tl ? tag : en;
     const msg = text.toLowerCase().trim();
-
     let clientName = "Valued Customer";
     let clientFullName = "";
     try {
