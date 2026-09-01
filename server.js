@@ -56,6 +56,10 @@ app.get('/webhook', (req, res) => {
 });
 
 // 2. Incoming Messages Endpoint (Where Facebook sends the chats)
+// Global Set to track recently processed message IDs and prevent Facebook's double-reply bug
+const processedMessages = new Set();
+setInterval(() => processedMessages.clear(), 10 * 60 * 1000); // Clear every 10 mins to prevent memory leak
+
 app.post('/webhook', (req, res) => {
     let body = req.body;
 
@@ -72,7 +76,10 @@ app.post('/webhook', (req, res) => {
                 if (appId !== BOT_APP_ID) {
                     const recipient_psid = webhook_event.recipient.id;
                     console.log("🧑‍💼 HUMAN AGENT DETECTED! Automatically pausing chatbot for PSID: " + recipient_psid);
-                    db.collection('messenger_psids').doc(recipient_psid).set({ is_paused: true }, { merge: true }).catch(e => console.error(e));
+                    db.collection('messenger_psids').doc(recipient_psid).set({ 
+                        is_paused: true,
+                        lastInteraction: FieldValue.serverTimestamp()
+                    }, { merge: true }).catch(e => console.error(e));
                 }
                 return; // Stop processing this echo event
             }
@@ -80,6 +87,17 @@ app.post('/webhook', (req, res) => {
             if (webhook_event.sender) {
                 // Extract the sender's PSID
                 let sender_psid = webhook_event.sender.id;
+                const messageId = webhook_event.message?.mid;
+
+                // Prevent Duplicate Processing
+                if (messageId) {
+                    if (processedMessages.has(messageId)) {
+                        console.log(`⚠️ Duplicate message detected (mid: ${messageId}). Ignoring to prevent double reply.`);
+                        return;
+                    }
+                    processedMessages.add(messageId);
+                }
+
                 console.log("-----------------------------------------");
                 console.log("New message received from PSID: " + sender_psid);
                 console.log("Message Text: ", webhook_event.message?.text || "[No text]");
@@ -107,31 +125,24 @@ app.post('/webhook', (req, res) => {
                     const now = Date.now();
                     let shouldProcessMessage = true;
 
-                    const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
-                    let is_session_expired = false;
-                    if (lastInteractionTime && (now - lastInteractionTime > INACTIVITY_TIMEOUT_MS)) {
-                        is_session_expired = true;
+                    const ONE_HOUR_MS = 60 * 60 * 1000; // 1 hour inactivity timer
+                    if (is_paused && lastInteractionTime && (now - lastInteractionTime > ONE_HOUR_MS)) {
+                        console.log(`⏰ 1 hour of silence detected for PSID ${sender_psid}. Auto-resuming chatbot.`);
+                        is_paused = false;
                     }
 
-                    // Reset complaint tracking if session expired OR global stopper used
+                    // Reset complaint tracking if global stopper used
                     const incomingText = webhook_event.message?.text || "";
                     const incomingPayload = webhook_event.message?.quick_reply ? webhook_event.message.quick_reply.payload : incomingText;
                     const isGlobalStopper = incomingPayload.match(/(cancel|stop|ayoko)/i);
 
-                    if (is_session_expired || isGlobalStopper) {
+                    if (isGlobalStopper) {
                         active_complaint_id = null;
                         active_apply_id = null;
                     }
 
-                    // 1-minute timer logic
                     if (is_paused) {
-                        if (is_session_expired) {
-                            // Wake up silently!
-                            is_paused = false;
-                        } else {
-                            // Stay paused
-                            shouldProcessMessage = false;
-                        }
+                        shouldProcessMessage = false;
                     }
 
                     // Save new timestamp and state to Firestore
@@ -236,20 +247,8 @@ app.post('/webhook', (req, res) => {
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
 
-                                if (is_session_expired) {
-                                    console.log(`⏳ Session expired for PSID ${sender_psid}. Resetting session.`);
-                                    userSessions.delete(sender_psid);
-                                    accountRecoveryData.delete(sender_psid);
-                                    incomingMsg = "hello"; // Trigger the greeting menu
-
-                                    try {
-                                        await callSendAPI(sender_psid, {
-                                            text: "Welcome! Just a quick reminder: If you ever get stuck, you can type 'cancel' or 'stop' to start over, and use the menu buttons below to navigate."
-                                        });
-                                    } catch (e) {
-                                        console.error("Error sending intro:", e);
-                                    }
-                                }
+                                // No session expiry spam logic here anymore!
+                                // The user's original message is kept entirely intact.
 
                                 getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
                                     if (replyMessage) {
@@ -693,7 +692,7 @@ Our team will check if your area is serviceable and contact you for installation
                 }
             } catch (err) {
                 console.error("DB Error:", err);
-                return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+                return { text: "We apologize, but we are currently experiencing a system error. I am transferring you to a human agent now. Please wait.", isHandover: true };
             }
         } else if (userSessions.get(sender_psid) === 'ACCOUNT_RECOVERY_CONFIRM') {
             const data = accountRecoveryData.get(sender_psid);
@@ -945,7 +944,7 @@ Our team will check if your area is serviceable and contact you for installation
                     }
                 } catch (err) {
                     console.error("DB Error:", err);
-                    return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+                    return { text: "I am transferring you to a human agent now. Please wait.", isHandover: true };
                 }
             } else {
                 return { text: "Would you like to check your 'Balance' or see 'Payment' methods?" };
@@ -981,7 +980,7 @@ Our team will check if your area is serviceable and contact you for installation
                 }
             } catch (err) {
                 console.error("DB Error:", err);
-                return { text: `Sorry, there was an error accessing the database. Please try again later. (Error: ${err.message || err})` };
+                return { text: "We apologize, but we are currently experiencing a system error. I am transferring you to a human agent now. Please wait.", isHandover: true };
             }
         } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_CONFIRM') {
             const data = accountRecoveryData.get(sender_psid);
@@ -1291,46 +1290,45 @@ Our team will check if your area is serviceable and contact you for installation
             if (!apiKey) throw new Error("Gemini API Key missing from Firestore");
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
-            const prompt = `You are an intelligent classifier for an ISP called RFiberX. 
-            Read the user's message in Tagalog, English, or Taglish. 
-            You must reply with exactly ONE word from this list that best matches their intent:
-            - TECHNICAL_SUPPORT (if they complain about slow internet, no internet, red light, or fiber cut)
-            - RELOCATION (if they are asking to relocate or move their internet connection)
-            - APPLICATION (if they are applying or want to apply for a new internet connection)
-            - BILLING (if they ask about payment, billing, GCash, or sending receipts)
-            - PLANS (if they are asking about internet plans, packages, or speeds available)
-            - CHANGE_PASSWORD (if they are asking to change their WiFi password)
-            - AREA_INQUIRY (if they are asking about area installation or if their area is serviceable)
-            - ACCOUNT_INQUIRY (if they are asking for their account number and password for the billing system account)
-            - MOBILE_APP (if they ask about the mobile app, downloading the app, or app links)
-            - GREETING (if they say hello, hi, good morning, good evening, or thank you)
-            - UNKNOWN (if they ask something completely unrelated to our ISP)
-            
-            User's Message: "${text}"`;
+            const modelsToTry = [
+                "gemini-1.5-flash",       // Massive free tier (1,500 RPD)
+                "gemini-2.0-flash",       // Good fallback
+                "gemini-1.5-pro",         // Heavier model fallback
+                "gemini-3.6-flash"        // Previous default
+            ];
 
             let result = null;
-            let retries = 3;
-            while (retries > 0) {
+            let finalError = null;
+
+            for (let i = 0; i < modelsToTry.length; i++) {
                 try {
+                    const currentModelName = modelsToTry[i];
+                    const model = genAI.getGenerativeModel({ model: currentModelName });
+                    console.log(`[Text Scan] Attempt ${i + 1}/${modelsToTry.length} using model: ${currentModelName}`);
+                    
                     result = await model.generateContent(prompt);
-                    break; // Success, break out of loop
+                    break; // Success
                 } catch (apiError) {
-                    if (apiError.status === 503 && retries > 1) {
-                        console.warn("Gemini 503 Overloaded. Retrying in 2 seconds...");
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        retries--;
+                    finalError = apiError;
+                    const isOverloaded = apiError.status === 503 || apiError.status === 429 || (apiError.message && (apiError.message.includes('503') || apiError.message.includes('429')));
+                    
+                    if (isOverloaded && i < modelsToTry.length - 1) {
+                        console.warn(`[Text Scan] ${currentModelName} failed (429/503). Trying next model...`);
                     } else {
-                        throw apiError;
+                        break;
                     }
                 }
+            }
+
+            if (!result) {
+                throw finalError || new Error("Failed to process text after trying all fallback models.");
             }
 
             ai_decision = result.response.text().trim();
             console.log("🤖 Gemini Classified Intent as: " + ai_decision);
         } catch (error) {
             console.error("Gemini Error:", error);
-            return { text: "We apologize, but we encountered a system error: " + error.message };
+            return { text: "I am transferring you to a human agent now. Please wait.", isHandover: true };
         }
         */
         console.log("🤖 Gemini is temporarily disabled. No keywords matched. Remaining silent.");
@@ -1846,10 +1844,11 @@ async function processImageAttachment(imageUrl, sender_psid) {
 
         // Define an array of models to try in sequence
         const modelsToTry = [
-            "gemini-3.6-flash",       // 1st attempt: ✅ Confirmed working
-            "gemini-3.7-flash",       // 2nd attempt: ✅ Confirmed working
-            "gemini-3.5-flash",       // 3rd attempt: ✅ Confirmed working
-            "gemini-3.5-flash-lite"   // 4th attempt: Lightweight last resort
+            "gemini-1.5-flash",       // Massive free tier (1,500 RPD)
+            "gemini-2.0-flash",       // Good fallback
+            "gemini-1.5-pro",         // Heavier model fallback
+            "gemini-3.6-flash",       // Previous default
+            "gemini-3.7-flash"
         ];
 
         // Download image and convert to Base64
@@ -1888,11 +1887,11 @@ If it IS a receipt, extract:
                 break; // Success! Break out of the retry loop.
             } catch (apiError) {
                 finalError = apiError;
-                const isOverloaded = apiError.status === 503 || (apiError.message && apiError.message.includes('503'));
+                const isOverloaded = apiError.status === 503 || apiError.status === 429 || (apiError.message && (apiError.message.includes('503') || apiError.message.includes('429')));
 
                 if (isOverloaded && i < modelsToTry.length - 1) {
-                    const delayMs = (i + 1) * 2000; // 2s, 4s, 6s
-                    console.warn(`[Receipt Scan] Gemini 503 Overloaded on ${modelsToTry[i]}. Falling back in ${delayMs}ms...`);
+                    const delayMs = (i + 1) * 1000;
+                    console.warn(`[Receipt Scan] ${modelsToTry[i]} failed (429/503). Falling back in ${delayMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                 } else {
                     // If it's a non-503 error (e.g. 400 Bad Request), or we ran out of retries, we stop trying.
@@ -2103,11 +2102,8 @@ If it IS a receipt, extract:
     } catch (err) {
         console.error("Error processing image receipt:", err);
         return {
-            text: `Sorry, there was an error processing your receipt. Please try again later. (Error: ${err.message || err})`,
-            quick_replies: [
-                { content_type: "text", title: "Agent", payload: "AGENT" },
-                { content_type: "text", title: "Cancel", payload: "CANCEL" }
-            ]
+            text: "I am transferring you to a human agent now. Please wait.",
+            isHandover: true
         };
     }
 }
