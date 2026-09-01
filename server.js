@@ -327,7 +327,7 @@ app.post('/webhook', (req, res) => {
                                     });
                                 } else {
                                     const imageUrl = webhook_event.message.attachments[0].payload.url;
-                                    processImageAttachment(imageUrl, sender_psid).then(replyMessage => {
+                                    processImageAttachment(imageUrl, sender_psid, language).then(replyMessage => {
                                         if (replyMessage) {
                                             callSendAPI(sender_psid, replyMessage);
                                         }
@@ -1821,7 +1821,10 @@ async function callSendAPI(sender_psid, response) {
 }
 
 // Process Image Attachment using Gemini Vision
-async function processImageAttachment(imageUrl, sender_psid) {
+async function processImageAttachment(imageUrl, sender_psid, language) {
+    const tl = language === 'tl';
+    const T = (en, tag) => tl ? tag : en;
+
     let accountNum = null;
 
     // 1. Check current session memory
