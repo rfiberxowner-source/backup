@@ -244,10 +244,12 @@ app.post('/webhook', (req, res) => {
                         // Send the auto-reply ONLY to allowed testers
                         const ALLOWED_TESTERS = [
                             '28146825618339223', // Rfiberx Blanco
-                            '27076770378611516'  // Jasper Mangulabnan
+                            '27076770378611516', // Jasper Mangulabnan
+                            '27846036101654635', // Angela Calubayan
+                            '36533187462992743', // Francis Serrano Agosto
+                            '27314329474875273'  // Marc S. Cambel
                         ];
-                        // if (ALLOWED_TESTERS.includes(sender_psid)) {
-                        if (true) { // Responds to anyone uniquely
+                        if (ALLOWED_TESTERS.includes(sender_psid)) {
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
                             if (webhook_event.message.text) {
                                 let incomingMsg = webhook_event.message.quick_reply ? webhook_event.message.quick_reply.payload : webhook_event.message.text;
@@ -2139,7 +2141,7 @@ If it IS a receipt, extract:
     } catch (err) {
         console.error("Error processing image receipt:", err);
         return {
-            text: T("I am transferring you to a human agent now. Please wait.", "Tinatransfer na kita sa isang human agent ngayon. Mangyaring maghintay."),
+            text: T("We have received your image. We are now transferring your chat to one of our agents for further assistance. Please wait.", "Natanggap na namin ang iyong image. Ititransfer na namin ang iyong chat sa isa sa aming mga agent para sa karagdagang tulong. Mangyaring maghintay."),
             isHandover: true
         };
     }
