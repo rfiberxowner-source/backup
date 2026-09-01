@@ -111,12 +111,14 @@ app.post('/webhook', (req, res) => {
                     let existingName = null;
                     let active_complaint_id = null;
                     let active_apply_id = null;
+                    let language = null;
                     if (doc.exists) {
                         const data = doc.data();
                         is_paused = data.is_paused === true;
                         existingName = data.name;
                         active_complaint_id = data.active_complaint_id || null;
                         active_apply_id = data.active_apply_id || null;
+                        language = data.language || null;
                         if (data.lastInteraction) {
                             lastInteractionTime = data.lastInteraction.toMillis();
                         }
@@ -253,7 +255,29 @@ app.post('/webhook', (req, res) => {
                                 // No session expiry spam logic here anymore!
                                 // The user's original message is kept entirely intact.
 
-                                getAutoReply(incomingMsg, sender_psid).then(async replyMessage => {
+                                if (!language && incomingMsg !== 'LANG_EN' && incomingMsg !== 'LANG_TL') {
+                                    // Send language selector
+                                    await callSendAPI(sender_psid, {
+                                        text: "Welcome to RFiberX! To serve you better, please choose your preferred language.\n\nMaligayang pagdating sa RFiberX! Upang mas mapaglingkuran ka namin, mangyaring piliin ang iyong wika.",
+                                        quick_replies: [
+                                            { content_type: "text", title: "English", payload: "LANG_EN" },
+                                            { content_type: "text", title: "Tagalog", payload: "LANG_TL" }
+                                        ]
+                                    });
+                                    return; // Stop processing, wait for their choice
+                                }
+
+                                if (incomingMsg === 'LANG_EN') {
+                                    language = 'en';
+                                    await psidRef.set({ language: 'en' }, { merge: true });
+                                    incomingMsg = 'get started'; // Simulate greeting
+                                } else if (incomingMsg === 'LANG_TL') {
+                                    language = 'tl';
+                                    await psidRef.set({ language: 'tl' }, { merge: true });
+                                    incomingMsg = 'get started'; // Simulate greeting
+                                }
+
+                                getAutoReply(incomingMsg, sender_psid, language).then(async replyMessage => {
                                     if (replyMessage) {
                                         const handleHandover = async () => {
                                             await psidRef.set({ is_paused: true }, { merge: true });
@@ -463,7 +487,7 @@ async function getAutoReply(text, sender_psid) {
             userSessions.delete(sender_psid);
             accountRecoveryData.delete(sender_psid);
             return {
-                text: "Okay, we've cancelled that request. How else can I help you today?",
+                text: T("Okay, we've cancelled that request. How else can I help you today?", "Okay, na-cancel na namin ang request na iyon. Paano pa kita matutulungan ngayon?"),
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -485,7 +509,7 @@ async function getAutoReply(text, sender_psid) {
 
             if (msg.match(/(slow|mabagal|bagal)/i)) {
                 return {
-                    text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
+                    text: T(`Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nakakaranas ka ng slow internet, tutulungan kita na maayos ito.\n\nKadalasan, ang pag-restart ng equipment ay makakabalik sa normal na speed. Pwede mo bang subukan ang quick step na ito?\n\nI-restart ang equipment: Tanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghihintay ng ilang minuto para bumalik ang connection at umilaw ng tama ang ilaw.\n\nKung mabagal pa rin ang internet mo pagkatapos gawin ito, sabihin lang sa akin. Kung gusto mong palitan ang wifi password o tawagan ang support, sabihin lang. Pwede kang tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx).`),
                     quick_replies: [
                         { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
                         { content_type: "text", title: "Agent", payload: "AGENT_SLOW_INTERNET" },
@@ -494,7 +518,7 @@ async function getAutoReply(text, sender_psid) {
                 };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
                 return {
-                    text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
+                    text: T(`Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nawalan ka ng internet connection. Nandito ako para tulungan kang maayos ito nang mabilis.\n\nPara ma-restore ang service mo, paki-try itong mga steps:\n\nTanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghintay ng 3 hanggang 5 minuto para mag-reboot nang maayos.\n\nPagkatapos mag-restart, tignan ang ilaw sa modem. Kung nakapatay o nag-bliblink ng pula ang "Internet" o "Online" light, ibig sabihin walang signal na nakakarating sa inyo.\n\nKung down pa rin o may error sa ilaw, i-tap ang "Agent" para ma-redirect ka sa aming team. Pwede ka ring tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx).`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT_NO_INTERNET" },
                         { content_type: "text", title: "Cancel", payload: "Cancel" }
@@ -797,7 +821,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
                 return {
-                    text: "Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.",
+                    text: T("Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.", "Dahil sa mismatches sa security test, hindi ko mabibigay ang details ng account na ito. Itatransfer kita sa aming human agent para mas matulungan ka sa account verification. Mangyaring maghintay."),
                     isHandover: true
                 };
             }
@@ -947,7 +971,7 @@ Our team will check if your area is serviceable and contact you for installation
                     }
                 } catch (err) {
                     console.error("DB Error:", err);
-                    return { text: "I am transferring you to a human agent now. Please wait.", isHandover: true };
+                    return { text: T("I am transferring you to a human agent now. Please wait.", "Tinatransfer na kita sa isang human agent ngayon. Mangyaring maghintay."), isHandover: true };
                 }
             } else {
                 return { text: "Would you like to check your 'Balance' or see 'Payment' methods?" };
@@ -1116,7 +1140,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
                 return {
-                    text: "Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.",
+                    text: T("Due to the security test and mismatching of details, I cannot provide you the details of this account. I will transfer you to our human agent who can better assist you with account verification. Please wait.", "Dahil sa mismatches sa security test, hindi ko mabibigay ang details ng account na ito. Itatransfer kita sa aming human agent para mas matulungan ka sa account verification. Mangyaring maghintay."),
                     isHandover: true
                 };
             }
@@ -1127,7 +1151,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
                 return {
-                    text: `Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`,
+                    text: T(`Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`, `Ang password mo ay: ${pass}\n\nSalamat sa pagpili sa RFiberX! Paano pa kita matutulungan ngayon?`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
                         { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1146,7 +1170,7 @@ Our team will check if your area is serviceable and contact you for installation
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
                 return {
-                    text: "Okay, we've cancelled that request. How else can I help you today?",
+                    text: T("Okay, we've cancelled that request. How else can I help you today?", "Okay, na-cancel na namin ang request na iyon. Paano pa kita matutulungan ngayon?"),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "Agent" },
                         { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1162,23 +1186,23 @@ Our team will check if your area is serviceable and contact you for installation
                     ]
                 };
             } else {
-                return { text: "Would you like to see your password? Please reply 'Yes' or 'No'." };
+                return { text: T("Would you like to see your password? Please reply 'Yes' or 'No'.", "Gusto mo bang makita ang iyong password? Mag-reply lang ng 'Yes' o 'No'.") };
             }
         } else if (userSessions.get(sender_psid) === 'REMOVE_ACCOUNT_CONFIRM') {
             if (msg.match(/(yes|oo|proceed)/i)) {
                 userSessions.set(sender_psid, 'REMOVE_ACCOUNT_VERIFY');
-                return { text: "For your security, please provide the exact Account Number or the Full Name of the account you want to remove." };
+                return { text: T("For your security, please provide the exact Account Number or the Full Name of the account you want to remove.", "Para sa iyong seguridad, pakibigay ang eksaktong Account Number o Full Name ng account na gusto mong i-remove.") };
             } else {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
-                return { text: "Okay, we have cancelled the account removal process. Your account is still saved." };
+                return { text: T("Okay, we have cancelled the account removal process. Your account is still saved.", "Okay, na-cancel na ang pag-remove ng account. Naka-save pa rin ang iyong account.") };
             }
         } else if (userSessions.get(sender_psid) === 'REMOVE_ACCOUNT_VERIFY') {
             const data = accountRecoveryData.get(sender_psid);
             const savedAccountNum = data ? data.accountToRemove : null;
             if (!savedAccountNum) {
                 userSessions.delete(sender_psid);
-                return { text: "Session expired. Please try again." };
+                return { text: T("Session expired. Please try again.", "Session expired. Mangyaring subukan muli.") };
             }
 
             let accountName = "Unknown";
@@ -1198,7 +1222,7 @@ Our team will check if your area is serviceable and contact you for installation
                     userSessions.delete(sender_psid);
                     accountRecoveryData.delete(sender_psid);
                     return {
-                        text: "Success! The account has been removed from your profile. What would you like to do next?",
+                        text: T("Success! The account has been removed from your profile. What would you like to do next?", "Success! Na-remove na ang account sa iyong profile. Ano ang gusto mong gawin susunod?"),
                         quick_replies: [
                             { content_type: "text", title: "Agent", payload: "Agent" },
                             { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1215,10 +1239,10 @@ Our team will check if your area is serviceable and contact you for installation
                     };
                 } catch (e) {
                     console.error("Error deleting account:", e);
-                    return { text: "An error occurred while removing your account. Please try again later." };
+                    return { text: T("An error occurred while removing your account. Please try again later.", "May error habang tinatanggal ang iyong account. Mangyaring subukan muli mamaya.") };
                 }
             } else {
-                return { text: "The details you provided do not match the saved account. Please try again or type 'Cancel' to stop." };
+                return { text: T("The details you provided do not match the saved account. Please try again or type 'Cancel' to stop.", "Hindi nag-match ang detalye sa naka-save na account. Mangyaring subukan muli o i-type ang 'Cancel' para i-stop.") };
             }
         }
     }
@@ -1230,7 +1254,7 @@ Our team will check if your area is serviceable and contact you for installation
                 type: "template",
                 payload: {
                     template_type: "button",
-                    text: "✅ System is responding! The webhook and auto-reply are fully functional.",
+                    text: T("✅ System is responding! The webhook and auto-reply are fully functional.", "✅ Nagre-respond ang system! Ang webhook at auto-reply ay fully functional."),
                     buttons: [
                         {
                             type: "web_url",
@@ -1331,7 +1355,7 @@ Our team will check if your area is serviceable and contact you for installation
             console.log("🤖 Gemini Classified Intent as: " + ai_decision);
         } catch (error) {
             console.error("Gemini Error:", error);
-            return { text: "I am transferring you to a human agent now. Please wait.", isHandover: true };
+            return { text: T("I am transferring you to a human agent now. Please wait.", "Tinatransfer na kita sa isang human agent ngayon. Mangyaring maghintay."), isHandover: true };
         }
         */
         console.log("🤖 Gemini is temporarily disabled. No keywords matched. Remaining silent.");
@@ -1347,7 +1371,7 @@ Our team will check if your area is serviceable and contact you for installation
     switch (ai_decision) {
         case 'CONTACTS':
             return {
-                text: "Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell  Rfiberx\n\nYou can contact our agent directly through these channels.",
+                text: T("Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell  Rfiberx\n\nYou can contact our agent directly through these channels.", "Narito ang aming contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell  Rfiberx\n\nPwede mo rin i-contact ang aming agent directly dito."),
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
@@ -1360,7 +1384,7 @@ Our team will check if your area is serviceable and contact you for installation
             } catch (e) { console.error("Error sending QR:", e); }
 
             return {
-                text: "Here is our mobile app! You can download it via this link:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHow else can I help you today?",
+                text: T("Here is our mobile app! You can download it via this link:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHow else can I help you today?", "Heto ang aming mobile app! Pwede mo itong i-download gamit ang link na ito:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nO i-scan ang QR code sa taas.\n\nPaano pa kita matutulungan ngayon?"),
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1379,7 +1403,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
             return {
-                text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\". You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook: Rendell Rfiberx.)*",
+                text: T("We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\". You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook: Rendell Rfiberx.)*", "Pasensya na sa abala. Nakakaranas ka ba ng Slow Internet, No Internet, o Red light flashing?\n\n*(Note: Kung gusto mong makausap ang human agent, i-tap lang ang \"Agent\". Pwede mo rin tawagan ang support sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook: Rendell Rfiberx.)*"),
                 quick_replies: [
                     { content_type: "text", title: "Slow Internet", payload: "Slow Internet" },
                     { content_type: "text", title: "No Internet", payload: "No Internet" },
@@ -1392,7 +1416,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'RELOCATION':
             userSessions.set(sender_psid, 'RELOCATION_STEP_1');
             return {
-                text: "Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just tap \"Agent\".)*",
+                text: T("Good day! Relocating your internet connection requires a relocation fee. Would you like to proceed with the relocation request? Please reply with 'Yes' to proceed, or 'Cancel' to stop.\n\n*(Note: If you need to speak with a human agent to discuss this, just tap \"Agent\".)*", "Magandang araw! May relocation fee ang paglipat ng internet connection. Gusto mo bang ituloy ang request? Mag-reply ng 'Yes' para ituloy, o 'Cancel' para i-stop.\n\n*(Note: Kung kailangan mo makausap ang agent tungkol dito, i-tap lang ang \"Agent\".)*"),
                 quick_replies: [
                     { content_type: "text", title: "Yes", payload: "Yes" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" },
@@ -1403,7 +1427,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
             return {
-                text: "Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?\n\nYou can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).",
+                text: T("Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?\n\nYou can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).", "Magandang araw! Para mag-apply ng bagong RFiberX connection, pakibigay ang sumusunod:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan o Speed na gusto mo:\n\nGusto mo bang makita muna ang aming available plans?\n\nPwede ka rin tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx)."),
                 quick_replies: [
                     { content_type: "text", title: "Yes", payload: "Yes" },
                     { content_type: "text", title: "No", payload: "No" },
@@ -1434,7 +1458,7 @@ Our team will check if your area is serviceable and contact you for installation
                         } catch (e) { console.error("Error sending QR:", e); }
 
                         return {
-                            text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
+                            text: T(`Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`, `Welcome back! Nakita ko na ang Account Number mo ay ${savedAccount}.\n\nNga pala, may mobile app na kami! Pwede mo i-download dito:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nO i-scan ang QR code sa taas.\n\nNa-download mo na ba ang aming mobile app?`),
                             quick_replies: [
                                 { content_type: "text", title: "Yes, I have it", payload: "Yes" },
                                 { content_type: "text", title: "No, not yet", payload: "No" }
@@ -1443,7 +1467,7 @@ Our team will check if your area is serviceable and contact you for installation
                     } else {
                         userSessions.set(sender_psid, 'BILLING_MENU');
                         return {
-                            text: `Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`,
+                            text: T(`Welcome back! I see your Account Number is ${savedAccount}.\n\nWould you like to check your 'Balance' or see 'Payment' methods?`, `Welcome back! Nakita ko na ang Account Number mo ay ${savedAccount}.\n\nGusto mo bang i-check ang iyong 'Balance' o tingnan ang 'Payment' methods?`),
                             quick_replies: [
                                 { content_type: "text", title: "Balance", payload: "Balance" },
                                 { content_type: "text", title: "Payment", payload: "Payment" },
@@ -1459,7 +1483,7 @@ Our team will check if your area is serviceable and contact you for installation
 
             userSessions.set(sender_psid, 'BILLING_STEP_1');
             return {
-                text: "Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please tap 'Forgot'.",
+                text: T("Good day! To assist you with billing, please provide your Account Number. If you forgot your account number, please tap 'Forgot'.", "Magandang araw! Para matulungan ka sa billing, pakibigay ang iyong Account Number. Kung nakalimutan mo ito, i-tap lang ang 'Forgot'."),
                 quick_replies: [
                     { content_type: "text", title: "Forgot", payload: "Forgot" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" },
@@ -1470,7 +1494,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'PLANS':
             userSessions.set(sender_psid, 'APPLICATION_STEP_2');
             return {
-                text: `Good day! Here are our available RFIBERX internet plans with details:
+                text: T(`Good day! Here are our available RFIBERX internet plans with details:
 • 30 Mbps – ₱800 (Best for light browsing & social media)
 • 50 Mbps – ₱1,000 (Ideal for work from home & HD streaming)
 • 70 Mbps – ₱1,300 (Great for multiple devices & gaming)
@@ -1484,7 +1508,7 @@ For inquiries or applications, kindly provide your preferred plan and the follow
 • Phone Number:
 • Plan or Speed you want:
 
-You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
+You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`, `Magandang araw! Heto ang aming mga available na RFIBERX internet plans:\n• 30 Mbps – ₱800 (Best for light browsing & social media)\n• 50 Mbps – ₱1,000 (Ideal for work from home & HD streaming)\n• 70 Mbps – ₱1,300 (Great for multiple devices & gaming)\n• 100 Mbps – ₱1,500 (Perfect for heavy gaming & 4K streaming)\n• 200 Mbps – ₱2,000 (For large families & heavy downloads)\n• 500 Mbps – ₱4,500 (Ultra-fast for power users or small business)\n\nPara sa inquiries o applications, pakibigay ang plan na gusto mo at ang mga detalye:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan o Speed na gusto mo:\n\nPwede ka rin palaging tumawag sa support sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx).`),
                 quick_replies: [
                     { content_type: "text", title: "Cancel", payload: "Cancel" },
                     { content_type: "text", title: "Agent", payload: "Agent" }
@@ -1499,7 +1523,7 @@ You can also always call the support using the phone number: 09913746474, email 
                         type: "template",
                         payload: {
                             template_type: "button",
-                            text: "To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE CLICK the corresponding quick reply below so I can send you the exact step-by-step tutorial!",
+                            text: T("To change your WiFi password, you need to access your router's gateway. Try clicking the buttons below until you find the one that works for your router.\n\nOnce you find the correct one, PLEASE CLICK the corresponding quick reply below so I can send you the exact step-by-step tutorial!", "Para mapalitan ang iyong WiFi password, kailangan mong pumasok sa router gateway. Subukan i-click ang mga buttons sa ibaba hanggang sa mahanap ang gumagana sa router mo.\n\nPag nahanap mo na, PAKI-CLICK ang corresponding quick reply para maibigay ko ang step-by-step tutorial!"),
                             buttons: [
                                 {
                                     type: "web_url",
@@ -1521,7 +1545,7 @@ You can also always call the support using the phone number: 09913746474, email 
                     }
                 },
                 {
-                    text: "For the login, the username is usually 'user' and the password is 'user' (all lowercase). If that didn't work, try 'User' and 'User' with a capital U.\n\nIf you still have problems logging in, try to contact the agent by typing 'Agent'.",
+                    text: T("For the login, the username is usually 'user' and the password is 'user' (all lowercase). If that didn't work, try 'User' and 'User' with a capital U.\n\nIf you still have problems logging in, try to contact the agent by typing 'Agent'.", "Para sa login, ang username ay kadalasang 'user' at ang password ay 'user' (small letters lahat). Kung hindi gumana, subukan ang 'User' at 'User' na may malaking U.\n\nKung may problema ka pa rin sa pag-login, i-type ang 'Agent' para makausap ang aming support."),
                     quick_replies: [
                         { content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
                         { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
@@ -1534,16 +1558,7 @@ You can also always call the support using the phone number: 09913746474, email 
         case 'AREA_INQUIRY':
             userSessions.set(sender_psid, 'AREA_INQUIRY_STEP_1');
             return {
-                text: `Good day! To check if your location is covered by RFIBERX and available for installation, kindly provide:
-• Complete Name:
-• Phone Number:
-• Complete Address:
-• Location (e.g. Majayjay, Magdalena, or Sta. Cruz):
-• Email Address:
-
-RFIBERX service is currently available in selected areas, including Magdalena, Majayjay, and Sta. Cruz. Our team will verify the exact coverage, NAP/port availability, and installation feasibility at your address.
-
-Would you also like to see our internet plans?`,
+                text: T(`Good day! To check if your location is covered by RFIBERX and available for installation, kindly provide:\n• Complete Name:\n• Phone Number:\n• Complete Address:\n• Location (e.g. Majayjay, Magdalena, or Sta. Cruz):\n• Email Address:\n\nRFIBERX service is currently available in selected areas, including Magdalena, Majayjay, and Sta. Cruz. Our team will verify the exact coverage, NAP/port availability, and installation feasibility at your address.\n\nWould you also like to see our internet plans?`, `Magandang araw! Para ma-check kung covered ng RFIBERX ang location mo para sa installation, pakibigay ang:\n• Complete Name:\n• Phone Number:\n• Complete Address:\n• Location (e.g. Majayjay, Magdalena, or Sta. Cruz):\n• Email Address:\n\nAng RFIBERX service ay available sa selected areas gaya ng Magdalena, Majayjay, at Sta. Cruz. Ive-verify ng aming team ang exact coverage at availability sa iyong address.\n\nGusto mo bang makita ang aming internet plans?`),
                 quick_replies: [
                     { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" },
@@ -1597,11 +1612,11 @@ Would you also like to see our internet plans?`,
             }
 
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
-            return { text: "To help you find your account details, please provide your Full Name or the name you remember for your account." };
+            return { text: T("To help you find your account details, please provide your Full Name or the name you remember for your account.", "Para mahanap ang iyong account details, pakibigay ang iyong Full Name o ang pangalang naaalala mo na nakarehistro sa iyong account.") };
 
         case 'GREETING':
             return {
-                text: "Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:",
+                text: T("Hello! I am the RFiberX Auto-Bot. How can I help you today? Please choose from the options below, or type your specific question:", "Hello! Ako ang RFiberX Auto-Bot. Paano kita matutulungan ngayon? Pumili lang sa mga options sa ibaba, o i-type ang iyong katanungan:"),
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1619,7 +1634,7 @@ Would you also like to see our internet plans?`,
 
         case 'CANCEL':
             return {
-                text: "Okay, we've cancelled that request. How else can I help you today?",
+                text: T("Okay, we've cancelled that request. How else can I help you today?", "Okay, na-cancel na namin ang request na iyon. Paano pa kita matutulungan ngayon?"),
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Technical Support", payload: "Technical Support" },
@@ -1637,14 +1652,14 @@ Would you also like to see our internet plans?`,
 
         case 'CHANGE_ACCOUNT':
             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_NAME');
-            return { text: "To change the account saved to your profile, please provide the Full Name or the name you remember for the new account you want to link." };
+            return { text: T("To change the account saved to your profile, please provide the Full Name or the name you remember for the new account you want to link.", "Para mapalitan ang account na naka-save sa iyong profile, pakibigay ang Full Name o ang pangalang gusto mong i-link na bagong account.") };
 
         case 'REMOVE_ACCOUNT':
             try {
                 const psidDoc = await db.collection('messenger_psids').doc(sender_psid).get();
                 const savedAccount = psidDoc.exists ? psidDoc.data().account : null;
                 if (!savedAccount) {
-                    return { text: "You don't have an account saved to your profile right now." };
+                    return { text: T("You don't have an account saved to your profile right now.", "Wala ka pang naka-save na account sa iyong profile ngayon.") };
                 }
 
                 let accountName = savedAccount;
@@ -1657,7 +1672,7 @@ Would you also like to see our internet plans?`,
                 accountRecoveryData.set(sender_psid, { accountToRemove: savedAccount });
                 userSessions.set(sender_psid, 'REMOVE_ACCOUNT_CONFIRM');
                 return {
-                    text: `Are you sure you want to remove the currently saved account (${accountName}) from your profile?`,
+                    text: T(`Are you sure you want to remove the currently saved account (${accountName}) from your profile?`, `Sigurado ka bang gusto mong i-remove ang naka-save na account (${accountName}) mula sa iyong profile?`),
                     quick_replies: [
                         { content_type: "text", title: "Yes", payload: "Yes" },
                         { content_type: "text", title: "No", payload: "No" }
@@ -1665,11 +1680,11 @@ Would you also like to see our internet plans?`,
                 };
             } catch (err) {
                 console.error("Error fetching account for removal:", err);
-                return { text: "Sorry, there was an error accessing your account details." };
+                return { text: T("Sorry, there was an error accessing your account details.", "Sorry, may error sa pag-access ng iyong account details.") };
             }
 
         case 'UNKNOWN':
-            return { text: "I am connecting you to a human agent now. Please wait.", isHandover: true };
+            return { text: T("I am connecting you to a human agent now. Please wait.", "Iko-connect kita sa isang human agent ngayon. Mangyaring maghintay."), isHandover: true };
 
         default:
             return null;
@@ -1678,8 +1693,8 @@ Would you also like to see our internet plans?`,
 
 // Intercept getAutoReply to append persistent reminder
 const originalGetAutoReply = getAutoReply;
-getAutoReply = async function (text, sender_psid) {
-    let reply = await originalGetAutoReply(text, sender_psid);
+getAutoReply = async function (text, sender_psid, language) {
+    let reply = await originalGetAutoReply(text, sender_psid, language);
     if (!reply) return null;
 
     // Check if they have a pending bill
@@ -1692,7 +1707,8 @@ getAutoReply = async function (text, sender_psid) {
                 .limit(1).get();
 
             if (!pendingQuery.empty) {
-                reply.text += "\n\n*(Reminder: Your billing statement is currently Waiting for approval.)*";
+                const tl = language === 'tl';
+                reply.text += tl ? "\n\n*(Reminder: Ang iyong billing statement ay kasalukuyang naka-Waiting para sa approval.)*" : "\n\n*(Reminder: Your billing statement is currently Waiting for approval.)*";
             }
         } catch (e) {
             console.error("Reminder check error:", e);
@@ -1923,7 +1939,7 @@ If it IS a receipt, extract:
             userSessions.set(sender_psid, 'BILLING_STEP_1');
             accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
             return {
-                text: "We received your receipt, but we need your Account Number to process it. Please provide your Account Number, or reply 'Forgot' if you don't know it.",
+                text: T("We received your receipt, but we need your Account Number to process it. Please provide your Account Number, or reply 'Forgot' if you don't know it.", "Natanggap namin ang iyong resibo, pero kailangan namin ang iyong Account Number para ma-process ito. Pakibigay ang Account Number, o mag-reply ng 'Forgot' kung nakalimutan mo ito."),
                 quick_replies: [
                     { content_type: "text", title: "Forgot", payload: "Forgot" },
                     { content_type: "text", title: "Agent", payload: "AGENT" },
@@ -1934,7 +1950,7 @@ If it IS a receipt, extract:
 
         const refNo = extracted.referenceNumber ? String(extracted.referenceNumber).replace(/[^0-9]/g, '') : '';
         if (refNo.length !== 13) {
-            return { text: `🚨 FRAUD DETECTED 🚨\n\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits.` };
+            return { text: T(`🚨 FRAUD DETECTED 🚨\n\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits.`, `🚨 FRAUD DETECTED 🚨\n\nInvalid ang GCash Reference Number. Ang tamang GCash Reference Number ay may eksaktong 13 digits.`) };
         }
 
         // Duplicate Check
@@ -1942,7 +1958,7 @@ If it IS a receipt, extract:
         const q = receiptsRef.where("referenceNumber", "==", refNo);
         const dupCheck = await q.get();
         if (!dupCheck.empty) {
-            return { text: `🚨 FRAUD DETECTED 🚨\n\nThis Reference Number (${refNo}) has already been used in another receipt. Submitting duplicate receipts is strictly prohibited.` };
+            return { text: T(`🚨 FRAUD DETECTED 🚨\n\nThis Reference Number (${refNo}) has already been used in another receipt. Submitting duplicate receipts is strictly prohibited.`, `🚨 FRAUD DETECTED 🚨\n\nAng Reference Number na ito (${refNo}) ay nagamit na sa ibang resibo. Mahigpit na ipinagbabawal ang pagpasa ng duplicate receipts.`) };
         }
 
         // 1. Fetch Client Details
@@ -1991,7 +2007,7 @@ If it IS a receipt, extract:
 
             if (unpaidCount === 0 && waitingCount > 0) {
                 return {
-                    text: `We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.`,
+                    text: T(`We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon.\n\nGayunpaman, meron kang ${waitingCount} na bill(s) na naka-marka na bilang "Waiting" for admin approval. Dahil wala kang pending bills ngayon, kung nagpadala ka ulit ng pera accidentally, mangyaring mag-request agad ng refund sa bangko mo o kontakin ang aming agent para matulungan ka.`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT" },
                         { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -1999,7 +2015,7 @@ If it IS a receipt, extract:
                 };
             } else if (unpaidCount === 0 && waitingCount === 0) {
                 return {
-                    text: `We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly and contact an agent for assistance.`,
+                    text: T(`We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly and contact an agent for assistance.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon sa iyong account. Kung nagpadala ka ulit ng pera accidentally, mangyaring mag-request agad ng refund o kontakin ang aming agent para matulungan ka.`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT" },
                         { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2060,7 +2076,7 @@ If it IS a receipt, extract:
                     });
                 }
                 return {
-                    text: "Thank you! Your payment receipt for your total balance has been successfully received. All your billing statements are now marked as 'Waiting' for Admin approval.",
+                    text: T("Thank you! Your payment receipt for your total balance has been successfully received. All your billing statements are now marked as 'Waiting' for Admin approval.", "Salamat! Nareceive na namin ang iyong payment receipt para sa total balance mo. Lahat ng billing statements mo ay naka-marka na bilang 'Waiting' for Admin approval."),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT" },
                         { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2077,7 +2093,7 @@ If it IS a receipt, extract:
                 let remainingCount = unpaidCount - 1;
                 if (remainingCount > 0) {
                     return {
-                        text: `Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.`,
+                        text: T(`Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.`, `Salamat! Nareceive na namin ang iyong payment receipt para sa pinakaluma mong bill. Naka-marka na ito bilang 'Waiting' for Admin approval.\n\nPaalala: Meron ka pang ${remainingCount} unpaid bill(s) na naiwan sa iyong account.`),
                         quick_replies: [
                             { content_type: "text", title: "Agent", payload: "AGENT" },
                             { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2105,7 +2121,7 @@ If it IS a receipt, extract:
     } catch (err) {
         console.error("Error processing image receipt:", err);
         return {
-            text: "I am transferring you to a human agent now. Please wait.",
+            text: T("I am transferring you to a human agent now. Please wait.", "Tinatransfer na kita sa isang human agent ngayon. Mangyaring maghintay."),
             isHandover: true
         };
     }
