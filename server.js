@@ -1902,11 +1902,10 @@ async function processImageAttachment(imageUrl, sender_psid, language) {
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const modelsToTry = [
-            "gemini-1.5-flash",
             "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
             "gemini-1.5-pro",
-            "gemini-3.6-flash",
-            "gemini-3.7-flash"
+            "gemini-1.5-flash"
         ];
 
         const imageResp = await fetch(imageUrl);
@@ -1944,11 +1943,11 @@ If it IS a receipt, extract:
                 break;
             } catch (apiError) {
                 finalError = apiError;
-                const isOverloaded = apiError.status === 503 || apiError.status === 429 || (apiError.message && (apiError.message.includes('503') || apiError.message.includes('429')));
+                const isRetryable = apiError.status === 503 || apiError.status === 429 || apiError.status === 404 || (apiError.message && (apiError.message.includes('503') || apiError.message.includes('429') || apiError.message.includes('404') || apiError.message.includes('Not Found')));
 
-                if (isOverloaded && i < modelsToTry.length - 1) {
+                if (isRetryable && i < modelsToTry.length - 1) {
                     const delayMs = (i + 1) * 1000;
-                    console.warn(`[Receipt Scan] ${modelsToTry[i]} failed (429/503). Falling back in ${delayMs}ms...`);
+                    console.warn(`[Receipt Scan] ${modelsToTry[i]} failed (${apiError.status}). Falling back in ${delayMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                 } else {
                     break;
