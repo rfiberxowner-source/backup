@@ -485,7 +485,7 @@ async function getAutoReply(text, sender_psid) {
 
             if (msg.match(/(slow|mabagal|bagal)/i)) {
                 return {
-                    text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. You can always call the support using the phone number: 09913746474 or email at support@rfiberx.net.`,
+                    text: `Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
                     quick_replies: [
                         { content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
                         { content_type: "text", title: "Agent", payload: "AGENT_SLOW_INTERNET" },
@@ -494,7 +494,7 @@ async function getAutoReply(text, sender_psid) {
                 };
             } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
                 return {
-                    text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. You can always call the support using the phone number: 09913746474 or email at support@rfiberx.net.`,
+                    text: `Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT_NO_INTERNET" },
                         { content_type: "text", title: "Cancel", payload: "Cancel" }
@@ -1347,7 +1347,7 @@ Our team will check if your area is serviceable and contact you for installation
     switch (ai_decision) {
         case 'CONTACTS':
             return {
-                text: "Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n\nYou can contact our agent directly through these channels.",
+                text: "Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell  Rfiberx\n\nYou can contact our agent directly through these channels.",
                 quick_replies: [
                     { content_type: "text", title: "Agent", payload: "Agent" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
@@ -1379,7 +1379,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'TECHNICAL_SUPPORT':
             userSessions.set(sender_psid, 'TECH_SUPPORT_STEP_1');
             return {
-                text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\". You can also always call the support using the phone number: 09913746474 or email at support@rfiberx.net.)*",
+                text: "We apologize for the inconvenience. Are you experiencing Slow Internet, No Internet, or Red light flashing?\n\n*(Note: If you ever need to speak with a human support agent instead, just tap \"Agent\". You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook: Rendell Rfiberx.)*",
                 quick_replies: [
                     { content_type: "text", title: "Slow Internet", payload: "Slow Internet" },
                     { content_type: "text", title: "No Internet", payload: "No Internet" },
@@ -1403,7 +1403,7 @@ Our team will check if your area is serviceable and contact you for installation
         case 'APPLICATION':
             userSessions.set(sender_psid, 'APPLICATION_STEP_1');
             return {
-                text: "Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?\n\nYou can also always call the support using the phone number: 09913746474 or email at support@rfiberx.net.",
+                text: "Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?\n\nYou can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).",
                 quick_replies: [
                     { content_type: "text", title: "Yes", payload: "Yes" },
                     { content_type: "text", title: "No", payload: "No" },
@@ -1484,7 +1484,7 @@ For inquiries or applications, kindly provide your preferred plan and the follow
 • Phone Number:
 • Plan or Speed you want:
 
-You can also always call the support using the phone number: 09913746474 or email at support@rfiberx.net.`,
+You can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`,
                 quick_replies: [
                     { content_type: "text", title: "Cancel", payload: "Cancel" },
                     { content_type: "text", title: "Agent", payload: "Agent" }
