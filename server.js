@@ -1292,7 +1292,7 @@ Our team will check if your area is serviceable and contact you for installation
         ai_decision = 'MOBILE_APP';
     } else if (msg.match(/(contacts|contact support|phone number|email|call support)/i)) {
         ai_decision = 'CONTACTS';
-    } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test)/i)) {
+    } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test|get started)/i)) {
         ai_decision = 'GREETING';
     } else if (msg.match(/(plans|packages|magkano plan|internet plans|speeds|options)/i)) {
         ai_decision = 'PLANS';
