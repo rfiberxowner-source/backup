@@ -127,8 +127,10 @@ app.post('/webhook', (req, res) => {
 
                     const ONE_HOUR_MS = 60 * 60 * 1000; // 1 hour inactivity timer
                     if (is_paused && lastInteractionTime && (now - lastInteractionTime > ONE_HOUR_MS)) {
-                        console.log(`⏰ 1 hour of silence detected for PSID ${sender_psid}. Auto-resuming chatbot.`);
+                        console.log(`⏰ 1 hour of silence detected for PSID ${sender_psid}. Auto-resuming chatbot and clearing old tickets.`);
                         is_paused = false;
+                        active_complaint_id = null;
+                        active_apply_id = null;
                     }
 
                     // Reset complaint tracking if global stopper used
