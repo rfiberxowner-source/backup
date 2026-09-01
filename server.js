@@ -327,8 +327,28 @@ app.post('/webhook', (req, res) => {
                                     });
                                 } else {
                                     const imageUrl = webhook_event.message.attachments[0].payload.url;
-                                    processImageAttachment(imageUrl, sender_psid, language).then(replyMessage => {
+                                    processImageAttachment(imageUrl, sender_psid, language).then(async replyMessage => {
                                         if (replyMessage) {
+                                            if (replyMessage.isHandover) {
+                                                await psidRef.set({ is_paused: true }, { merge: true });
+                                                if (!active_complaint_id) {
+                                                    const newComplaintRef = db.collection('complaints').doc();
+                                                    active_complaint_id = newComplaintRef.id;
+                                                    await newComplaintRef.set({
+                                                        psid: sender_psid,
+                                                        name: existingName || psidPayload.name || "Unknown Client",
+                                                        status: "Unread",
+                                                        createdAt: FieldValue.serverTimestamp()
+                                                    });
+                                                    await db.collection('complaints').doc(active_complaint_id).collection('messages').add({
+                                                        sender: 'client',
+                                                        text: '[Image Attachment]',
+                                                        timestamp: FieldValue.serverTimestamp()
+                                                    });
+                                                    await psidRef.set({ active_complaint_id: active_complaint_id }, { merge: true });
+                                                }
+                                                delete replyMessage.isHandover;
+                                            }
                                             callSendAPI(sender_psid, replyMessage);
                                         }
                                     }).catch(err => console.error("Error processing image:", err));
@@ -1820,11 +1840,29 @@ async function callSendAPI(sender_psid, response) {
     }
 }
 
-// Process Image Attachment using Gemini Vision
 async function processImageAttachment(imageUrl, sender_psid, language) {
     const tl = language === 'tl';
     const T = (en, tag) => tl ? tag : en;
 
+    // =========================================================================
+    // 🔒 FEATURE GATE: Only RFiberX Blanco (with ENABLE_AI_RECEIPT=true) gets
+    // the full Gemini AI receipt scanner. All other deployments get a simple
+    // "image received" response and handover to agent.
+    // =========================================================================
+    if (!process.env.ENABLE_AI_RECEIPT) {
+        console.log("📸 Image received from PSID: " + sender_psid + ". Transferring to agent (AI receipt scanner disabled).");
+        return {
+            text: T(
+                "We have received your image. We are now transferring your chat to one of our agents for further assistance. Please wait.",
+                "Natanggap na namin ang iyong image. Ititransfer na namin ang iyong chat sa isa sa aming mga agent para sa karagdagang tulong. Mangyaring maghintay."
+            ),
+            isHandover: true
+        };
+    }
+
+    // =========================================================================
+    // 🧠 AI RECEIPT SCANNER (Only runs when ENABLE_AI_RECEIPT=true)
+    // =========================================================================
     let accountNum = null;
 
     // 1. Check current session memory
@@ -1847,10 +1885,8 @@ async function processImageAttachment(imageUrl, sender_psid, language) {
         }
     }
 
-    // 3. (Moved check for missing account number AFTER Gemini scan)
-
     try {
-        console.log("📸 Processing image receipt...");
+        console.log("📸 Processing image receipt (AI scanner enabled)...");
 
         // Fetch Gemini API key
         const apiKeyDoc = await db.collection('settings').doc('apiKeys').get();
@@ -1865,16 +1901,14 @@ async function processImageAttachment(imageUrl, sender_psid, language) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Define an array of models to try in sequence
         const modelsToTry = [
-            "gemini-1.5-flash",       // Massive free tier (1,500 RPD)
-            "gemini-2.0-flash",       // Good fallback
-            "gemini-1.5-pro",         // Heavier model fallback
-            "gemini-3.6-flash",       // Previous default
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-3.6-flash",
             "gemini-3.7-flash"
         ];
 
-        // Download image and convert to Base64
         const imageResp = await fetch(imageUrl);
         const buffer = await imageResp.arrayBuffer();
         const base64Data = Buffer.from(buffer).toString("base64");
@@ -1907,7 +1941,7 @@ If it IS a receipt, extract:
                 console.log(`[Receipt Scan] Attempt ${i + 1}/${modelsToTry.length} using model: ${currentModelName}`);
 
                 result = await model.generateContent([prompt, imagePart]);
-                break; // Success! Break out of the retry loop.
+                break;
             } catch (apiError) {
                 finalError = apiError;
                 const isOverloaded = apiError.status === 503 || apiError.status === 429 || (apiError.message && (apiError.message.includes('503') || apiError.message.includes('429')));
@@ -1917,7 +1951,6 @@ If it IS a receipt, extract:
                     console.warn(`[Receipt Scan] ${modelsToTry[i]} failed (429/503). Falling back in ${delayMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                 } else {
-                    // If it's a non-503 error (e.g. 400 Bad Request), or we ran out of retries, we stop trying.
                     break;
                 }
             }
@@ -1928,17 +1961,14 @@ If it IS a receipt, extract:
         }
 
         const responseText = result.response.text();
-
-        // Clean JSON formatting
         let jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         let extracted = JSON.parse(jsonStr);
 
         if (extracted.error === "NOT_A_RECEIPT") {
             console.log("❌ Image is not a receipt. Ignoring.");
-            return null; // silently ignore
+            return null;
         }
 
-        // Now that we know it IS a receipt, if we still don't have an account, force them to provide it
         if (!accountNum) {
             userSessions.set(sender_psid, 'BILLING_STEP_1');
             accountRecoveryData.set(sender_psid, { pendingReceiptUrl: imageUrl });
@@ -1957,7 +1987,6 @@ If it IS a receipt, extract:
             return { text: T(`🚨 FRAUD DETECTED 🚨\n\nInvalid GCash Reference Number. A valid GCash Reference Number must be exactly 13 digits.`, `🚨 FRAUD DETECTED 🚨\n\nInvalid ang GCash Reference Number. Ang tamang GCash Reference Number ay may eksaktong 13 digits.`) };
         }
 
-        // Duplicate Check
         const receiptsRef = db.collection('receipts');
         const q = receiptsRef.where("referenceNumber", "==", refNo);
         const dupCheck = await q.get();
@@ -1965,7 +1994,6 @@ If it IS a receipt, extract:
             return { text: T(`🚨 FRAUD DETECTED 🚨\n\nThis Reference Number (${refNo}) has already been used in another receipt. Submitting duplicate receipts is strictly prohibited.`, `🚨 FRAUD DETECTED 🚨\n\nAng Reference Number na ito (${refNo}) ay nagamit na sa ibang resibo. Mahigpit na ipinagbabawal ang pagpasa ng duplicate receipts.`) };
         }
 
-        // 1. Fetch Client Details
         let clientName = 'Unknown';
         let userId = null;
 
@@ -1985,25 +2013,20 @@ If it IS a receipt, extract:
             }
         }
 
-        const now = new Date();
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        const billingMonth = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-
         console.log("✅ Receipt validated. Updating billing status...");
 
-        // 3. Update the billing statement status to Pending
         if (userId) {
             const billingSnap = await db.collection('users').doc(userId).collection('billing_emails').get();
             const unpaidBillsList = [];
             let waitingCount = 0;
 
             for (let docSnap of billingSnap.docs) {
-                const data = docSnap.data();
-                const status = (data.status || '').toLowerCase();
+                const bData = docSnap.data();
+                const status = (bData.status || '').toLowerCase();
                 if (status === 'waiting') {
                     waitingCount++;
                 } else if (status !== 'paid' && status !== 'completed') {
-                    unpaidBillsList.push({ id: docSnap.id, ref: docSnap.ref, ...data });
+                    unpaidBillsList.push({ id: docSnap.id, ref: docSnap.ref, ...bData });
                 }
             }
 
@@ -2011,7 +2034,7 @@ If it IS a receipt, extract:
 
             if (unpaidCount === 0 && waitingCount > 0) {
                 return {
-                    text: T(`We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval. Since you have no pending bills to pay right now, if you accidentally sent money twice, please request a refund quickly from your bank or contact an agent for assistance.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon.\n\nGayunpaman, meron kang ${waitingCount} na bill(s) na naka-marka na bilang "Waiting" for admin approval. Dahil wala kang pending bills ngayon, kung nagpadala ka ulit ng pera accidentally, mangyaring mag-request agad ng refund sa bangko mo o kontakin ang aming agent para matulungan ka.`),
+                    text: T(`We received your receipt, but you currently have NO unpaid bills.\n\nHowever, you do have ${waitingCount} bill(s) that are already marked as "Waiting" for admin approval.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon.\n\nGayunpaman, meron kang ${waitingCount} na bill(s) na naka-marka na bilang "Waiting" for admin approval.`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT" },
                         { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2019,7 +2042,7 @@ If it IS a receipt, extract:
                 };
             } else if (unpaidCount === 0 && waitingCount === 0) {
                 return {
-                    text: T(`We received your receipt, but you currently have NO unpaid bills on your account. If you accidentally sent money, please request a refund quickly and contact an agent for assistance.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon sa iyong account. Kung nagpadala ka ulit ng pera accidentally, mangyaring mag-request agad ng refund o kontakin ang aming agent para matulungan ka.`),
+                    text: T(`We received your receipt, but you currently have NO unpaid bills on your account.`, `Nareceive namin ang iyong resibo, pero WALA kang unpaid bills ngayon sa iyong account.`),
                     quick_replies: [
                         { content_type: "text", title: "Agent", payload: "AGENT" },
                         { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2027,13 +2050,9 @@ If it IS a receipt, extract:
                 };
             }
 
-            // Sort oldest to newest
             unpaidBillsList.sort((a, b) => new Date(a.dateSent || 0) - new Date(b.dateSent || 0));
-
-            // Extract amount from receipt
             const extractedAmount = parseFloat(String(extracted.amount).replace(/[^0-9\.]/g, ''));
 
-            // Calculate expected amounts
             let expectedTotalAmount = 0;
             unpaidBillsList.forEach(b => {
                 expectedTotalAmount += parseFloat(String(b.amount || 0).replace(/[^0-9\.]/g, '')) || 0;
@@ -2044,11 +2063,9 @@ If it IS a receipt, extract:
             let isOldestMatch = false;
 
             if (extractedAmount > 0) {
-                // Total Match
                 if (expectedTotalAmount > 0 && extractedAmount === expectedTotalAmount) {
                     isTotalMatch = true;
                 }
-                // Oldest Bill Match
                 else if (oldestBillAmt > 0 && extractedAmount === oldestBillAmt) {
                     isOldestMatch = true;
                 }
@@ -2057,9 +2074,9 @@ If it IS a receipt, extract:
             if (!isTotalMatch && !isOldestMatch) {
                 let errorMsg = `🚨 INVALID AMOUNT 🚨\n\nYour receipt is for ₱${extractedAmount}.\n\n`;
                 if (unpaidCount > 1) {
-                    errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${oldestBillAmt} (for your oldest month) OR exactly ₱${expectedTotalAmount} (for your total balance). Partial payments or overpayments are not accepted.`;
+                    errorMsg += `You have multiple unpaid bills. You must pay exactly ₱${oldestBillAmt} (for your oldest month) OR exactly ₱${expectedTotalAmount} (for your total balance).`;
                 } else {
-                    errorMsg += `Your required balance is exactly ₱${expectedTotalAmount}. Partial payments or overpayments are not accepted.`;
+                    errorMsg += `Your required balance is exactly ₱${expectedTotalAmount}.`;
                 }
                 return {
                     text: errorMsg,
@@ -2070,7 +2087,6 @@ If it IS a receipt, extract:
                 };
             }
 
-            // Amount is valid, update documents
             if (isTotalMatch) {
                 for (let bill of unpaidBillsList) {
                     await bill.ref.update({
@@ -2087,7 +2103,6 @@ If it IS a receipt, extract:
                     ]
                 };
             } else if (isOldestMatch) {
-                // Update ONLY the oldest bill
                 await unpaidBillsList[0].ref.update({
                     status: 'Waiting',
                     processedBy: 'Page AI',
@@ -2097,7 +2112,7 @@ If it IS a receipt, extract:
                 let remainingCount = unpaidCount - 1;
                 if (remainingCount > 0) {
                     return {
-                        text: T(`Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining on your account.`, `Salamat! Nareceive na namin ang iyong payment receipt para sa pinakaluma mong bill. Naka-marka na ito bilang 'Waiting' for Admin approval.\n\nPaalala: Meron ka pang ${remainingCount} unpaid bill(s) na naiwan sa iyong account.`),
+                        text: T(`Thank you! Your payment receipt has been successfully received for your oldest bill. It is now marked as 'Waiting' for Admin approval.\n\nPlease note: You still have ${remainingCount} other unpaid bill(s) remaining.`, `Salamat! Nareceive na namin ang iyong payment receipt para sa pinakaluma mong bill. Naka-marka na ito bilang 'Waiting' for Admin approval.\n\nPaalala: Meron ka pang ${remainingCount} unpaid bill(s) na naiwan.`),
                         quick_replies: [
                             { content_type: "text", title: "Agent", payload: "AGENT" },
                             { content_type: "text", title: "Cancel", payload: "CANCEL" }
@@ -2112,8 +2127,8 @@ If it IS a receipt, extract:
                         ]
                     };
                 }
-            } // Close if (isOldestMatch)
-        } // Close if (userId)
+            }
+        }
 
         return {
             text: "Thank you! Your payment receipt has been successfully received. Your billing statement is now marked as 'Waiting' for Admin approval.",
