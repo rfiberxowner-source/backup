@@ -68,8 +68,7 @@ setInterval(() => processedMessages.clear(), 10 * 60 * 1000); // Clear every 10 
 setInterval(async () => {
     try {
         const now = Date.now();
-        // TEST MODE: 10 seconds timeout. Normally 60 * 60 * 1000 (1 hour).
-        const TIMEOUT_MS = 10 * 1000; 
+        const TIMEOUT_MS = 60 * 60 * 1000; 
 
         // Query all paused users
         const pausedUsers = await db.collection('messenger_psids').where('is_paused', '==', true).get();
@@ -117,7 +116,7 @@ setInterval(async () => {
     } catch (err) {
         console.error("Error in proactive timeout worker:", err);
     }
-}, 5000); // Check every 5 seconds for testing
+}, 5 * 60 * 1000); // Check every 5 minutes
 
 
 // =========================================================================
