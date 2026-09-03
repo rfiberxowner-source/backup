@@ -618,6 +618,20 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
     const msg = text.toLowerCase().trim();
     let clientName = "Valued Customer";
     let clientFullName = "";
+
+    // --- SENTENCE COMPLAINT HANDOVER ---
+    // If the user types a full sentence (more than 3 words) that contains complaint triggers,
+    // hand them straight over to a human agent.
+    if (!isQuickReply && msg.split(' ').length >= 3) {
+        if (msg.match(/(slow internet|no internet|wala|putol|mabagal|los|red light|flashing)/i)) {
+            console.log(`🗣️ Sentence complaint detected from ${sender_psid}: "${msg}". Handing over to agent.`);
+            return {
+                text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."),
+                isHandover: true
+            };
+        }
+    }
+
     try {
         const response = await fetch(`https://graph.facebook.com/${sender_psid}?fields=first_name,last_name&access_token=${PAGE_ACCESS_TOKEN}`);
         const data = await response.json();

@@ -804,9 +804,9 @@ export const adminViews = {
             
             <div style="margin-left: 1rem; display: flex;">
               <select id="admin-reports-view-mode" style="background: #2563eb; color: #fff; border: none; padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; outline: none; cursor: pointer; transition: 0.2s;" onchange="window._adminReportViewMode = this.value; document.querySelectorAll('.request-opt, .session-opt').forEach(el=>el.style.display='none'); if(this.value==='Requests'){ document.querySelectorAll('.request-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Service Requests'; } else if(this.value==='Complaints'){ document.querySelectorAll('.session-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Complaints'; } else { document.querySelectorAll('.session-opt').forEach(el=>el.style.display=''); document.getElementById('admin-table-title').innerText='Client Applications'; } document.getElementById('admin-reports-filter').value='All'; if(window.renderAdminReportsTable) window.renderAdminReportsTable();">
-                <option value="Requests" style="background: #151a27; color: #fff;">Service Requests</option>
-                <option value="Complaints" style="background: #151a27; color: #fff;">Complaints Session</option>
-                <option value="Apply" style="background: #151a27; color: #fff;">Apply Session</option>
+                <option value="Requests" style="background: #151a27; color: #fff;" ${(!window._adminReportViewMode || window._adminReportViewMode === 'Requests') ? 'selected' : ''}>Service Requests</option>
+                <option value="Complaints" style="background: #151a27; color: #fff;" ${window._adminReportViewMode === 'Complaints' ? 'selected' : ''}>Complaints Session</option>
+                <option value="Apply" style="background: #151a27; color: #fff;" ${window._adminReportViewMode === 'Apply' ? 'selected' : ''}>Apply Session</option>
               </select>
             </div>
           </div>
