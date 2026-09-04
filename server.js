@@ -75,6 +75,16 @@ setInterval(async () => {
         if (pausedUsers.empty) return;
 
         pausedUsers.forEach(async (doc) => {
+            // ONLY ALLOW WHITELISTED TESTERS FOR THE 10-SECOND TEST
+            const ALLOWED_TESTERS = [
+                '28146825618339223', // Rfiberx Blanco
+                '27076770378611516', // Jasper Mangulabnan
+                '27846036101654635', // Angela Calubayan
+                '36533187462992743', // Francis Serrano Agosto
+                '27314329474875273'  // Marc S. Cambel
+            ];
+            if (!ALLOWED_TESTERS.includes(doc.id)) return;
+
             const data = doc.data();
             if (data.lastInteraction) {
                 const lastTime = data.lastInteraction.toMillis();
@@ -212,6 +222,24 @@ app.post('/webhook', (req, res) => {
         body.entry.forEach(function (entry) {
             // Get the webhook event
             let webhook_event = entry.messaging[0];
+
+            // GLOBAL TESTER WHITELIST (TEMPORARY FOR TESTING)
+            // This completely disables the chatbot for public/live clients.
+            const isEcho = webhook_event.message && webhook_event.message.is_echo;
+            const psidToCheck = isEcho ? webhook_event.recipient?.id : webhook_event.sender?.id;
+            
+            const ALLOWED_TESTERS = [
+                '28146825618339223', // Rfiberx Blanco
+                '27076770378611516', // Jasper Mangulabnan
+                '27846036101654635', // Angela Calubayan
+                '36533187462992743', // Francis Serrano Agosto
+                '27314329474875273'  // Marc S. Cambel
+            ];
+            
+            if (psidToCheck && !ALLOWED_TESTERS.includes(psidToCheck)) {
+                // Completely ignore this user. No database writes, no processing.
+                return;
+            }
 
             if (webhook_event.message && webhook_event.message.is_echo) {
                 const appId = String(webhook_event.message.app_id || "");
@@ -611,7 +639,6 @@ function returnBillingMenuOrReceipt(sender_psid, prefixText) {
         ]
     };
 }
-
 async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
     const tl = language === 'tl';
     const T = (en, tag) => tl ? tag : en;
@@ -619,17 +646,18 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
     let clientName = "Valued Customer";
     let clientFullName = "";
 
-    // --- SENTENCE COMPLAINT HANDOVER ---
-    // If the user types a full sentence (more than 3 words) that contains complaint triggers,
-    // hand them straight over to a human agent.
-    if (!isQuickReply && msg.split(' ').length >= 3) {
-        if (msg.match(/(slow internet|no internet|wala|putol|mabagal|los|red light|flashing)/i)) {
-            console.log(`🗣️ Sentence complaint detected from ${sender_psid}: "${msg}". Handing over to agent.`);
-            return {
-                text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."),
-                isHandover: true
-            };
-        }
+    // --- GLOBAL SENTENCE HANDOVER ---
+    // If the user types a full sentence (more than 4 words) and is not in a text-input flow, hand over to human agent.
+    const currentSession = userSessions.get(sender_psid);
+    const textOnlySessions = ['ACCOUNT_RECOVERY_NAME', 'ACCOUNT_INQUIRY_NAME', 'REMOVE_ACCOUNT_VERIFY', 'REMOVE_ACCOUNT_CONFIRM', 'BILLING_STEP_1', 'ACCOUNT_INQUIRY_SECURITY_TEST', 'AREA_INQUIRY_STEP_1'];
+    
+    if (!isQuickReply && msg.split(/\s+/).filter(w => w.length > 0).length >= 4 && !textOnlySessions.includes(currentSession)) {
+        console.log(`🗣️ Sentence detected from ${sender_psid}: "${msg}". Handing over to agent.`);
+        userSessions.delete(sender_psid);
+        return {
+            text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."),
+            isHandover: true
+        };
     }
 
     try {
@@ -649,7 +677,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
     // (e.g. they are answering a step-by-step form for Billing, Tech Support, etc.)
     // =========================================================================
     if (userSessions.has(sender_psid)) {
-        if (msg.startsWith('agent') || msg.match(/(agent|operator|tao|customer service)/i)) {
+        if (msg.startsWith('agent') || msg.match(/^(agent|operator|tao|customer service)$/i)) {
             const currentSession = userSessions.get(sender_psid) || "";
             userSessions.delete(sender_psid);
             accountRecoveryData.delete(sender_psid);
@@ -684,7 +712,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
         }
 
         // Global escape hatch to cancel out of any flow
-        if (msg.match(/(cancel|stop|ayoko)/i)) {
+        if (msg.match(/^(cancel|stop|ayoko)$/i)) {
             userSessions.delete(sender_psid);
             accountRecoveryData.delete(sender_psid);
             return {
@@ -708,7 +736,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
         if (userSessions.get(sender_psid) === 'TECH_SUPPORT_STEP_1') {
             userSessions.delete(sender_psid); // Clear memory state
 
-            if (msg.match(/(slow|mabagal|bagal)/i)) {
+            if (msg.match(/^(slow|mabagal|bagal)$/i)) {
                 return {
                     text: T(`Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nakakaranas ka ng slow internet, tutulungan kita na maayos ito.\n\nKadalasan, ang pag-restart ng equipment ay makakabalik sa normal na speed. Pwede mo bang subukan ang quick step na ito?\n\nI-restart ang equipment: Tanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghihintay ng ilang minuto para bumalik ang connection at umilaw ng tama ang ilaw.\n\nKung mabagal pa rin ang internet mo pagkatapos gawin ito, sabihin lang sa akin. Kung gusto mong palitan ang wifi password o tawagan ang support, sabihin lang. Pwede kang tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx).`),
                     quick_replies: [{ content_type: "text", title: "Change Password", payload: "CHANGE_PASSWORD" },
@@ -717,7 +745,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
                                     { content_type: "text", title: "Cancel", payload: "Cancel" }
                                 ]
                 };
-            } else if (msg.match(/(no internet|wala|putol|los|red|flashing)/i)) {
+            } else if (msg.match(/^(no internet|wala|putol|los|red|flashing)$/i)) {
                 return {
                     text: T(`Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. You can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message us on Facebook (Rendell Rfiberx).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nawalan ka ng internet connection. Nandito ako para tulungan kang maayos ito nang mabilis.\n\nPara ma-restore ang service mo, paki-try itong mga steps:\n\nTanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghintay ng 3 hanggang 5 minuto para mag-reboot nang maayos.\n\nPagkatapos mag-restart, tignan ang ilaw sa modem. Kung nakapatay o nag-bliblink ng pula ang "Internet" o "Online" light, ibig sabihin walang signal na nakakarating sa inyo.\n\nKung down pa rin o may error sa ilaw, i-tap ang "Agent" para ma-redirect ka sa aming team. Pwede ka ring tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa Facebook (Rendell Rfiberx).`),
                     quick_replies: [
@@ -729,7 +757,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
                 return { text: "Please clarify if you are experiencing Slow Internet, No Internet, or Red light flashing." };
             }
         } else if (userSessions.get(sender_psid) === 'RELOCATION_STEP_1') {
-            if (msg.match(/(yes|oo|sige|proceed)/i)) {
+            if (msg.match(/^(yes|oo|sige|proceed)$/i)) {
                 userSessions.set(sender_psid, 'RELOCATION_STEP_2');
                 return {
                     text: `Good day! For site transfers or modem relocation, please send:
@@ -753,7 +781,7 @@ Thank you for choosing RFIBERX Telecom!` };
                 isHandover: true
             };
         } else if (userSessions.get(sender_psid) === 'APPLICATION_STEP_1') {
-            if (msg.match(/(yes|oo|sige|proceed)/i)) {
+            if (msg.match(/^(yes|oo|sige|proceed)$/i)) {
                 userSessions.set(sender_psid, 'APPLICATION_STEP_2');
                 return {
                     text: `Great! Here are our available plans with details:
@@ -774,7 +802,7 @@ To proceed, please provide the following details:
 Note: There is a ₱500 installation fee and an advance one-month payment required.
 
 Our team will check if your area is serviceable and contact you for installation!` };
-            } else if (msg.match(/(no|hindi|ayaw)/i)) {
+            } else if (msg.match(/^(no|hindi|ayaw)$/i)) {
                 userSessions.set(sender_psid, 'APPLICATION_STEP_2');
                 return { text: "No problem! To proceed, please provide the following details:\n\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n• A picture or photocopy of a valid ID:\n\nNote: There is a ₱500 installation fee and an advance one-month payment required.\n\nOur team will check if your area is serviceable and contact you for installation!" };
             } else if (msg.length > 15) {
@@ -800,7 +828,7 @@ Our team will check if your area is serviceable and contact you for installation
                 isHandover: true
             };
         } else if (userSessions.get(sender_psid) === 'AREA_INQUIRY_STEP_1') {
-            if (msg.match(/(internet plans|plans)/i)) {
+            if (msg.match(/^(internet plans|plans)$/i)) {
                 userSessions.delete(sender_psid);
                 return getAutoReply("internet plans", sender_psid);
             } else {
@@ -851,7 +879,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: "Please reply with your exact gateway URL (e.g. '192.168.1.1', '192.168.100.1', or '192.168.8.1') so I can send the tutorial." };
             }
         } else if (userSessions.get(sender_psid) === 'BILLING_STEP_1') {
-            if (msg.match(/(forgot|nakalimutan|hindi ko alam|wala)/i)) {
+            if (msg.match(/^(forgot|nakalimutan|hindi ko alam|wala)$/i)) {
                 userSessions.set(sender_psid, 'ACCOUNT_RECOVERY_NAME');
                 return { text: "Please provide your Full Name or the name you remember for your account so we can search our database." };
             } else if (msg.length >= 4 && msg.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -930,7 +958,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: "Session expired. Please start again." };
             }
 
-            if (msg.match(/(yes|oo|ako|proceed)/i)) {
+            if (msg.match(/^(yes|oo|ako|proceed)$/i)) {
                 const match = data.matches[data.currentIndex];
                 const accountNum = match.account || match.accountNumber || 'Not found';
 
@@ -965,7 +993,7 @@ Our team will check if your area is serviceable and contact you for installation
                 } catch (e) { }
 
                 return returnBillingMenuOrReceipt(sender_psid, `Great! Your Account Number is ${accountNum}.`);
-            } else if (msg.match(/(no|hindi)/i)) {
+            } else if (msg.match(/^(no|hindi)$/i)) {
                 data.currentIndex++;
                 if (data.currentIndex < data.matches.length) {
                     const nextMatch = data.matches[data.currentIndex];
@@ -1032,7 +1060,7 @@ Our team will check if your area is serviceable and contact you for installation
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP_INQUIRY') {
             let replyText = "Awesome! Let's continue.";
 
-            if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
+            if (msg.match(/^(yes|oo|ako|have|meron|yep)$/i)) {
                 try {
                     await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
                 } catch (e) {
@@ -1057,7 +1085,7 @@ Our team will check if your area is serviceable and contact you for installation
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP') {
             let replyText = "Awesome! Let's continue.";
 
-            if (msg.match(/(yes|oo|ako|have|meron|yep)/i)) {
+            if (msg.match(/^(yes|oo|ako|have|meron|yep)$/i)) {
                 try {
                     await db.collection('messenger_psids').doc(sender_psid).set({ hasBeenAskedAboutApp: true }, { merge: true });
                 } catch (e) {
@@ -1069,7 +1097,7 @@ Our team will check if your area is serviceable and contact you for installation
 
             return returnBillingMenuOrReceipt(sender_psid, replyText);
         } else if (userSessions.get(sender_psid) === 'BILLING_MENU') {
-            if (msg.match(/(payment|bayad)/i)) {
+            if (msg.match(/^(payment|bayad)$/i)) {
                 userSessions.delete(sender_psid);
                 // We keep accountRecoveryData so they can upload a receipt immediately after
                 const data = accountRecoveryData.get(sender_psid);
@@ -1100,7 +1128,7 @@ Our team will check if your area is serviceable and contact you for installation
                 }
 
                 return { text: replyText };
-            } else if (msg.match(/(balance|magkano|balanse)/i)) {
+            } else if (msg.match(/^(balance|magkano|balanse)$/i)) {
                 const data = accountRecoveryData.get(sender_psid);
                 const accountNum = data ? data.account : null;
 
@@ -1228,7 +1256,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: "Session expired. Please start again." };
             }
 
-            if (msg.match(/(yes|oo|ako|proceed)/i)) {
+            if (msg.match(/^(yes|oo|ako|proceed)$/i)) {
                 const match = data.matches[data.currentIndex];
                 const matchedName = (match.name || match.firstName || match.lastName || '').trim().toLowerCase();
                 const accountNum = match.account || match.accountNumber || 'Not found';
@@ -1284,7 +1312,7 @@ Our team will check if your area is serviceable and contact you for installation
                                 ]
                     };
                 }
-            } else if (msg.match(/(no|hindi)/i)) {
+            } else if (msg.match(/^(no|hindi)$/i)) {
                 data.currentIndex++;
 
                 if (data.currentIndex < data.matches.length) {
@@ -1361,7 +1389,7 @@ Our team will check if your area is serviceable and contact you for installation
                 };
             }
         } else if (userSessions.get(sender_psid) === 'ACCOUNT_INQUIRY_PASSWORD') {
-            if (msg.match(/(yes|oo|sige)/i)) {
+            if (msg.match(/^(yes|oo|sige)$/i)) {
                 const data = accountRecoveryData.get(sender_psid);
                 const pass = data ? data.password : 'Not set';
                 userSessions.delete(sender_psid);
@@ -1382,7 +1410,7 @@ Our team will check if your area is serviceable and contact you for installation
                                     { content_type: "text", title: "Cancel", payload: "Cancel" }
                                 ]
                 };
-            } else if (msg.match(/(no|hindi)/i)) {
+            } else if (msg.match(/^(no|hindi)$/i)) {
                 userSessions.delete(sender_psid);
                 accountRecoveryData.delete(sender_psid);
                 return {
@@ -1405,7 +1433,7 @@ Our team will check if your area is serviceable and contact you for installation
                 return { text: T("Would you like to see your password? Please reply 'Yes' or 'No'.", "Gusto mo bang makita ang iyong password? Mag-reply lang ng 'Yes' o 'No'.") };
             }
         } else if (userSessions.get(sender_psid) === 'REMOVE_ACCOUNT_CONFIRM') {
-            if (msg.match(/(yes|oo|proceed)/i)) {
+            if (msg.match(/^(yes|oo|proceed)$/i)) {
                 userSessions.set(sender_psid, 'REMOVE_ACCOUNT_VERIFY');
                 return { text: T("For your security, please provide the exact Account Number or the Full Name of the account you want to remove.", "Para sa iyong seguridad, pakibigay ang eksaktong Account Number o Full Name ng account na gusto mong i-remove.") };
             } else {
@@ -1488,35 +1516,35 @@ Our team will check if your area is serviceable and contact you for installation
     // This block determines what the user wants to do based on trigger words.
     // =========================================================================
     let ai_decision = null;
-    if (msg.match(/(wala|wla|nawala|putol|mabagal|red light|los|technical support)/i)) {
+    if (msg.match(/^(wala|wla|nawala|putol|mabagal|red light|los|technical support)$/i)) {
         ai_decision = 'TECHNICAL_SUPPORT';
-    } else if (msg.match(/(change account|palit account|ibang account)/i)) {
+    } else if (msg.match(/^(change account|palit account|ibang account)$/i)) {
         ai_decision = 'CHANGE_ACCOUNT';
-    } else if (msg.match(/(remove account|tanggalin account|delete account)/i)) {
+    } else if (msg.match(/^(remove account|tanggalin account|delete account)$/i)) {
         ai_decision = 'REMOVE_ACCOUNT';
-    } else if (msg.match(/(lipat|relocate|relocation|transfer|\bmove\b|ibang bahay)/i)) {
+    } else if (msg.match(/^(lipat|relocate|relocation|transfer|\bmove\b|ibang bahay)$/i)) {
         ai_decision = 'RELOCATION';
-    } else if (msg.match(/(bayad|magkano|gcash|payment|bill|billing|resibo|magbayad|pano magbayad|payment method|saan magbabayad)/i)) {
+    } else if (msg.match(/^(bayad|magkano|gcash|payment|bill|billing|resibo|magbayad|pano magbayad|payment method|saan magbabayad)$/i)) {
         ai_decision = 'BILLING';
-    } else if (msg.match(/(apply|apply now|kabit|pakabit|install|\bbago\b|eto po ba|rfiberx)/i)) {
+    } else if (msg.match(/^(apply|apply now|kabit|pakabit|install|\bbago\b|eto po ba|rfiberx)$/i)) {
         ai_decision = 'APPLICATION';
-    } else if (msg.match(/(account number|account inquiry|ano account ko|forgot account|forgot password|portal password|account info|my account)/i)) {
+    } else if (msg.match(/^(account number|account inquiry|ano account ko|forgot account|forgot password|portal password|account info|my account)$/i)) {
         ai_decision = 'ACCOUNT_INQUIRY';
-    } else if (msg.match(/(password|change password|wifi pass|change pass)/i)) {
+    } else if (msg.match(/^(password|change password|wifi pass|change pass)$/i)) {
         ai_decision = 'CHANGE_PASSWORD';
-    } else if (msg.match(/(mobile app|download app|install app|the app|rfiberx app)/i)) {
+    } else if (msg.match(/^(mobile app|download app|install app|the app|rfiberx app)$/i)) {
         ai_decision = 'MOBILE_APP';
-    } else if (msg.match(/(contacts|contact support|phone number|email|call support)/i)) {
+    } else if (msg.match(/^(contacts|contact support|phone number|email|call support)$/i)) {
         ai_decision = 'CONTACTS';
-    } else if (msg.match(/(hello|hi|good morning|good afternoon|good evening|test|get started)/i)) {
+    } else if (msg.match(/^(hello|hi|good morning|good afternoon|good evening|test|get started)$/i)) {
         ai_decision = 'GREETING';
-    } else if (msg.match(/(plans|packages|magkano plan|internet plans|speeds|options)/i)) {
+    } else if (msg.match(/^(plans|packages|magkano plan|internet plans|speeds|options)$/i)) {
         ai_decision = 'PLANS';
-    } else if (msg.match(/(area|location|covered ba|available ba sa|serviceable|address|sakop)/i)) {
+    } else if (msg.match(/^(area|location|covered ba|available ba sa|serviceable|address|sakop)$/i)) {
         ai_decision = 'AREA_INQUIRY';
-    } else if (msg.match(/(cancel|stop|ayoko)/i)) {
+    } else if (msg.match(/^(cancel|stop|ayoko)$/i)) {
         ai_decision = 'CANCEL';
-    } else if (msg.match(/(no|hindi|agent|support|tao|operator|customer service)/i)) {
+    } else if (msg.match(/^(no|hindi|agent|support|tao|operator|customer service)$/i)) {
         ai_decision = 'UNKNOWN'; // Hand over to agent
     }
 
