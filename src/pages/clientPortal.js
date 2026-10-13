@@ -1229,10 +1229,13 @@ export const clientViews = {
         const clientAddress = userObj.address || 'None';
         const accountNumber = pay.accountNumber || userObj.accountNumber || 'N/A';
         const datePaidStr = pay.datePaid ? new Date(pay.datePaid).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : (isPaid ? 'N/A' : 'UNPAID');
-        let pDate = pay.dateSent ? new Date(pay.dateSent) : (pay.datePaid ? new Date(pay.datePaid) : new Date());
-        let due = new Date(pDate);
-        due.setDate(7);
-        const dueDate = due.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        let pDate = pay.dateSent ? new Date(pay.dateSent) : (pay.datePaid ? new Date(pay.datePaid) : (pay.billingMonth && !isNaN(new Date(pay.billingMonth).getTime()) ? new Date(pay.billingMonth) : new Date()));
+        let dueDate = pay.dueDate || '';
+        if (!dueDate) {
+          let due = new Date(pDate);
+          due.setDate(7);
+          dueDate = due.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        }
         const rawPlan = pay.plan || '-';
         let plan = rawPlan;
         const match = rawPlan.match(/(\d+)\s*Mbps/i);

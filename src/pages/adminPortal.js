@@ -4509,12 +4509,20 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     if (pm.timestamp && pm.timestamp.toDate) pDate = pm.timestamp.toDate();
     else if (pm.datePaid) pDate = new Date(pm.datePaid);
     else if (pm.date) pDate = new Date(pm.date);
+    else if (pm.dateSent) pDate = new Date(pm.dateSent);
+    else if (pm.billingMonth) {
+      const bmDate = new Date(pm.billingMonth);
+      if (!isNaN(bmDate.getTime())) pDate = bmDate;
+    }
 
     const dateStr = pDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    let due = new Date(pDate);
-    due.setDate(7);
-    const dueStr = due.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    let dueStr = pm.dueDate || '';
+    if (!dueStr) {
+      let due = new Date(pDate);
+      due.setDate(7);
+      dueStr = due.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    }
 
     const customerName = pm.customerName || pm.name || 'Unknown';
     const acct = pm.accountNumber || 'N/A';
