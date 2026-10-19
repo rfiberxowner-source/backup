@@ -2568,7 +2568,7 @@ app.get('/api/admin/export-excel', async (req, res) => {
             rowRef.getCell(10).value = row.plan;
 
             // Formula for amount based on Plan
-            rowRef.getCell(11).value = { formula: `IF(J${rowIndex}="30Mbps", 800, IF(J${rowIndex}="50Mbps", 1000, IF(J${rowIndex}="70Mbps", 1200, IF(J${rowIndex}="100Mbps", 1500, IF(J${rowIndex}="200Mbps", 2000, ${row.amount || 0})))))`, result: row.amount };
+            rowRef.getCell(11).value = { formula: `IF(J${rowIndex}="20Mbps", 599, IF(J${rowIndex}="30Mbps", 800, IF(J${rowIndex}="45Mbps", 900, IF(J${rowIndex}="50Mbps", 1000, IF(J${rowIndex}="60Mbps", 1200, IF(J${rowIndex}="70Mbps", 1300, IF(J${rowIndex}="100Mbps", 1500, IF(J${rowIndex}="150Mbps", 1700, IF(J${rowIndex}="200Mbps", 2000, IF(J${rowIndex}="300Mbps", 2700, ${row.amount || 0}))))))))))`, result: row.amount };
 
             rowRef.getCell(12).value = row.facebook ? `FB: ${row.facebook}` : '';
             rowRef.getCell(13).value = row.phone;
@@ -2582,7 +2582,7 @@ app.get('/api/admin/export-excel', async (req, res) => {
             sheet.getCell(`D${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"Monthly,Every Last Week"'] };
             sheet.getCell(`G${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"PAID,UNPAID,DELETED"'] };
             sheet.getCell(`H${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"CONNECTED,DISCONNECTED,PARTIAL CONNECTED"'] };
-            sheet.getCell(`J${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"30Mbps,50Mbps,70Mbps,100Mbps,200Mbps"'] };
+            sheet.getCell(`J${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"20Mbps,30Mbps,45Mbps,50Mbps,60Mbps,70Mbps,100Mbps,150Mbps,200Mbps,300Mbps"'] };
         });
 
         // Add Conditional Formatting for colors

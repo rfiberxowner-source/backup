@@ -684,11 +684,16 @@ export const adminViews = {
           </select>
           <select id="bm-plan" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.85rem; width: 140px;">
             <option value="">All Plans</option>
+            <option value="20Mbps">20Mbps</option>
             <option value="30Mbps">30Mbps</option>
+            <option value="45Mbps">45Mbps</option>
             <option value="50Mbps">50Mbps</option>
+            <option value="60Mbps">60Mbps</option>
             <option value="70Mbps">70Mbps</option>
             <option value="100Mbps">100Mbps</option>
+            <option value="150Mbps">150Mbps</option>
             <option value="200Mbps">200Mbps</option>
+            <option value="300Mbps">300Mbps</option>
           </select>
           <select id="bm-status" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; min-width: 120px;">
               <option value="">Status: All</option>
@@ -732,11 +737,16 @@ export const adminViews = {
           </select>
           <select id="ph-plan" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.85rem; width: 140px;">
             <option value="">All Plans</option>
+            <option value="20Mbps">20Mbps</option>
             <option value="30Mbps">30Mbps</option>
+            <option value="45Mbps">45Mbps</option>
             <option value="50Mbps">50Mbps</option>
+            <option value="60Mbps">60Mbps</option>
             <option value="70Mbps">70Mbps</option>
             <option value="100Mbps">100Mbps</option>
+            <option value="150Mbps">150Mbps</option>
             <option value="200Mbps">200Mbps</option>
+            <option value="300Mbps">300Mbps</option>
           </select>
           <button onclick="window.exportBillingExcel()" style="margin-left: auto; background: #10b981; color: #fff; padding: 0.5rem 1.5rem; border-radius: 4px; border: none; font-weight: 600; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -1042,11 +1052,16 @@ export const adminViews = {
               </select>
               <select id="admin-clients-plan-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
                 <option value="All">All Plans</option>
+                <option value="20Mbps">20Mbps</option>
                 <option value="30Mbps">30Mbps</option>
+                <option value="45Mbps">45Mbps</option>
                 <option value="50Mbps">50Mbps</option>
+                <option value="60Mbps">60Mbps</option>
                 <option value="70Mbps">70Mbps</option>
                 <option value="100Mbps">100Mbps</option>
+                <option value="150Mbps">150Mbps</option>
                 <option value="200Mbps">200Mbps</option>
+                <option value="300Mbps">300Mbps</option>
               </select>
               <select id="admin-clients-location-filter" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; outline: none; cursor: pointer;" onchange="window.renderAdminClientsTable()">
                 <option value="All Locations">All Locations</option>
@@ -1266,11 +1281,16 @@ export const adminViews = {
                 <div>
                   <label style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600;">Plan</label>
                   <select id="modal-client-plan-input" onchange="window.handleAdminClientPlanChange()" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; outline: none; cursor: pointer;">
+                    <option style="background: #0f131f; color: #fff;" value="20Mbps">20Mbps</option>
                     <option style="background: #0f131f; color: #fff;" value="30Mbps">30Mbps - Starter RFiberX</option>
+                    <option style="background: #0f131f; color: #fff;" value="45Mbps">45Mbps</option>
                     <option style="background: #0f131f; color: #fff;" value="50Mbps">50Mbps - Value RFiberX</option>
+                    <option style="background: #0f131f; color: #fff;" value="60Mbps">60Mbps</option>
                     <option style="background: #0f131f; color: #fff;" value="70Mbps">70Mbps - Family RFiberX</option>
                     <option style="background: #0f131f; color: #fff;" value="100Mbps">100Mbps - Pro RFiberX</option>
+                    <option style="background: #0f131f; color: #fff;" value="150Mbps">150Mbps</option>
                     <option style="background: #0f131f; color: #fff;" value="200Mbps">200Mbps - Extreme RFiberX</option>
+                    <option style="background: #0f131f; color: #fff;" value="300Mbps">300Mbps</option>
                   </select>
                 </div>
                 <div>
@@ -1671,14 +1691,17 @@ export const adminViews = {
           if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) continue;
 
           rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-          if (rawPlan === '60Mbps') rawPlan = '50Mbps';
-          if (rawPlan === '20Mbps') rawPlan = '30Mbps';
-          if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+
+          const PLAN_RATES = {
+            '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+            '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+            '200Mbps': 2000, '300Mbps': 2700
+          };
 
           let amountStr = String(userData.amount || userData.ammount || '').trim();
           let finalAmount = 0;
-          if (rawPlan === '150Mbps') {
-            finalAmount = 1700;
+          if (PLAN_RATES[rawPlan]) {
+            finalAmount = PLAN_RATES[rawPlan];
           } else {
             if (!amountStr || amountStr === '0' || amountStr === '') continue;
             amountStr = amountStr.replace(/[^0-9.]/g, '');
@@ -2245,11 +2268,13 @@ window.initDashboard = async function () {
           let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
           if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return;
           rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-          if (rawPlan === '60Mbps') rawPlan = '50Mbps';
-          if (rawPlan === '20Mbps') rawPlan = '30Mbps';
-          if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+          const PLAN_RATES = {
+            '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+            '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+            '200Mbps': 2000, '300Mbps': 2700
+          };
           let amountStr = String(u.amount || u.ammount || '').trim();
-          if (rawPlan !== '150Mbps' && (!amountStr || amountStr === '0' || amountStr === '')) return;
+          if (!PLAN_RATES[rawPlan] && (!amountStr || amountStr === '0' || amountStr === '')) return;
           validClients++;
         });
         dashClients.innerText = validClients;
@@ -2557,11 +2582,13 @@ window.initAdminBanking = async function () {
         let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
         if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) return;
         rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-        if (rawPlan === '60Mbps') rawPlan = '50Mbps';
-        if (rawPlan === '20Mbps') rawPlan = '30Mbps';
-        if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+        const PLAN_RATES = {
+          '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+          '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+          '200Mbps': 2000, '300Mbps': 2700
+        };
         let amountStr = String(u.amount || u.ammount || '').trim();
-        if (rawPlan !== '150Mbps' && (!amountStr || amountStr === '0' || amountStr === '')) return;
+        if (!PLAN_RATES[rawPlan] && (!amountStr || amountStr === '0' || amountStr === '')) return;
         
         window._userPaymentTypes = window._userPaymentTypes || {};
         if (u.accountNumber) window._userPaymentTypes[u.accountNumber] = u.paymentType || 'Monthly';
@@ -3396,14 +3423,17 @@ window.renderAdminClientsTable = async function () {
 
       // Normalize plans
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-      if (rawPlan === '60Mbps') rawPlan = '50Mbps';
-      if (rawPlan === '20Mbps') rawPlan = '30Mbps';
-      if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+
+      const PLAN_RATES = {
+        '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+        '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+        '200Mbps': 2000, '300Mbps': 2700
+      };
 
       let amountStr = String(u.amount || u.ammount || '').trim();
       let amount = 0;
-      if (rawPlan === '150Mbps') {
-        amount = 1700;
+      if (PLAN_RATES[rawPlan]) {
+        amount = PLAN_RATES[rawPlan];
       } else {
         if (!amountStr || amountStr === '0' || amountStr === '') return; // Skip if no amount
         amountStr = amountStr.replace(/[^0-9.]/g, '');
@@ -3485,18 +3515,21 @@ window.renderAdminClientsTable = async function () {
       let rawPlan = String(u.plan || u.Plan || 'TBD').trim();
 
       rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-      if (rawPlan === '60Mbps') rawPlan = '50Mbps';
-      if (rawPlan === '20Mbps') rawPlan = '30Mbps';
-      if (rawPlan === '45Mbps') rawPlan = '50Mbps';
+
+      const PLAN_RATES = {
+        '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+        '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+        '200Mbps': 2000, '300Mbps': 2700
+      };
 
       let amountStr = String(u.amount || u.ammount || '').trim();
       let amount = u.amount || u.ammount || 'TBD';
 
-      if (rawPlan === '150Mbps') {
-        amount = '1700';
+      if (PLAN_RATES[rawPlan]) {
+        amount = String(PLAN_RATES[rawPlan]);
+      } else if (!amountStr || amountStr === '0' || amountStr === '') {
+        amount = 'TBD';
       }
-
-      if (!amountStr || amountStr === '0' || amountStr === '') amount = 'TBD';
 
       const plan = rawPlan;
 
@@ -3535,11 +3568,9 @@ window.renderAdminClientsTable = async function () {
 
       // Plan to Amount logic
       let finalAmount = amount;
-      if (plan === '30Mbps') finalAmount = 800;
-      else if (plan === '50Mbps') finalAmount = 1000;
-      else if (plan === '70Mbps') finalAmount = 1000;
-      else if (plan === '100Mbps') finalAmount = 1500;
-      else if (plan === '200Mbps') finalAmount = 2000;
+      if (PLAN_RATES[plan]) {
+        finalAmount = PLAN_RATES[plan];
+      }
 
       const amtStr = finalAmount !== 'TBD' ? '₱' + parseFloat(String(finalAmount).replace(/[^0-9.]/g, '') || 0).toLocaleString() : 'TBD';
 
@@ -4045,19 +4076,43 @@ window.openAdminClientModal = async function (id) {
       phoneInput.dataset.original = phoneInput.value;
     }
 
-    const plan = u.plan || u.Plan || '30Mbps';
+    const rawPlan = String(u.plan || u.Plan || '30Mbps').trim();
     const planSel = document.getElementById('modal-client-plan-input');
-    // Ensure the plan exists in the dropdown, else just leave it as is or add it
-    if (Array.from(planSel.options).some(o => o.value === plan)) {
-      planSel.value = plan;
+    // Ensure the plan exists in the dropdown (case-insensitive check)
+    const matchedOpt = Array.from(planSel.options).find(o => o.value.toLowerCase() === rawPlan.toLowerCase());
+    let currentPlan = rawPlan;
+    if (matchedOpt) {
+      currentPlan = matchedOpt.value;
+      planSel.value = currentPlan;
+    } else {
+      const newOpt = document.createElement('option');
+      newOpt.style.background = '#0f131f';
+      newOpt.style.color = '#fff';
+      newOpt.value = rawPlan;
+      newOpt.innerText = rawPlan;
+      planSel.appendChild(newOpt);
+      planSel.value = rawPlan;
     }
 
+    const PLAN_AMOUNTS = {
+      '20Mbps': '599',
+      '30Mbps': '800',
+      '45Mbps': '900',
+      '50Mbps': '1000',
+      '60Mbps': '1200',
+      '70Mbps': '1300',
+      '100Mbps': '1500',
+      '150Mbps': '1700',
+      '200Mbps': '2000',
+      '300Mbps': '2700'
+    };
+
     let finalAmount = u.amount || u.ammount || '';
-    if (plan === '30Mbps') finalAmount = '800';
-    else if (plan === '50Mbps') finalAmount = '1000';
-    else if (plan === '70Mbps') finalAmount = '1000';
-    else if (plan === '100Mbps') finalAmount = '1500';
-    else if (plan === '200Mbps') finalAmount = '2000';
+    if (PLAN_AMOUNTS[currentPlan]) {
+      finalAmount = PLAN_AMOUNTS[currentPlan];
+    } else if (PLAN_AMOUNTS[planSel.value]) {
+      finalAmount = PLAN_AMOUNTS[planSel.value];
+    }
 
     document.getElementById('modal-client-amount-input').value = finalAmount;
     document.getElementById('modal-client-password-input').value = u.password || '';
@@ -4115,12 +4170,19 @@ window.closeAdminClientModal = function () {
 
 window.handleAdminClientPlanChange = function () {
   const plan = document.getElementById('modal-client-plan-input').value;
-  let finalAmount = '';
-  if (plan === '30Mbps') finalAmount = '800';
-  else if (plan === '50Mbps') finalAmount = '1000';
-  else if (plan === '70Mbps') finalAmount = '1300';
-  else if (plan === '100Mbps') finalAmount = '1500';
-  else if (plan === '200Mbps') finalAmount = '2000';
+  const PLAN_AMOUNTS = {
+    '20Mbps': '599',
+    '30Mbps': '800',
+    '45Mbps': '900',
+    '50Mbps': '1000',
+    '60Mbps': '1200',
+    '70Mbps': '1300',
+    '100Mbps': '1500',
+    '150Mbps': '1700',
+    '200Mbps': '2000',
+    '300Mbps': '2700'
+  };
+  const finalAmount = PLAN_AMOUNTS[plan] || '';
 
   if (finalAmount) {
     document.getElementById('modal-client-amount-input').value = finalAmount;
@@ -4303,12 +4365,15 @@ window.sendBillingEmail = async function () {
     dueDate.setDate(dueDate.getDate() + 15);
     const dueDateStr = dueDate.toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    let amountToBill = 0;
-    if (userData.plan === '30Mbps') amountToBill = 1000;
-    else if (userData.plan === '50Mbps') amountToBill = 1500;
-    else if (userData.plan === '70Mbps') amountToBill = 2000;
-    else if (userData.plan === '100Mbps') amountToBill = 2500;
-    else if (userData.plan === '200Mbps') amountToBill = 3500;
+    let amountToBill = parseFloat(String(userData.amount || userData.ammount || '').replace(/[^0-9.]/g, '')) || 0;
+    if (!amountToBill) {
+      const PLAN_RATES = {
+        '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+        '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+        '200Mbps': 2000, '300Mbps': 2700
+      };
+      amountToBill = PLAN_RATES[userData.plan] || 0;
+    }
 
     await firestore.addDoc(firestore.collection(db, 'users', userId, 'billing_emails'), {
       to: userData.email,
@@ -4462,10 +4527,16 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
     // If we didn't find baseAmount in the user doc, deduce it from their plan or the billed amount!
     if (baseAmount === 0 && recordAmount > 0) {
       const pStr = pm.plan || '';
-      if (pStr.includes('200Mbps')) baseAmount = 2000;
-      else if (pStr.includes('100Mbps') || pStr.includes('70Mbps')) baseAmount = 1500;
+      if (pStr.includes('300Mbps')) baseAmount = 2700;
+      else if (pStr.includes('200Mbps')) baseAmount = 2000;
+      else if (pStr.includes('150Mbps')) baseAmount = 1700;
+      else if (pStr.includes('100Mbps')) baseAmount = 1500;
+      else if (pStr.includes('70Mbps')) baseAmount = 1300;
+      else if (pStr.includes('60Mbps')) baseAmount = 1200;
       else if (pStr.includes('50Mbps')) baseAmount = 1000;
+      else if (pStr.includes('45Mbps')) baseAmount = 900;
       else if (pStr.includes('30Mbps')) baseAmount = 800;
+      else if (pStr.includes('20Mbps')) baseAmount = 599;
       else {
         // If we still don't know, guess based on multiples of common rates
         if (recordAmount % 2000 === 0) baseAmount = 2000;
