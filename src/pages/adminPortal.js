@@ -3322,8 +3322,26 @@ window.confirmAccountDeletion = async function (collection, id) {
   if (window.confirm("Are you sure you want to delete this account?")) {
     try {
       const { db, firestore } = await window._getAdminDb();
+      let userData = null;
+      if (collection === 'users') {
+        try {
+          const uDoc = await firestore.getDoc(firestore.doc(db, collection, id));
+          if (uDoc.exists()) userData = uDoc.data();
+        } catch (e) { }
+      }
+
       await firestore.deleteDoc(firestore.doc(db, collection, id));
       alert("Account deleted.");
+
+      if (userData && collection === 'users') {
+        const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://website-98gm.onrender.com';
+        fetch(`${BACKEND_URL}/api/admin/delete-sheet-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: userData })
+        }).catch(err => console.error("Error triggering sheet row deletion:", err));
+      }
+
       if (window.loadAdminDashboardData) window.loadAdminDashboardData();
     } catch (e) {
       alert("Failed to delete account.");

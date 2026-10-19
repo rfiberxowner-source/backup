@@ -1,7 +1,7 @@
 import express from 'express';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initSheetsSync, createNewMonthSheet } from './sheetsIntegration.js';
+import { initSheetsSync, createNewMonthSheet, deleteUserRowFromSheet } from './sheetsIntegration.js';
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -85,7 +85,7 @@ setInterval(() => processedMessages.clear(), 10 * 60 * 1000); // Clear every 10 
 // =========================================================================
 const receiptQueue = [];
 const receiptsDir = './receipts';
-if (!fs.existsSync(receiptsDir)){
+if (!fs.existsSync(receiptsDir)) {
     fs.mkdirSync(receiptsDir, { recursive: true });
 }
 
@@ -93,21 +93,21 @@ let isProcessingQueue = false;
 
 async function processReceiptQueue() {
     if (isProcessingQueue || receiptQueue.length === 0) return;
-    
+
     // Feature gate check: only run if AI scanner is enabled
     if (!process.env.ENABLE_AI_RECEIPT) {
         // If disabled, just clear the queue to prevent memory leak
-        while(receiptQueue.length > 0) {
+        while (receiptQueue.length > 0) {
             receiptQueue.shift();
         }
         return;
     }
 
     isProcessingQueue = true;
-    
+
     // Peek at the first task
     const task = receiptQueue[0];
-    
+
     // Check if the image has expired (been in queue for > 30 minutes)
     if (task.timestamp && (Date.now() - task.timestamp > 1800000)) {
         console.log(`[Queue] Dropping image for PSID ${task.psid} (Expired after 30 minutes in standby)`);
@@ -115,15 +115,15 @@ async function processReceiptQueue() {
         isProcessingQueue = false;
         return;
     }
-    
+
     try {
         console.log(`[Queue] Processing receipt for PSID: ${task.psid}`);
         // 1. Check if the user has an account connected
         let accountNum = null;
-        
+
         const data = accountRecoveryData.get(task.psid);
         if (data && data.account) accountNum = data.account;
-        
+
         if (!accountNum) {
             const psidDoc = await db.collection('messenger_psids').doc(task.psid).get();
             if (psidDoc.exists && psidDoc.data().account) {
@@ -131,13 +131,13 @@ async function processReceiptQueue() {
                 accountRecoveryData.set(task.psid, { account: accountNum });
             }
         }
-        
+
         if (!accountNum) {
             // STANDBY LOGIC: No account connected yet. 
             // Pause this task. We'll skip it for now.
             // Move it to the back of the queue (or just shift and push)
             console.log(`[Queue] PSID ${task.psid} has no account connected. Moving image to standby...`);
-            receiptQueue.shift(); 
+            receiptQueue.shift();
             // Re-add to back so it loops until they connect an account
             receiptQueue.push(task);
             isProcessingQueue = false;
@@ -146,7 +146,7 @@ async function processReceiptQueue() {
 
         // If they have an account, process it!
         const success = await processImageAttachmentLogic(task.base64Data, task.psid, accountNum, task.language, task.imageUrl);
-        
+
         if (success === "BUSY") {
             // API is busy. Wait 30 seconds and retry.
             console.log(`[Queue] Gemini API Busy. Pausing queue for 30 seconds...`);
@@ -156,16 +156,16 @@ async function processReceiptQueue() {
             }, 30000);
             return; // Don't shift it from queue
         }
-        
+
         // Success or unrecoverable error (e.g. invalid amount). We silently drop it and move on.
         receiptQueue.shift();
-        
+
     } catch (e) {
         console.error("[Queue] Unhandled error processing receipt:", e);
         // On fatal error, discard the task
         receiptQueue.shift();
     }
-    
+
     isProcessingQueue = false;
 }
 // Run the worker every 5 seconds
@@ -174,7 +174,7 @@ setInterval(processReceiptQueue, 5000);
 app.post('/api/simulator/reset', async (req, res) => {
     try {
         const psid = 'SIMULATOR_TEST';
-        
+
         // 1. Wipe simulator_chats
         const chatsSnap = await db.collection('simulator_chats').get();
         const batch = db.batch();
@@ -183,13 +183,13 @@ app.post('/api/simulator/reset', async (req, res) => {
 
         // 2. Delete messenger_psids
         await db.collection('messenger_psids').doc(psid).delete();
-        
+
         // 3. Delete users
         const usersSnap = await db.collection('users').where('psid', '==', psid).get();
         const batch2 = db.batch();
         usersSnap.docs.forEach(doc => batch2.delete(doc.ref));
         await batch2.commit();
-        
+
         // 4. Delete complaints & applications
         const complaintsSnap = await db.collection('complaints').where('psid', '==', psid).get();
         for (let doc of complaintsSnap.docs) {
@@ -207,7 +207,7 @@ app.post('/api/simulator/reset', async (req, res) => {
             b.delete(doc.ref);
             await b.commit();
         }
-        
+
         // 5. Clear Memory
         if (typeof userSessions !== 'undefined') userSessions.delete(psid);
         if (typeof accountRecoveryData !== 'undefined') accountRecoveryData.delete(psid);
@@ -217,7 +217,7 @@ app.post('/api/simulator/reset', async (req, res) => {
             pendingTextMessages.delete(psid);
         }
         if (typeof userMessageQueues !== 'undefined') userMessageQueues.delete(psid);
-        
+
         res.json({ success: true });
     } catch (e) {
         console.error("Simulator Reset Error:", e);
@@ -244,7 +244,7 @@ app.post('/webhook', (req, res) => {
             // This completely disables the chatbot for public/live clients.
             const isEcho = webhook_event.message && webhook_event.message.is_echo;
             const psidToCheck = isEcho ? webhook_event.recipient?.id : webhook_event.sender?.id;
-            
+
             const ALLOWED_TESTERS = [
                 '28146825618339223', // Rfiberx Blanco
                 '27076770378611516', // Jasper Mangulabnan
@@ -253,7 +253,7 @@ app.post('/webhook', (req, res) => {
                 '27314329474875273', // Marc S. Cambel
                 'SIMULATOR_TEST'     // Bot Simulator
             ];
-            
+
             if (psidToCheck && !ALLOWED_TESTERS.includes(psidToCheck)) {
                 // Completely ignore this user. No database writes, no processing.
                 return;
@@ -435,7 +435,7 @@ app.post('/webhook', (req, res) => {
                         ];
                         if (ALLOWED_TESTERS.includes(sender_psid)) {
                             console.log("✔️ Allowed PSID chatting: " + sender_psid);
-                            
+
                             // Immediately show the typing indicator bubble!
                             sendSenderAction(sender_psid, 'typing_on');
 
@@ -541,7 +541,7 @@ app.post('/webhook', (req, res) => {
                                         const now = Date.now();
                                         const lastReplied = recentlyRepliedImages.get(sender_psid) || 0;
                                         let shouldReply = false;
-                                        
+
                                         if (now - lastReplied > 5000) {
                                             recentlyRepliedImages.set(sender_psid, now);
                                             shouldReply = true;
@@ -577,7 +577,7 @@ app.post('/webhook', (req, res) => {
                                                     callSendAPI(sender_psid, replyMessage);
                                                 }
                                             }).catch(err => console.error("Error queueing image:", err));
-                                            
+
                                             // Prevent subsequent images in the SAME array from getting the reply
                                             shouldReply = false;
                                         }
@@ -684,14 +684,14 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
     // If the user types a full sentence (more than 4 words) and is not in a text-input flow, hand over to human agent.
     const currentSession = userSessions.get(sender_psid);
     const textOnlySessions = ['ACCOUNT_RECOVERY_NAME', 'ACCOUNT_INQUIRY_NAME', 'REMOVE_ACCOUNT_VERIFY', 'REMOVE_ACCOUNT_CONFIRM', 'BILLING_STEP_1', 'ACCOUNT_INQUIRY_SECURITY_TEST', 'AREA_INQUIRY_STEP_1'];
-    
+
     if (!isQuickReply && msg.split(/\s+/).filter(w => w.length > 0).length >= 4 && !textOnlySessions.includes(currentSession)) {
         console.log(`🗣️ Sentence detected from ${sender_psid}: "${msg}". Handing over to agent.`);
         userSessions.delete(sender_psid);
         return {
             text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."),
             // isHandover removed — no longer transferring to agent
-    };
+        };
     }
 
     try {
@@ -769,7 +769,7 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
                     { content_type: "text", title: "Contacts", payload: "Contacts" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                ]
             };
         }
 
@@ -780,16 +780,16 @@ async function getAutoReply(text, sender_psid, language, isQuickReply = false) {
                 return {
                     text: T(`Hi ${clientName},\n\nThank you for reaching out. I am sorry to hear you are experiencing slow internet speeds, and I am happy to help get this sorted out for you.\n\nIn most cases, a quick restart of your equipment will refresh the connection and restore your normal speeds. Could you please try this quick step?\n\nRestart your equipment: Unplug the power cable from both your modem and your router. Wait for about 10 seconds, then plug them both back in. It will take a few minutes for the lights to stabilize and the connection to return.\n\nIf your internet is still running slow after doing this, please let me know if you wanna try another way to resolve the problem. Tell me if you wanna change the wifi password or wanna contact the support. If you choose to contact support, please provide the following details so we can assist you faster:\n\n- Full Name\n- Full Address\n- Phone Number\n\nYou can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message the owner (Rendell Blanco).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nakakaranas ka ng slow internet, tutulungan kita na maayos ito.\n\nKadalasan, ang pag-restart ng equipment ay makakabalik sa normal na speed. Pwede mo bang subukan ang quick step na ito?\n\nI-restart ang equipment: Tanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghihintay ng ilang minuto para bumalik ang connection at umilaw ng tama ang ilaw.\n\nKung mabagal pa rin ang internet mo pagkatapos gawin ito, sabihin lang sa akin. Kung gusto mong palitan ang wifi password o tawagan ang support, pakibigay ang sumusunod na detalye para mas mabilis ka naming matulungan:\n\n- Buong Pangalan\n- Buong Address\n- Phone Number\n\nPwede kang tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa owner (Rendell Blanco).`),
                     quick_replies: [{ content_type: "text", title: "Change Password", payload: "Change Password" },
-                        
-                        { content_type: "text", title: "Stop", payload: "Stop" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }
-                                ]
+
+                    { content_type: "text", title: "Stop", payload: "Stop" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                    ]
                 };
             } else if (msg.match(/^(no internet|wala|putol|los|red|flashing|red light flashing)$/i)) {
                 return {
                     text: T(`Hi ${clientName},\n\nI am sorry to hear that your internet is completely down. I know how disruptive it is to lose your connection, and I am here to help get you back online as quickly as possible.\n\nTo help restore your service, please try the following steps:\n\nUnplug the power cord from both your modem and your router. Leave them unplugged for a full 10 seconds, then plug them back in. Wait about 3 to 5 minutes for the devices to fully reboot and establish a connection.\n\nAfter restarting, take a look at the lights on your modem. If the "Internet" or "Online" light is completely off or flashing red, it indicates the signal is not reaching your home.\n\nIf your internet is still down or the lights are showing an error after trying these steps, tap "Agent" and I will redirect you to our agent team to further solve the problem. Please also provide the following details so we can assist you faster:\n\n- Full Name\n- Full Address\n- Phone Number\n\nYou can always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message the owner (Rendell Blanco).`, `Hi ${clientName},\n\nSalamat sa pag-reach out. Nakakalungkot malaman na nawalan ka ng internet connection. Nandito ako para tulungan kang maayos ito nang mabilis.\n\nPara ma-restore ang service mo, paki-try itong mga steps:\n\nTanggalin sa saksakan ang modem at router. Maghintay ng 10 segundo bago isaksak ulit. Maghintay ng 3 hanggang 5 minuto para mag-reboot nang maayos.\n\nPagkatapos mag-restart, tignan ang ilaw sa modem. Kung nakapatay o nag-bliblink ng pula ang "Internet" o "Online" light, ibig sabihin walang signal na nakakarating sa inyo.\n\nKung down pa rin o may error sa ilaw, i-tap ang "Agent" para ma-redirect ka sa aming team. Pakibigay na rin ang sumusunod na detalye para mas mabilis ka naming matulungan:\n\n- Buong Pangalan\n- Buong Address\n- Phone Number\n\nPwede ka ring tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa owner (Rendell Blanco).`),
                     quick_replies: [
-                        
+
                         { content_type: "text", title: "Cancel", payload: "Cancel" }
                     ]
                 };
@@ -941,8 +941,8 @@ Our team will check if your area is serviceable and contact you for installation
                         return {
                             text: "Thank you.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                             quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                            { content_type: "text", title: "No, not yet", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
                         };
                     }
                 } catch (e) { }
@@ -1017,8 +1017,8 @@ Our team will check if your area is serviceable and contact you for installation
                         return {
                             text: `Great! Your Account Number is ${accountNum}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
                             quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                            { content_type: "text", title: "No, not yet", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
                         };
                     }
                 } catch (e) { }
@@ -1069,8 +1069,8 @@ Our team will check if your area is serviceable and contact you for installation
                         return {
                             text: `Verification successful!\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`,
                             quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                            { content_type: "text", title: "No, not yet", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
                         };
                     }
                 } catch (e) { }
@@ -1104,8 +1104,8 @@ Our team will check if your area is serviceable and contact you for installation
             return {
                 text: `${replyText}\n\n${nextText}\n\nWould you also like to see your password?`,
                 quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                    { content_type: "text", title: "No", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                { content_type: "text", title: "No", payload: "No" },
+                { content_type: "text", title: "Cancel", payload: "Cancel" }]
             };
         } else if (userSessions.get(sender_psid) === 'ASK_DOWNLOAD_APP') {
             let replyText = "Awesome! Let's continue.";
@@ -1128,7 +1128,7 @@ Our team will check if your area is serviceable and contact you for installation
                 const data = accountRecoveryData.get(sender_psid);
                 const accountNum = data ? data.account : null;
 
-                let replyText = `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Nuber: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`;
+                let replyText = `We accept the following payment methods:\n\n1. GCash:\n•Account Name: RE****L B.\n•Account Number: 09058395471 \n\n2. UnionBank:\n•Account Name: RFIBERX\n•Account Number: 1096-6732-3727\n\n3.Cash Payment:\n•Visit our official office location.\n\nNote: All transactions and payment are strictly non-refundable.`;
 
                 if (accountNum) {
                     try {
@@ -1301,8 +1301,8 @@ Our team will check if your area is serviceable and contact you for installation
                             return {
                                 text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                                 quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                    { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                                { content_type: "text", title: "No, not yet", payload: "No" },
+                                { content_type: "text", title: "Cancel", payload: "Cancel" }]
                             };
                         }
                     } catch (e) { }
@@ -1311,8 +1311,8 @@ Our team will check if your area is serviceable and contact you for installation
                     return {
                         text: `${nextText}\n\nWould you also like to see your password?`,
                         quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                            { content_type: "text", title: "No", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                        { content_type: "text", title: "No", payload: "No" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }]
                     };
                 } else {
                     accountRecoveryData.set(sender_psid, { pendingAccount: accountNum, password: pass, plan: plan, lastActive: match.lastActive });
@@ -1320,12 +1320,12 @@ Our team will check if your area is serviceable and contact you for installation
                     return {
                         text: "For security purposes, since this account name differs from your Facebook profile, please select the exact Internet Plan associated with this account.",
                         quick_replies: [{ content_type: "text", title: "30Mbps", payload: "30Mbps" },
-                            { content_type: "text", title: "50Mbps", payload: "50Mbps" },
-                            { content_type: "text", title: "70Mbps", payload: "70Mbps" },
-                            { content_type: "text", title: "100Mbps", payload: "100Mbps" },
-                            { content_type: "text", title: "200Mbps", payload: "200Mbps" },
-                            { content_type: "text", title: "500Mbps", payload: "500Mbps" },
-                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                        { content_type: "text", title: "50Mbps", payload: "50Mbps" },
+                        { content_type: "text", title: "70Mbps", payload: "70Mbps" },
+                        { content_type: "text", title: "100Mbps", payload: "100Mbps" },
+                        { content_type: "text", title: "200Mbps", payload: "200Mbps" },
+                        { content_type: "text", title: "500Mbps", payload: "500Mbps" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }]
                     };
                 }
             } else if (msg.match(/^(no|hindi)$/i)) {
@@ -1377,8 +1377,8 @@ Our team will check if your area is serviceable and contact you for installation
                         return {
                             text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                             quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                            { content_type: "text", title: "No, not yet", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
                         };
                     }
                 } catch (e) { }
@@ -1387,8 +1387,8 @@ Our team will check if your area is serviceable and contact you for installation
                 return {
                     text: `${nextText}\n\nWould you also like to see your password?`,
                     quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                        { content_type: "text", title: "No", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                    { content_type: "text", title: "No", payload: "No" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
                 };
             } else {
                 userSessions.delete(sender_psid);
@@ -1407,19 +1407,19 @@ Our team will check if your area is serviceable and contact you for installation
                 return {
                     text: T(`Your password is: ${pass}\n\nThank you for choosing RFiberX! How else can I help you today?`, `Ang password mo ay: ${pass}\n\nSalamat sa pagpili sa RFiberX! Paano pa kita matutulungan ngayon?`),
                     quick_replies: [
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
-                    { content_type: "text", title: "Billing", payload: "Billing" },
-                    { content_type: "text", title: "Change Password", payload: "Change Password" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
-                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
-                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
-                    { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Billing", payload: "Billing" },
+                        { content_type: "text", title: "Change Password", payload: "Change Password" },
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                        { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                        { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                        { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                        { content_type: "text", title: "Relocation", payload: "Relocation" },
+                        { content_type: "text", title: "Mobile App", payload: "Mobile App" },
+                        { content_type: "text", title: "Contacts", payload: "Contacts" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                    ]
                 };
             } else if (msg.match(/^(no|hindi)$/i)) {
                 userSessions.delete(sender_psid);
@@ -1427,19 +1427,19 @@ Our team will check if your area is serviceable and contact you for installation
                 return {
                     text: T("Okay, we've cancelled that request. How else can I help you today?", "Okay, na-cancel na namin ang request na iyon. Paano pa kita matutulungan ngayon?"),
                     quick_replies: [
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
-                    { content_type: "text", title: "Billing", payload: "Billing" },
-                    { content_type: "text", title: "Change Password", payload: "Change Password" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
-                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
-                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
-                    { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                        { content_type: "text", title: "Billing", payload: "Billing" },
+                        { content_type: "text", title: "Change Password", payload: "Change Password" },
+                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                        { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                        { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                        { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                        { content_type: "text", title: "Relocation", payload: "Relocation" },
+                        { content_type: "text", title: "Mobile App", payload: "Mobile App" },
+                        { content_type: "text", title: "Contacts", payload: "Contacts" },
+                        { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                    ]
                 };
             } else {
                 return { text: T("Would you like to see your password? Please reply 'Yes' or 'No'.", "Gusto mo bang makita ang iyong password? Mag-reply lang ng 'Yes' o 'No'.") };
@@ -1480,19 +1480,19 @@ Our team will check if your area is serviceable and contact you for installation
                     return {
                         text: T("Success! The account has been removed from your profile. What would you like to do next?", "Success! Na-remove na ang account sa iyong profile. Ano ang gusto mong gawin susunod?"),
                         quick_replies: [
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
-                    { content_type: "text", title: "Billing", payload: "Billing" },
-                    { content_type: "text", title: "Change Password", payload: "Change Password" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
-                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
-                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
-                    { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                            { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                            { content_type: "text", title: "Billing", payload: "Billing" },
+                            { content_type: "text", title: "Change Password", payload: "Change Password" },
+                            { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                            { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                            { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                            { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                            { content_type: "text", title: "Relocation", payload: "Relocation" },
+                            { content_type: "text", title: "Mobile App", payload: "Mobile App" },
+                            { content_type: "text", title: "Contacts", payload: "Contacts" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                        ]
                     };
                 } catch (e) {
                     console.error("Error deleting account:", e);
@@ -1629,7 +1629,7 @@ Our team will check if your area is serviceable and contact you for installation
         if (!isQuickReply && ai_decision !== 'CANCEL' && ai_decision !== 'UNKNOWN' && ai_decision !== 'GREETING') {
             const now = Date.now();
             const userTrack = topicTracker.get(sender_psid) || { topic: null, count: 0, lastInteraction: 0 };
-            
+
             // If more than 30 minutes (1800000 ms) passed, reset the counter
             if (now - userTrack.lastInteraction > 1800000) {
                 userTrack.count = 0;
@@ -1649,9 +1649,9 @@ Our team will check if your area is serviceable and contact you for installation
                 console.log(`🚫 SPAM DETECTED: PSID ${sender_psid} triggered ${ai_decision} ${userTrack.count} times. Handing over.`);
                 topicTracker.delete(sender_psid);
                 userSessions.delete(sender_psid);
-                return { 
-                    text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."), 
-                    isHandover: true 
+                return {
+                    text: T("We are now transferring you to agents for further assistance, please wait.", "We are now transferring you to agents for further assistance, please wait."),
+                    isHandover: true
                 };
             }
         }
@@ -1667,7 +1667,7 @@ Our team will check if your area is serviceable and contact you for installation
             return {
                 text: T("Here are our contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell Blanco (Owner)\n\nYou can contact our agent directly through these channels.", "Narito ang aming contact details:\n\n📞 Phone number: 09913746474\n📧 Email: support@rfiberx.net\n💬 Messenger / Facebook: Rendell Blanco (Owner)\n\nPwede mo rin i-contact ang aming agent directly dito."),
                 quick_replies: [
-                    
+
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
                 ]
             };
@@ -1692,7 +1692,7 @@ Our team will check if your area is serviceable and contact you for installation
                     { content_type: "text", title: "Contacts", payload: "Contacts" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                ]
             };
 
         case 'TECHNICAL_SUPPORT':
@@ -1703,7 +1703,7 @@ Our team will check if your area is serviceable and contact you for installation
                     { content_type: "text", title: "Slow Internet", payload: "Slow Internet" },
                     { content_type: "text", title: "No Internet", payload: "No Internet" },
                     { content_type: "text", title: "Red Light Flashing", payload: "Red Light Flashing" },
-                    
+
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
                 ]
             };
@@ -1722,10 +1722,10 @@ Our team will check if your area is serviceable and contact you for installation
             return {
                 text: T("Good day! To apply for a new RFiberX internet connection, please provide the following details:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan or Speed you want:\n\nWould you like to see our available plans first?\n\nYou can also always call the support using the phone number: 09913746474, email at support@rfiberx.net, or message the owner (Rendell Blanco).", "Magandang araw! Para mag-apply ng bagong RFiberX connection, pakibigay ang sumusunod:\n• Full Name:\n• Complete Address:\n• Phone Number:\n• Plan o Speed na gusto mo:\n\nGusto mo bang makita muna ang aming available plans?\n\nPwede ka rin tumawag sa 09913746474, mag-email sa support@rfiberx.net, o mag-message sa owner (Rendell Blanco)."),
                 quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                    { content_type: "text", title: "No", payload: "No" },
-                    
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }
-                                ]
+                { content_type: "text", title: "No", payload: "No" },
+
+                { content_type: "text", title: "Cancel", payload: "Cancel" }
+                ]
             };
 
         case 'BILLING':
@@ -1753,8 +1753,8 @@ Our team will check if your area is serviceable and contact you for installation
                         return {
                             text: T(`Welcome back! I see your Account Number is ${savedAccount}.\n\nBy the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?`, `Welcome back! Nakita ko na ang Account Number mo ay ${savedAccount}.\n\nNga pala, may mobile app na kami! Pwede mo i-download dito:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nO i-scan ang QR code sa taas.\n\nNa-download mo na ba ang aming mobile app?`),
                             quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                            { content_type: "text", title: "No, not yet", payload: "No" },
+                            { content_type: "text", title: "Cancel", payload: "Cancel" }]
                         };
                     } else {
                         userSessions.set(sender_psid, 'BILLING_MENU');
@@ -1834,9 +1834,9 @@ You can also always call the support using the phone number: 09913746474, email 
                 {
                     text: T("For the login, the username is usually 'user' and the password is 'user' (all lowercase). If that didn't work, try 'User' and 'User' with a capital U.\n\nIf you still have problems logging in, try to contact the agent by typing 'Agent'.", "Para sa login, ang username ay kadalasang 'user' at ang password ay 'user' (small letters lahat). Kung hindi gumana, subukan ang 'User' at 'User' na may malaking U.\n\nKung may problema ka pa rin sa pag-login, i-type ang 'Agent' para makausap ang aming support."),
                     quick_replies: [{ content_type: "text", title: "192.168.1.1", payload: "192.168.1.1" },
-                        { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
-                        { content_type: "text", title: "192.168.8.1", payload: "192.168.8.1" },
-                        { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                    { content_type: "text", title: "192.168.100.1", payload: "192.168.100.1" },
+                    { content_type: "text", title: "192.168.8.1", payload: "192.168.8.1" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
                 }
             ];
 
@@ -1874,16 +1874,16 @@ You can also always call the support using the phone number: 09913746474, email 
                             return {
                                 text: "By the way, we now have a mobile app! You can download it here:\nhttps://expo.dev/accounts/lyntester2000/projects/rfiberx/builds/967ad66c-2ecb-4133-a608-28a72ca2600d\n\nOr scan the QR code above.\n\nHave you already downloaded our mobile app?",
                                 quick_replies: [{ content_type: "text", title: "Yes, I have it", payload: "Yes" },
-                                    { content_type: "text", title: "No, not yet", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                                { content_type: "text", title: "No, not yet", payload: "No" },
+                                { content_type: "text", title: "Cancel", payload: "Cancel" }]
                             };
                         } else {
                             userSessions.set(sender_psid, 'ACCOUNT_INQUIRY_PASSWORD');
                             return {
                                 text: `${nextText}\n\nWould you also like to see your password?`,
                                 quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                                    { content_type: "text", title: "No", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                                { content_type: "text", title: "No", payload: "No" },
+                                { content_type: "text", title: "Cancel", payload: "Cancel" }]
                             };
                         }
                     }
@@ -1931,7 +1931,7 @@ You can also always call the support using the phone number: 09913746474, email 
                     { content_type: "text", title: "Contacts", payload: "Contacts" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                ]
             };
 
         case 'CANCEL':
@@ -1951,7 +1951,7 @@ You can also always call the support using the phone number: 09913746474, email 
                     { content_type: "text", title: "Contacts", payload: "Contacts" },
                     { content_type: "text", title: "Cancel", payload: "Cancel" }
 
-                                ]
+                ]
             };
 
         case 'CHANGE_ACCOUNT':
@@ -1978,8 +1978,8 @@ You can also always call the support using the phone number: 09913746474, email 
                 return {
                     text: T(`Are you sure you want to remove the currently saved account (${accountName}) from your profile?`, `Sigurado ka bang gusto mong i-remove ang naka-save na account (${accountName}) mula sa iyong profile?`),
                     quick_replies: [{ content_type: "text", title: "Yes", payload: "Yes" },
-                        { content_type: "text", title: "No", payload: "No" },
-                                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
+                    { content_type: "text", title: "No", payload: "No" },
+                    { content_type: "text", title: "Cancel", payload: "Cancel" }]
                 };
             } catch (err) {
                 console.error("Error fetching account for removal:", err);
@@ -2060,7 +2060,7 @@ db.collection('payments').onSnapshot((snapshot) => {
                             for (const psidDoc of psidSnap.docs) {
                                 const psid = psidDoc.id;
 
-                                                                // Fetch user data to get exact Due Date
+                                // Fetch user data to get exact Due Date
                                 let userDueDate = 7; // default
                                 if (data.userId) {
                                     const uDoc = await db.collection('users').doc(data.userId).get();
@@ -2076,10 +2076,10 @@ db.collection('payments').onSnapshot((snapshot) => {
                                     rawMonth = new Date().toLocaleString('en-US', { month: 'long', timeZone: 'Asia/Manila' });
                                 }
                                 const monthName = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1).toLowerCase();
-                                
+
                                 const currentYear = new Date().toLocaleString('en-US', { year: 'numeric', timeZone: 'Asia/Manila' });
                                 const coverageDate = new Date(`${monthName} 1, ${currentYear}`);
-                                
+
                                 let lastDay = 30;
                                 let nextMonthName = "next month";
                                 let nextLastDay = 30;
@@ -2101,17 +2101,17 @@ db.collection('payments').onSnapshot((snapshot) => {
                                 await callSendAPI(psid, {
                                     text: message,
                                     quick_replies: [
-                    { content_type: "text", title: "Technical Support", payload: "Technical Support" },
-                    { content_type: "text", title: "Billing", payload: "Billing" },
-                    { content_type: "text", title: "Change Password", payload: "Change Password" },
-                    { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
-                    { content_type: "text", title: "Apply Now", payload: "Apply Now" },
-                    { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
-                    { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
-                    { content_type: "text", title: "Relocation", payload: "Relocation" },
-                    { content_type: "text", title: "Mobile App", payload: "Mobile App" },
-                    { content_type: "text", title: "Contacts", payload: "Contacts" },
-                    { content_type: "text", title: "Cancel", payload: "Cancel" }
+                                        { content_type: "text", title: "Technical Support", payload: "Technical Support" },
+                                        { content_type: "text", title: "Billing", payload: "Billing" },
+                                        { content_type: "text", title: "Change Password", payload: "Change Password" },
+                                        { content_type: "text", title: "Account Inquiry", payload: "Account Inquiry" },
+                                        { content_type: "text", title: "Apply Now", payload: "Apply Now" },
+                                        { content_type: "text", title: "Internet Plans", payload: "Internet Plans" },
+                                        { content_type: "text", title: "Area Inquiry", payload: "Area Inquiry" },
+                                        { content_type: "text", title: "Relocation", payload: "Relocation" },
+                                        { content_type: "text", title: "Mobile App", payload: "Mobile App" },
+                                        { content_type: "text", title: "Contacts", payload: "Contacts" },
+                                        { content_type: "text", title: "Cancel", payload: "Cancel" }
 
                                     ]
                                 });
@@ -2148,7 +2148,7 @@ async function callSendAPI_Raw(sender_psid, response) {
                 timestamp: FieldValue.serverTimestamp()
             });
             console.log('✅ Simulated message saved to simulator_chats!');
-        } catch(e) {
+        } catch (e) {
             console.error("Error saving simulated message:", e);
         }
         return;
@@ -2189,7 +2189,7 @@ function callSendAPI(sender_psid, response) {
     }
     const queue = userMessageQueues.get(sender_psid);
     queue.messages.push(response);
-    
+
     if (!queue.isProcessing) {
         processOutgoingQueue(sender_psid);
     }
@@ -2208,12 +2208,12 @@ async function processOutgoingQueue(sender_psid) {
         while (queue.messages.length > 0) {
             const response = queue.messages.shift();
             await callSendAPI_Raw(sender_psid, response);
-            
+
             if (queue.messages.length > 0) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
-    } catch(e) {
+    } catch (e) {
         console.error("Queue processing error:", e);
     } finally {
         queue.isProcessing = false;
@@ -2234,7 +2234,7 @@ async function sendSenderAction(sender_psid, action) {
                 action: action,
                 timestamp: FieldValue.serverTimestamp()
             });
-        } catch(e) {}
+        } catch (e) { }
         return;
     }
 
@@ -2279,7 +2279,7 @@ async function queueImageAttachment(imageUrl, sender_psid, language, shouldReply
             const buffer = await imageResp.arrayBuffer();
             base64Data = Buffer.from(buffer).toString("base64");
         }
-        
+
         receiptQueue.push({
             psid: sender_psid,
             base64Data: base64Data,
@@ -2291,7 +2291,7 @@ async function queueImageAttachment(imageUrl, sender_psid, language, shouldReply
     } catch (e) {
         console.error("Failed to queue image:", e);
     }
-    
+
     return shouldReply ? defaultReply : null;
 }
 
@@ -2382,11 +2382,25 @@ app.post('/api/admin/create-month-sheet', express.json(), async (req, res) => {
     try {
         const { dateStr } = req.body;
         // dateStr should be like "October 2026"
-        const targetDate = new Date(dateStr); 
+        const targetDate = new Date(dateStr);
         await createNewMonthSheet(targetDate);
         res.json({ success: true });
     } catch (err) {
         console.error("Error creating month sheet:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint to delete a user row from Google Sheets (SuperExcel)
+app.post('/api/admin/delete-sheet-user', express.json(), async (req, res) => {
+    try {
+        const { user } = req.body;
+        if (user) {
+            await deleteUserRowFromSheet(user);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error deleting user from Google Sheets:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -2398,7 +2412,7 @@ app.get('/api/admin/export-excel', async (req, res) => {
         if (!titleMonth) {
             titleMonth = new Date().toLocaleString('en-US', { month: 'long' });
         }
-        
+
         const ExcelJS = (await import('exceljs')).default;
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Billing Report');
@@ -2445,18 +2459,18 @@ app.get('/api/admin/export-excel', async (req, res) => {
         allUsers.forEach(u => {
             const rawName = u.fullName || u.name || '';
             const accountName = rawName.toLowerCase().replace(/\s+/g, '.');
-            
+
             const payment = userPayments[u.id];
             const bill = userBills[u.id];
 
             let status = 'UNPAID';
             if (payment) status = 'PAID';
             else if (u.status === 'DELETED') status = 'DELETED';
-            
+
             let datePaidStr = '';
             let refNo = '';
             let dueDate = bill ? (bill.dueDate || '') : '';
-            
+
             if (payment) {
                 if (payment.datePaid) {
                     datePaidStr = new Date(payment.datePaid).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' });
@@ -2497,24 +2511,24 @@ app.get('/api/admin/export-excel', async (req, res) => {
         titleCell.value = titleMonth;
         titleCell.font = { name: 'Arial', family: 4, size: 24, bold: true };
         titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8EA9DB' } }; 
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8EA9DB' } };
         sheet.getRow(1).height = 40;
 
         // Add Headers (Row 2) - Added Account Number at the end
         const headers = [
-            "Name", "Account", "Type of Client", "Payment", "Due Date", "Date of Payment", 
-            "Payment Status", "Connection Status", "Ref. No.", "Plan", "Amount", 
+            "Name", "Account", "Type of Client", "Payment", "Due Date", "Date of Payment",
+            "Payment Status", "Connection Status", "Ref. No.", "Plan", "Amount",
             "Contact", "Phone", "Email", "Address", "Location", "Account Number"
         ];
-        
+
         sheet.getRow(2).values = headers;
         sheet.getRow(2).height = 30;
-        
+
         // Style Headers
         headers.forEach((header, i) => {
             const cell = sheet.getRow(2).getCell(i + 1);
             cell.font = { name: 'Arial', bold: true, color: { argb: 'FFFFFFFF' } };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF203764' } }; 
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF203764' } };
             cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
             cell.border = {
                 top: { style: 'thin' }, left: { style: 'thin' },
@@ -2526,7 +2540,7 @@ app.get('/api/admin/export-excel', async (req, res) => {
         excelData.forEach((row, i) => {
             const rowIndex = i + 3;
             const rowRef = sheet.getRow(rowIndex);
-            
+
             rowRef.getCell(1).value = row.clientName;
             rowRef.getCell(2).value = row.accountName;
             rowRef.getCell(3).value = row.clientType;
@@ -2537,10 +2551,10 @@ app.get('/api/admin/export-excel', async (req, res) => {
             rowRef.getCell(8).value = row.connectionStatus;
             rowRef.getCell(9).value = row.refNo;
             rowRef.getCell(10).value = row.plan;
-            
+
             // Formula for amount based on Plan
             rowRef.getCell(11).value = { formula: `IF(J${rowIndex}="30Mbps", 800, IF(J${rowIndex}="50Mbps", 1000, IF(J${rowIndex}="70Mbps", 1200, IF(J${rowIndex}="100Mbps", 1500, IF(J${rowIndex}="200Mbps", 2000, ${row.amount || 0})))))`, result: row.amount };
-            
+
             rowRef.getCell(12).value = row.facebook ? `FB: ${row.facebook}` : '';
             rowRef.getCell(13).value = row.phone;
             rowRef.getCell(14).value = row.email;

@@ -971,7 +971,111 @@ async function applyProfileUpdates(user, sheetName, sheetsMeta) {
     }
 }
 
+export async function deleteUserRowFromSheet(user) {
+    if (!sheetsAPI || !user) return;
+    try {
+        const now = new Date();
+        const currentMonthStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const advanceDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const advanceMonthStr = advanceDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
+        const meta = await sheetsAPI.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        const sheets = meta.data.sheets;
+
+        await removeRowFromSheet(user, currentMonthStr, sheets);
+        await removeRowFromSheet(user, advanceMonthStr, sheets);
+    } catch (err) {
+        console.error("❌ Error deleting user row from sheets:", err);
+    }
+}
+
+async function removeRowFromSheet(user, sheetName, sheetsMeta) {
+    try {
+        const sheetInfo = sheetsMeta.find(s => s.properties.title === sheetName);
+        if (!sheetInfo) return;
+        const sheetId = sheetInfo.properties.sheetId;
+
+        const res = await sheetsAPI.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${sheetName}!A:Z`
+        }).catch(() => null);
+
+        if (!res || !res.data.values) return;
+        const rows = res.data.values;
+        if (!rows || rows.length === 0) return;
+
+        let headerRow = 1;
+        for (let r = 0; r < Math.min(rows.length, 5); r++) {
+            const h = rows[r].map(c => String(c || '').toLowerCase().trim());
+            if (h.includes('payment status') || h.includes('status')) {
+                headerRow = r;
+                break;
+            }
+        }
+
+        let rowIndex = -1;
+        const targetAccount = String(user.accountNumber || user.account || '').toLowerCase().trim();
+        const targetName = String(user.fullName || user.name || '').toLowerCase().trim();
+        const stripStr = (str) => str.replace(/[^a-z0-9]/g, '');
+        const strippedTargetName = stripStr(targetName);
+
+        for (let i = headerRow + 1; i < rows.length; i++) {
+            const rowData = rows[i];
+            let foundByAccount = false;
+            if (targetAccount !== '') {
+                for (let col = 0; col < rowData.length; col++) {
+                    if (String(rowData[col] || '').toLowerCase().trim() === targetAccount) {
+                        foundByAccount = true;
+                        break;
+                    }
+                }
+            }
+            if (foundByAccount) {
+                rowIndex = i + 1;
+                break;
+            }
+            const rowNameA = String(rowData[0] || '').toLowerCase().trim();
+            const rowNameB = String(rowData[1] || '').toLowerCase().trim();
+            const strippedA = stripStr(rowNameA);
+            const strippedB = stripStr(rowNameB);
+
+            if (targetName !== '' && (rowNameA === targetName || rowNameB === targetName)) {
+                rowIndex = i + 1;
+                break;
+            } else if (strippedTargetName !== '' && (strippedA === strippedTargetName || strippedB === strippedTargetName)) {
+                rowIndex = i + 1;
+                break;
+            }
+        }
+
+        if (rowIndex === -1) {
+            console.log(`User ${targetName} (${targetAccount}) not found in sheet "${sheetName}".`);
+            return;
+        }
+
+        console.log(`🗑️ Deleting row ${rowIndex} for ${targetName || targetAccount} from "${sheetName}"...`);
+        await sheetsAPI.spreadsheets.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+                requests: [
+                    {
+                        deleteDimension: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: 'ROWS',
+                                startIndex: rowIndex - 1,
+                                endIndex: rowIndex
+                            }
+                        }
+                    }
+                ]
+            }
+        });
+        console.log(`✅ Successfully deleted row ${rowIndex} for ${targetName || targetAccount} from "${sheetName}".`);
+    } catch (err) {
+        console.error(`❌ Error removing row from sheet "${sheetName}":`, err);
+    }
+}
 
 function startClientAgingCron() {
     console.log("⏳ Starting daily cron job to check for client aging...");
@@ -1038,6 +1142,12 @@ function listenForNewUsers() {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
         for (const change of snapshot.docChanges()) {
+
+            if (change.type === 'removed') {
+                const user = change.doc.data();
+                console.log(`🗑️ User deleted: ${user.name || user.accountNumber}. Deleting row from Google Sheets...`);
+                await deleteUserRowFromSheet(user);
+            }
 
             if (change.type === 'modified') {
                 const user = change.doc.data();
