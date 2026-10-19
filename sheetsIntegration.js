@@ -488,10 +488,31 @@ export async function createNewMonthSheet(targetDate = new Date()) {
                                 }
                             }, index: 0
                         }
+                    },
+                    {
+                        setDataValidation: {
+                            range: {
+                                sheetId: newSheetId,
+                                startRowIndex: 2,
+                                startColumnIndex: 8,
+                                endColumnIndex: 9
+                            },
+                            rule: {
+                                condition: {
+                                    type: 'CUSTOM_FORMULA',
+                                    values: [
+                                        { userEnteredValue: '=OR(ISBLANK(I3), COUNTIF($I$3:$I, I3)<=1)' }
+                                    ]
+                                },
+                                inputMessage: 'This reference number is already saved.',
+                                strict: true,
+                                showCustomUi: true
+                            }
+                        }
                     }
                 ]
             }
-        }).catch(err => console.error("⚠️ Failed to format Column R in new month sheet:", err));
+        }).catch(err => console.error("⚠️ Failed to format Column R / Data Validation in new month sheet:", err));
 
         console.log(`✅ Successfully created new Auto-Rollover sheet for ${newSheetName}`);
 
@@ -968,6 +989,43 @@ async function applyProfileUpdates(user, sheetName, sheetsMeta) {
         }
     } catch (err) {
         console.error(`❌ Error syncing profile to ${sheetName}:`, err);
+    }
+}
+
+export async function isRefNoInSheet(refNo) {
+    if (!sheetsAPI || !refNo) return false;
+    try {
+        const cleanTarget = String(refNo).replace(/[\s-]/g, '').toLowerCase();
+        const now = new Date();
+        const currentMonthStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const advanceDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const advanceMonthStr = advanceDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+        const meta = await sheetsAPI.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+        const sheets = meta.data.sheets || [];
+        const targetSheetTitles = [currentMonthStr, advanceMonthStr];
+
+        for (const s of sheets) {
+            const title = s.properties.title;
+            if (targetSheetTitles.includes(title) || sheets[sheets.length - 1].properties.sheetId === s.properties.sheetId) {
+                const res = await sheetsAPI.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: `'${title}'!I3:I`
+                }).catch(() => null);
+                if (res && res.data && res.data.values) {
+                    for (const row of res.data.values) {
+                        const val = row[0] ? String(row[0]).trim() : '';
+                        if (val && (val.toLowerCase() === String(refNo).trim().toLowerCase() || val.replace(/[\s-]/g, '').toLowerCase() === cleanTarget)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    } catch (e) {
+        console.error("Error checking ref in sheet:", e);
+        return false;
     }
 }
 

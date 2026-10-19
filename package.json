@@ -24,6 +24,7 @@
     "node-cron": "^4.6.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "string-similarity": "^4.0.4",
     "xlsx": "^0.18.5"
   }
 }

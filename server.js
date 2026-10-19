@@ -1,7 +1,7 @@
 import express from 'express';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { initSheetsSync, createNewMonthSheet, deleteUserRowFromSheet } from './sheetsIntegration.js';
+import { initSheetsSync, createNewMonthSheet, deleteUserRowFromSheet, isRefNoInSheet } from './sheetsIntegration.js';
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -2402,6 +2402,21 @@ app.post('/api/admin/delete-sheet-user', express.json(), async (req, res) => {
     } catch (err) {
         console.error("Error deleting user from Google Sheets:", err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Endpoint to check if a reference number is already saved in SuperExcel
+app.post('/api/admin/check-reference-number', express.json(), async (req, res) => {
+    try {
+        const { refNo } = req.body;
+        if (!refNo || !String(refNo).trim()) {
+            return res.json({ exists: false });
+        }
+        const exists = await isRefNoInSheet(refNo);
+        res.json({ exists: !!exists });
+    } catch (err) {
+        console.error("Error checking reference number in sheets:", err);
+        res.status(500).json({ error: err.message, exists: false });
     }
 });
 

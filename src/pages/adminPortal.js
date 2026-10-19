@@ -4971,12 +4971,93 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     return;
   }
 
+  const trimmedRefNo = refNo.trim();
 
   btn.innerHTML = 'Processing...';
   btn.disabled = true;
 
   try {
     const { db, firestore } = await window._getAdminDb();
+
+    // Check if reference number is already saved
+    if (trimmedRefNo !== '') {
+      btn.innerHTML = 'Checking Ref...';
+      const cleanTarget = trimmedRefNo.replace(/[\s-]/g, '').toLowerCase();
+
+      // 1. Check in-memory payments cache
+      let isDuplicate = (window._adminPaymentsDocs || []).some(d => {
+        const r = String(d.data().referenceNumber || d.data().refNo || '').trim();
+        return r && (r.toLowerCase() === trimmedRefNo.toLowerCase() || r.replace(/[\s-]/g, '').toLowerCase() === cleanTarget);
+      });
+
+      // 2. Query Firestore payments collection directly
+      if (!isDuplicate) {
+        const paymentsCol = firestore.collection(db, "payments");
+        const dupQ1 = firestore.query(paymentsCol, firestore.where("referenceNumber", "==", trimmedRefNo));
+        const dupSnap1 = await firestore.getDocs(dupQ1);
+        if (!dupSnap1.empty) {
+          isDuplicate = true;
+        } else {
+          const stripped = trimmedRefNo.replace(/\s+/g, '');
+          if (stripped !== trimmedRefNo) {
+            const dupQ2 = firestore.query(paymentsCol, firestore.where("referenceNumber", "==", stripped));
+            const dupSnap2 = await firestore.getDocs(dupQ2);
+            if (!dupSnap2.empty) isDuplicate = true;
+          }
+        }
+      }
+
+      // 3. Query Firestore receipts collection directly
+      if (!isDuplicate) {
+        const receiptsCol = firestore.collection(db, "receipts");
+        const rQ1 = firestore.query(receiptsCol, firestore.where("referenceNumber", "==", trimmedRefNo));
+        const rSnap1 = await firestore.getDocs(rQ1);
+        if (!rSnap1.empty) {
+          isDuplicate = true;
+        } else {
+          const stripped = trimmedRefNo.replace(/\s+/g, '');
+          if (stripped !== trimmedRefNo) {
+            const rQ2 = firestore.query(receiptsCol, firestore.where("referenceNumber", "==", stripped));
+            const rSnap2 = await firestore.getDocs(rQ2);
+            if (!rSnap2.empty) isDuplicate = true;
+          }
+        }
+      }
+
+      // 4. Query active SuperExcel sheet via backend endpoint
+      if (!isDuplicate) {
+        try {
+          const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://website-98gm.onrender.com';
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+          const sheetRes = await fetch(`${BACKEND_URL}/api/admin/check-reference-number`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refNo: trimmedRefNo }),
+            signal: controller.signal
+          }).catch(() => null);
+          clearTimeout(timeoutId);
+          if (sheetRes && sheetRes.ok) {
+            const sheetData = await sheetRes.json().catch(() => null);
+            if (sheetData && sheetData.exists) {
+              isDuplicate = true;
+            }
+          }
+        } catch (e) {
+          console.warn("Backend ref check skipped or timed out:", e);
+        }
+      }
+
+      if (isDuplicate) {
+        alert("This reference number is already saved.");
+        btn.innerHTML = 'Paid';
+        btn.disabled = false;
+        return;
+      }
+    }
+
+    btn.innerHTML = 'Processing...';
+
     const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
 
     const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
