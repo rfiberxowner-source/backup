@@ -290,6 +290,43 @@ export async function createNewMonthSheet(targetDate = new Date()) {
         // 1. Duplicate the previous month sheet
         const oldSheetName = await getLatestSheetName();
         const oldSheetId = await getSheetIdByName(oldSheetName);
+
+        // Fetch previous month sheet rows to preserve DELETED status in Column G
+        const prevSheetRes = await sheetsAPI.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `'${oldSheetName}'!A1:Q`
+        }).catch(() => null);
+
+        const deletedAccountsSet = new Set();
+        const deletedNamesSet = new Set();
+
+        if (prevSheetRes && prevSheetRes.data && prevSheetRes.data.values) {
+            const pRows = prevSheetRes.data.values;
+            let pHeaderRow = 1;
+            let colStatus = 6;  // Column G
+            let colAccNum = 16; // Column Q
+            for (let r = 0; r < Math.min(pRows.length, 5); r++) {
+                const h = pRows[r].map(c => String(c || '').toLowerCase().trim());
+                if (h.includes('payment status') || h.includes('status')) {
+                    pHeaderRow = r;
+                    const cS = h.findIndex(x => x === 'payment status' || x === 'status');
+                    if (cS !== -1) colStatus = cS;
+                    const cA = h.findIndex(x => x.includes('account number') || x.includes('account no') || x === 'account');
+                    if (cA !== -1) colAccNum = cA;
+                    break;
+                }
+            }
+            for (let r = pHeaderRow + 1; r < pRows.length; r++) {
+                const row = pRows[r];
+                const statusVal = String(row[colStatus] || '').trim().toUpperCase();
+                if (statusVal === 'DELETED') {
+                    const acc = String(row[colAccNum] || '').trim().toLowerCase();
+                    const name = String(row[0] || '').trim().toLowerCase();
+                    if (acc) deletedAccountsSet.add(acc);
+                    if (name) deletedNamesSet.add(name);
+                }
+            }
+        }
         
         const duplicateRes = await sheetsAPI.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
@@ -331,8 +368,15 @@ export async function createNewMonthSheet(targetDate = new Date()) {
         let rowData = [];
         allUsers.forEach(u => {
             const rawName = u.fullName || u.name || '';
-            const accountName = rawName.toLowerCase().replace(/\\s+/g, '.');
-            let status = u.status === 'DELETED' ? 'DELETED' : 'UNPAID';
+            const accountName = rawName.toLowerCase().replace(/\s+/g, '.');
+            const userAcc = String(u.accountNumber || u.account || '').trim().toLowerCase();
+            const userName = rawName.trim().toLowerCase();
+
+            const isDeleted = u.status === 'DELETED' ||
+                (userAcc && deletedAccountsSet.has(userAcc)) ||
+                (userName && deletedNamesSet.has(userName));
+
+            let status = isDeleted ? 'DELETED' : 'UNPAID';
 
             let cType = u.clientType || 'Old Client';
             if (u.createdAt) {
