@@ -615,9 +615,10 @@ export const adminViews = {
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const val = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-      months.push({ value: val, label: `${val}${i === 0 ? ' (Current)' : ''}` });
+      months.push({ value: val, label: `${val}${i === 0 ? ' (Current)' : ''}`, isCurrent: i === 0 });
     }
     const monthOptionsHtml = `<option value="">All Months</option>` + months.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+    const bmMonthOptionsHtml = `<option value="">All Months</option>` + months.map(m => `<option value="${m.value}"${m.isCurrent ? ' selected' : ''}>${m.label}</option>`).join('');
 
     const content = `
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
@@ -680,7 +681,7 @@ export const adminViews = {
             <input id="bm-search" type="text" placeholder="Search customer name..." style="width: 100%; background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem 0.5rem 2rem; border-radius: 4px; font-size: 0.85rem; outline: none;">
           </div>
           <select id="bm-month" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.85rem; width: 140px;">
-            ${monthOptionsHtml}
+            ${bmMonthOptionsHtml}
           </select>
           <select id="bm-plan" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.85rem; width: 140px;">
             <option value="">All Plans</option>
@@ -2719,25 +2720,35 @@ window.initAdminBanking = async function () {
     );
 
     // Ensure month options are present
-    const ensureMonthOptions = (selectId) => {
+    const ensureMonthOptions = (selectId, defaultToCurrent = false) => {
       const sel = document.getElementById(selectId);
-      if (!sel || sel.options.length > 1) return;
-      const n = new Date();
-      let opts = '<option value="">All Months</option>';
-      const adv = new Date(n.getFullYear(), n.getMonth() + 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-      opts += `<option value="${adv}">${adv} (Advance)</option>`;
-      for (let i = 0; i < 12; i++) {
-        const d = new Date(n.getFullYear(), n.getMonth() - i, 1);
-        const val = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        opts += `<option value="${val}">${val}${i === 0 ? ' (Current)' : ''}</option>`;
+      if (!sel) return;
+      if (sel.options.length <= 1) {
+        const n = new Date();
+        let opts = '<option value="">All Months</option>';
+        const adv = new Date(n.getFullYear(), n.getMonth() + 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        opts += `<option value="${adv}">${adv} (Advance)</option>`;
+        for (let i = 0; i < 12; i++) {
+          const d = new Date(n.getFullYear(), n.getMonth() - i, 1);
+          const val = d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+          const isCur = i === 0;
+          opts += `<option value="${val}"${defaultToCurrent && isCur ? ' selected' : ''}>${val}${isCur ? ' (Current)' : ''}</option>`;
+        }
+        sel.innerHTML = opts;
       }
-      sel.innerHTML = opts;
+      if (defaultToCurrent && sel.options.length > 2 && (!sel.value || sel.selectedIndex === 0)) {
+        sel.selectedIndex = 2;
+      }
     };
-    ensureMonthOptions('bm-month');
-    ensureMonthOptions('admin-paid-month-filter');
+    ensureMonthOptions('bm-month', true);
+    ensureMonthOptions('admin-paid-month-filter', true);
     const apmf = document.getElementById('admin-paid-month-filter');
-    if (apmf && apmf.options.length > 2) {
+    if (apmf && apmf.options.length > 2 && (!apmf.value || apmf.selectedIndex === 0)) {
       apmf.selectedIndex = 2;
+    }
+    const bmm = document.getElementById('bm-month');
+    if (bmm && bmm.options.length > 2 && (!bmm.value || bmm.selectedIndex === 0)) {
+      bmm.selectedIndex = 2;
     }
     if (window.updatePaidCounts) window.updatePaidCounts();
     ensureMonthOptions('ph-month');
@@ -2816,7 +2827,8 @@ window.renderBills = async function () {
       if (st && displayStatus !== st) return;
       const cName = b.customerName || b.name || 'Unknown';
       if (s && !cName.toLowerCase().includes(s)) return;
-      if (m && b.month !== m && b.billingMonth !== m) return;
+      const billM = String(b.month || b.billingMonth || b.period || '').trim();
+      if (m && b.month !== m && b.billingMonth !== m && b.period !== m && billM !== m) return;
       if (p && b.plan !== p) return;
 
       const badgeColor = displayStatus === 'Overdue' ? '#E53935' : (displayStatus === 'Waiting' ? '#f97316' : '#f59e0b');
