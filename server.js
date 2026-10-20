@@ -2377,14 +2377,14 @@ async function processImageAttachmentLogic(base64Data, sender_psid, accountNum, 
 // =========================================================================
 
 
-// Endpoint to manually trigger creation of a new month's Google Sheet
+// Endpoint to trigger creation of a new month's Google Sheet
 app.post('/api/admin/create-month-sheet', express.json(), async (req, res) => {
     try {
         const { dateStr } = req.body;
-        // dateStr should be like "October 2026"
-        const targetDate = new Date(dateStr);
-        await createNewMonthSheet(targetDate);
-        res.json({ success: true });
+        const cleanStr = String(dateStr || '').replace(/\s*\(Advance\)/i, '').trim();
+        const targetDate = cleanStr ? new Date(cleanStr) : new Date();
+        const sheetId = await createNewMonthSheet(targetDate);
+        res.json({ success: true, sheetId });
     } catch (err) {
         console.error("Error creating month sheet:", err);
         res.status(500).json({ error: err.message });

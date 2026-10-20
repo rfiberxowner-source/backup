@@ -112,9 +112,28 @@ export async function syncPaymentToSheet(payment) {
     if (!sheetsAPI) return;
     try {
         let sheetName = payment.billingMonth || payment.month;
-        if (!sheetName) {
+        if (!sheetName || sheetName === '-') {
             sheetName = await getLatestSheetName();
         }
+
+        // Clean sheetName (e.g. "November 2026 (Advance)" -> "November 2026")
+        sheetName = String(sheetName).replace(/\s*\(Advance\)/i, '').trim();
+
+        // Check if the target sheet exists; if not, automatically create it!
+        let sheetId = await getSheetIdByName(sheetName);
+        if (!sheetId) {
+            console.log(`📋 Sheet "${sheetName}" does not exist yet! Automatically creating new month sheet...`);
+            let targetDate = new Date(sheetName);
+            if (isNaN(targetDate.getTime())) {
+                targetDate = new Date();
+            }
+            await createNewMonthSheet(targetDate);
+            sheetId = await getSheetIdByName(sheetName);
+            if (!sheetId) {
+                sheetName = await getLatestSheetName();
+            }
+        }
+
         const res = await sheetsAPI.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
             range: `${sheetName}!A:Z`, // Fetch up to Column Z just in case
@@ -247,10 +266,16 @@ export async function syncPaymentToSheet(payment) {
 }
 
 export async function createNewMonthSheet(targetDate = new Date()) {
-    const now = targetDate;
     if (!sheetsAPI) return;
     try {
-        const date = targetDate;
+        let date = targetDate;
+        if (typeof date === 'string') {
+            const cleanStr = date.replace(/\s*\(Advance\)/i, '').trim();
+            date = new Date(cleanStr);
+        }
+        if (!date || isNaN(date.getTime())) {
+            date = new Date();
+        }
         const currentMonth = date.toLocaleString('en-US', { month: 'long' });
         const currentYear = date.getFullYear();
         const newSheetName = `${currentMonth} ${currentYear}`;
@@ -259,7 +284,7 @@ export async function createNewMonthSheet(targetDate = new Date()) {
         const existingId = await getSheetIdByName(newSheetName);
         if (existingId) {
             console.log(`⚠️ Sheet ${newSheetName} already exists! Skipping creation.`);
-            return;
+            return existingId;
         }
 
         // 1. Duplicate the previous month sheet
@@ -515,6 +540,7 @@ export async function createNewMonthSheet(targetDate = new Date()) {
         }).catch(err => console.error("⚠️ Failed to format Column R / Data Validation in new month sheet:", err));
 
         console.log(`✅ Successfully created new Auto-Rollover sheet for ${newSheetName}`);
+        return newSheetId;
 
     } catch (err) {
         console.error("❌ Error creating new month sheet:", err);

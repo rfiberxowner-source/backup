@@ -5156,10 +5156,18 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     await firestore.addDoc(firestore.collection(db, "payments"), payData);
     await firestore.deleteDoc(billDocRef);
 
-    // Ping the backend to wake it up from sleep mode
+    // Call backend to ensure the month sheet exists in SuperExcel (especially for advance months)
     try {
       const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://website-98gm.onrender.com';
-      fetch(`${BACKEND_URL}/`).catch(() => { });
+      if (billMonth && billMonth !== '-') {
+        fetch(`${BACKEND_URL}/api/admin/create-month-sheet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dateStr: billMonth })
+        }).catch(() => { });
+      } else {
+        fetch(`${BACKEND_URL}/`).catch(() => { });
+      }
     } catch (e) { }
 
     // Send push notification if token exists
