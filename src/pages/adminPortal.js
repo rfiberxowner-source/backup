@@ -661,7 +661,7 @@ export const adminViews = {
         <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; padding-bottom: 4.5rem; position: relative; overflow: hidden; z-index: 1;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
             <div style="font-size: 0.65rem; font-weight: 700; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase;">PAID BILLS</div>
-            <select id="admin-paid-month-filter" onchange="if(window.updatePaidCounts) window.updatePaidCounts()" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; outline: none; cursor: pointer; max-width: 130px;">
+            <select id="admin-paid-month-filter" onchange="if(window.handleMonthChange) window.handleMonthChange(this.value); else if(window.updatePaidCounts) window.updatePaidCounts();" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; outline: none; cursor: pointer; max-width: 130px;">
               <option value="">All Months</option>
             </select>
           </div>
@@ -2572,8 +2572,11 @@ window.initAdminBanking = async function () {
     let allUsersSnap = null;
     let billsSnap = null;
 
-    const updateBankingStats = () => {
+    window.updateBankingStats = function () {
       if (!allUsersSnap || !billsSnap) return;
+
+      const bmMonthEl = document.getElementById('bm-month');
+      const selectedMonth = bmMonthEl ? bmMonthEl.value : '';
 
       let validClients = 0;
       allUsersSnap.docs.forEach(d => {
@@ -2608,8 +2611,6 @@ window.initAdminBanking = async function () {
         let status = (b.status || 'Pending').toLowerCase();
         if (status === 'unread') status = 'pending';
 
-        if (status === 'waiting') waitingCount++;
-
         let isOverdue = false;
         if (status !== 'paid' && status !== 'completed') {
           if (b.dueDate && status !== 'waiting') {
@@ -2625,8 +2626,6 @@ window.initAdminBanking = async function () {
               isOverdue = true;
             }
           }
-          outSum += parseFloat(b.amount) || 0;
-          if (b.accountNumber) outSet.add(b.accountNumber);
         }
 
         if (isOverdue) {
@@ -2657,15 +2656,44 @@ window.initAdminBanking = async function () {
           }
         }
 
-        if (status === 'overdue' && b.accountNumber) overdueCount++;
-        if (status === 'pending' && b.accountNumber) pendingCount++;
+        // Filter metrics by the selected billing month (or all months if empty)
+        let matchesMonth = true;
+        if (selectedMonth) {
+          const sM = selectedMonth.trim().toLowerCase();
+          const billM = String(b.billingMonth || b.month || b.period || '').trim().toLowerCase();
+          if (billM) {
+            matchesMonth = billM === sM || billM.includes(sM);
+          } else if (b.dueDate) {
+            matchesMonth = String(b.dueDate).toLowerCase().includes(sM);
+          } else {
+            matchesMonth = false;
+          }
+        }
+
+        if (matchesMonth) {
+          if (status === 'waiting') waitingCount++;
+
+          if (status !== 'paid' && status !== 'completed') {
+            outSum += parseFloat(b.amount) || 0;
+            if (b.accountNumber) outSet.add(b.accountNumber);
+          }
+
+          if (status === 'overdue' && b.accountNumber) overdueCount++;
+          if (status === 'pending' && b.accountNumber) pendingCount++;
+        }
       });
 
-      document.getElementById('admin-pending-bills').innerText = pendingCount;
-      document.getElementById('admin-outstanding-amount').innerText = '₱' + outSum.toLocaleString();
-      document.getElementById('admin-outstanding-accounts').innerText = `Across ${outSet.size} accounts`;
-      document.getElementById('admin-overdue-accounts').innerText = overdueCount;
-      if (document.getElementById('admin-waiting-bills')) document.getElementById('admin-waiting-bills').innerText = waitingCount;
+      const pendingEl = document.getElementById('admin-pending-bills');
+      const outAmtEl = document.getElementById('admin-outstanding-amount');
+      const outAccEl = document.getElementById('admin-outstanding-accounts');
+      const overdueEl = document.getElementById('admin-overdue-accounts');
+      const waitingEl = document.getElementById('admin-waiting-bills');
+
+      if (pendingEl) pendingEl.innerText = pendingCount;
+      if (outAmtEl) outAmtEl.innerText = '₱' + outSum.toLocaleString();
+      if (outAccEl) outAccEl.innerText = `Across ${outSet.size} accounts`;
+      if (overdueEl) overdueEl.innerText = overdueCount;
+      if (waitingEl) waitingEl.innerText = waitingCount;
 
       if (disconnectedAnyone) {
         const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://website-98gm.onrender.com';
@@ -2678,7 +2706,7 @@ window.initAdminBanking = async function () {
     window._bankUnsubs.push(
       onSnapshot(collection(db, "users"), snap => {
         allUsersSnap = snap;
-        updateBankingStats();
+        if (window.updateBankingStats) window.updateBankingStats();
       })
     );
 
@@ -2686,7 +2714,7 @@ window.initAdminBanking = async function () {
       onSnapshot(collectionGroup(db, "billing_emails"), snap => {
         billsSnap = snap;
         window._adminBillsDocs = [...snap.docs];
-        updateBankingStats();
+        if (window.updateBankingStats) window.updateBankingStats();
         if (window.renderBills) window.renderBills();
       })
     );
@@ -2694,9 +2722,10 @@ window.initAdminBanking = async function () {
     window.updatePaidCounts = function () {
       const pCountEl = document.getElementById('admin-paid-counts');
       const pMonth = document.getElementById('admin-paid-month-filter');
-      if (!pCountEl || !pMonth || !window._adminPaymentsDocs) return;
+      const bmMonth = document.getElementById('bm-month');
+      if (!pCountEl || !window._adminPaymentsDocs) return;
 
-      const m = pMonth.value;
+      const m = bmMonth ? bmMonth.value : (pMonth ? pMonth.value : '');
       let count = 0;
 
       window._adminPaymentsDocs.forEach(d => {
@@ -2704,7 +2733,19 @@ window.initAdminBanking = async function () {
         let rawStatus = (pm.status || 'Completed').toLowerCase();
         if (rawStatus !== 'completed' && rawStatus !== 'paid') return;
 
-        if (m && pm.month !== m && pm.billingMonth !== m && pm.period !== m) return;
+        if (m) {
+          const sM = m.trim().toLowerCase();
+          const pM = String(pm.billingMonth || pm.month || pm.period || '').trim().toLowerCase();
+          let match = pM && (pM === sM || pM.includes(sM));
+          if (!match && !pM && (pm.date || pm.createdAt)) {
+            try {
+              const dObj = pm.createdAt?.toDate ? pm.createdAt.toDate() : new Date(pm.date || pm.createdAt);
+              const pDateMonth = dObj.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toLowerCase();
+              if (pDateMonth === sM) match = true;
+            } catch(e) {}
+          }
+          if (!match) return;
+        }
         count++;
       });
 
@@ -2750,11 +2791,29 @@ window.initAdminBanking = async function () {
     if (bmm && bmm.options.length > 2 && (!bmm.value || bmm.selectedIndex === 0)) {
       bmm.selectedIndex = 2;
     }
+    if (window.updateBankingStats) window.updateBankingStats();
     if (window.updatePaidCounts) window.updatePaidCounts();
     ensureMonthOptions('ph-month');
 
+    window.handleMonthChange = function (newVal) {
+      const bmmEl = document.getElementById('bm-month');
+      const pmfEl = document.getElementById('admin-paid-month-filter');
+      if (bmmEl && bmmEl.value !== newVal) bmmEl.value = newVal;
+      if (pmfEl && pmfEl.value !== newVal) pmfEl.value = newVal;
 
-    ['bm-search', 'bm-month', 'bm-plan', 'bm-status'].forEach(id => {
+      if (window.updateBankingStats) window.updateBankingStats();
+      if (window.updatePaidCounts) window.updatePaidCounts();
+      if (window.renderBills) window.renderBills();
+    };
+
+    if (bmm) {
+      bmm.addEventListener('change', (e) => window.handleMonthChange(e.target.value));
+    }
+    if (apmf) {
+      apmf.addEventListener('change', (e) => window.handleMonthChange(e.target.value));
+    }
+
+    ['bm-search', 'bm-plan', 'bm-status'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener(id === 'bm-search' ? 'input' : 'change', window.renderBills);
     });
