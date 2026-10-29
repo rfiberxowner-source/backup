@@ -702,6 +702,7 @@ export const adminViews = {
               <option value="Pending">Pending</option>
               <option value="Overdue">Overdue</option>
             </select>
+          <button id="bill-delete-mode-btn" onclick="window.toggleBillDeleteMode()" style="background: #0f131f; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-left: auto;">Delete Billing</button>
         </div>
         <div style="background: #0f131f; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; max-height: 620px; overflow-y: auto;">
           <table style="width: 100%; border-collapse: collapse; font-size: 0.6rem; text-transform: uppercase; font-weight: 700; color: #94a3b8; text-align: left;">
@@ -2139,6 +2140,7 @@ window.handleAdminSignup = async function () {
   btn.innerHTML = 'Creating...';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Check if email exists
@@ -2246,6 +2248,7 @@ window.initDashboard = async function () {
   }
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const { collection, collectionGroup, onSnapshot } = firestore;
 
@@ -2545,6 +2548,7 @@ window.initDashboard = async function () {
 };
 
 window.initAdminBanking = async function () {
+  window.isBillDeleteMode = false;
   const adminRole = JSON.parse(localStorage.getItem('adminUser') || '{}').role || 'Minimal';
   if (adminRole === 'Minimal') {
     document.getElementById('admin-pending-bills').innerText = '15';
@@ -2561,6 +2565,7 @@ window.initAdminBanking = async function () {
   }
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const { collection, collectionGroup, onSnapshot } = firestore;
 
@@ -2826,6 +2831,60 @@ window.initAdminBanking = async function () {
     console.error(err);
   }
 };
+
+window.isBillDeleteMode = false;
+
+window.toggleBillDeleteMode = function () {
+  window.isBillDeleteMode = !window.isBillDeleteMode;
+  const btn = document.getElementById('bill-delete-mode-btn');
+  if (btn) {
+    btn.style.background = window.isBillDeleteMode ? '#ef4444' : '#0f131f';
+    btn.style.borderColor = window.isBillDeleteMode ? '#ef4444' : 'rgba(255,255,255,0.1)';
+    btn.innerText = window.isBillDeleteMode ? 'Cancel Deletion Mode' : 'Delete Billing';
+  }
+  if (window.renderBills) window.renderBills();
+};
+
+window.handleBillRowDblClick = function (tr) {
+  if (!window.isBillDeleteMode) return;
+  const customerId = tr.getAttribute('data-customer-id');
+  const billId = tr.getAttribute('data-bill-id');
+  const cName = tr.getAttribute('data-customer-name');
+  const acct = tr.getAttribute('data-account');
+  const month = tr.getAttribute('data-month');
+  const amount = tr.getAttribute('data-amount');
+  window.confirmBillDeletion(customerId, billId, cName, acct, month, amount);
+};
+
+window.confirmBillDeletion = async function (customerId, billId, cName, acct, month, amount) {
+  const confirmMsg = "Are you sure you want to delete this billing statement?\n\n" +
+    "• Customer: " + (cName || 'Unknown') + "\n" +
+    "• Account #: " + (acct || 'N/A') + "\n" +
+    "• Month: " + (month || 'N/A') + "\n" +
+    "• Amount: ₱" + parseFloat(amount || 0).toLocaleString() + "\n\n" +
+    "This will permanently remove the billing statement.";
+
+  if (window.confirm(confirmMsg)) {
+    try {
+      const { db, firestore } = await window._getAdminDb();
+      const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
+      await firestore.deleteDoc(billDocRef);
+
+      if (window._adminBillsDocs) {
+        window._adminBillsDocs = window._adminBillsDocs.filter(d => d.id !== billId);
+      }
+
+      alert("Billing statement deleted.");
+
+      if (window.updateBankingStats) window.updateBankingStats();
+      if (window.renderBills) await window.renderBills();
+    } catch (e) {
+      console.error("Failed to delete billing statement:", e);
+      alert("Failed to delete billing statement.");
+    }
+  }
+};
+
 window.renderBills = async function () {
   const tb = document.getElementById('bm-tbody');
   if (!tb) return;
@@ -2892,12 +2951,34 @@ window.renderBills = async function () {
 
       const badgeColor = displayStatus === 'Overdue' ? '#E53935' : (displayStatus === 'Waiting' ? '#f97316' : '#f59e0b');
       const realBillId = b.billId || d.id;
+      const isDel = window.isBillDeleteMode;
+
+      let rowBg = 'transparent';
+      let rowClick = `window.openReceiptPage('${realBillId}', true)`;
+      let rowDblClick = '';
+      let hoverBg = 'rgba(255,255,255,0.05)';
+      let hoverOutBg = 'transparent';
+
+      if (isDel) {
+        rowBg = 'rgba(239, 68, 68, 0.2)';
+        hoverBg = 'rgba(239, 68, 68, 0.4)';
+        hoverOutBg = 'rgba(239, 68, 68, 0.2)';
+        rowClick = '';
+        rowDblClick = 'window.handleBillRowDblClick(this)';
+      }
 
       html += `
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer;"
-            onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='0 0 15px rgba(255,255,255,0.1)'"
-            onmouseout="this.style.background='transparent'; this.style.boxShadow='none'"
-            onclick="window.openReceiptPage('${realBillId}', true)">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02); transition: all 0.2s; cursor: pointer; background: ${rowBg};"
+            data-customer-id="${d.ref.parent.parent.id}"
+            data-bill-id="${d.id}"
+            data-customer-name="${(cName).replace(/"/g, '&quot;')}"
+            data-account="${(b.accountNumber || '').replace(/"/g, '&quot;')}"
+            data-month="${(b.month || b.billingMonth || '-').replace(/"/g, '&quot;')}"
+            data-amount="${b.amount || 0}"
+            onmouseover="this.style.background='${hoverBg}'; this.style.boxShadow='0 0 15px rgba(${isDel ? '239,68,68,0.3' : '255,255,255,0.1'})'"
+            onmouseout="this.style.background='${hoverOutBg}'; this.style.boxShadow='none'"
+            onclick="${rowClick}"
+            ondblclick="${rowDblClick}">
           <td style="padding: 1rem; color: #fff;">${displayStatus === 'Waiting' ? (b.processedBy || 'Unknown') : 'N/A'}</td>
           <td style="padding: 1rem; color: #fff;">${cName}</td>
           <td style="padding: 1rem; font-family: monospace;">${b.accountNumber || 'N/A'}</td>
@@ -2907,11 +2988,13 @@ window.renderBills = async function () {
           <td style="padding: 1rem;">${b.dueDate || '-'}</td>
           <td style="padding: 1rem;"><span style="color: ${badgeColor}; background: ${badgeColor}22; padding: 0.2rem 0.5rem; border-radius: 4px;">${displayStatus}</span></td>
           <td style="padding: 1rem;">
-            ${displayStatus === 'Waiting' ?
+            ${isDel ?
+          `<button onclick="event.stopPropagation(); window.confirmBillDeletion('${d.ref.parent.parent.id}', '${d.id}', '${(cName).replace(/'/g, "\\'")}', '${(b.accountNumber || '').replace(/'/g, "\\'")}', '${(b.month || b.billingMonth || '-').replace(/'/g, "\\'")}', '${b.amount || 0}')" style="background: #ef4444; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">Delete</button>`
+          : (displayStatus === 'Waiting' ?
           `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '${b.processedBy || ''}', event)" style="background: #f59e0b; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">Approve</button>`
           :
           `<button onclick="event.stopPropagation(); window.markAdminBillPaid(this, '${d.id}', '${d.ref.parent.parent.id}', '${b.amount || 0}', '${b.month || b.billingMonth || ''}', '${b.plan || ''}', '${cName}', '${b.accountNumber || ''}', '', event)" style="background: #10b981; color: #fff; border: none; padding: 0.3rem 0.8rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">Paid</button>`
-        }
+          )}
           </td>
         </tr>
       `;
@@ -3002,6 +3085,7 @@ window.renderPayments = async function () {
 };
 window.initAdminReports = async function () {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     if (window._adminReportsUnsub) window._adminReportsUnsub();
@@ -3038,6 +3122,7 @@ window.renderAdminReportsTable = async function () {
   if (!tb) return;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-reports-search').value || '').toLowerCase();
     const f = document.getElementById('admin-reports-filter').value;
@@ -3131,6 +3216,7 @@ window.renderAdminReportsTable = async function () {
 
 window.openAdminComplaint = async function (id, viewMode = 'Complaints') {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const collectionName = viewMode === 'Apply' ? 'applications' : 'complaints';
     const docRef = firestore.doc(db, collectionName, id);
@@ -3209,6 +3295,7 @@ window.closeAdminComplaint = function () {
 window.toggleChatbotPause = async function (psid, currentPaused) {
   if (!psid) return;
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const newPausedState = !currentPaused;
 
@@ -3234,6 +3321,7 @@ window.toggleChatbotPause = async function (psid, currentPaused) {
 
 window.openAdminReport = async function (id) {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const doc = await firestore.getDoc(firestore.doc(db, "reports", id));
     if (!doc.exists()) return;
@@ -3357,6 +3445,7 @@ window.closeAdminReport = function () {
 
 window.initAdminAccounts = async function () {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     if (window._adminUsersUnsub) window._adminUsersUnsub();
@@ -3466,6 +3555,7 @@ window.renderAdminClientsTable = async function () {
   if (!tb) return;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-clients-search').value || '').toLowerCase();
     const p = document.getElementById('admin-clients-plan-filter').value;
@@ -3759,6 +3849,7 @@ window.filterAdminAccounts = async function () {
   if (!tb) return;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const s = (document.getElementById('admin-technician-search').value || '').toLowerCase();
 
@@ -3856,6 +3947,7 @@ window.submitNewStaffAccount = async function () {
   btn.innerText = 'Adding...';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Check email exists
@@ -4098,6 +4190,7 @@ window.openAdminClientModal = async function (id) {
   document.body.style.cursor = 'wait';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const doc = await firestore.getDoc(firestore.doc(db, "users", id));
 
@@ -4407,6 +4500,7 @@ window.sendBillingEmail = async function () {
   statusEl.innerHTML = '';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Query users
@@ -4485,6 +4579,7 @@ window.sendMaintenanceAdvisory = async function () {
   btn.innerText = 'Sending...';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // To simulate sending, we add to a "communications" collection
@@ -4553,6 +4648,7 @@ window.sendMaintenanceAdvisory = async function () {
 
 window.openReceiptPage = async function (paymentId, isPending = false) {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     let pm = null;
@@ -5047,6 +5143,7 @@ window.unpaidAdminBill = async function (paymentId, customerId, cName) {
   if (!confirm(`Are you sure you want to mark ${cName}'s payment as UNPAID?\nThis will revert the payment and update the Google Sheet.`)) return;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Fetch payment to get details for recreation
@@ -5119,6 +5216,7 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
   btn.disabled = true;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Check if reference number is already saved
@@ -5333,6 +5431,7 @@ window.initAdminChatbox = async function () {
   window._activeChatUser = null;
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     const adminCol = firestore.collection(db, "admin");
     const unsubUsers = firestore.onSnapshot(adminCol, (snapshot) => {
@@ -5603,6 +5702,7 @@ window.chatboxDeleteMsg = async function (msgId, type, targetId) {
     : "Are you sure you want to delete this message? This will also unassign the task/client from the technician.";
   if (!confirm(confirmText)) return;
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
     await firestore.deleteDoc(firestore.doc(db, "messages", msgId));
 
@@ -5619,6 +5719,7 @@ window.chatboxDeleteMsg = async function (msgId, type, targetId) {
 
 window.initChatboxTools = async function () {
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Fetch reports
@@ -5776,6 +5877,7 @@ window.chatboxSendReport = async function (reportId) {
   const myName = adminUser.fullName || adminUser.name || 'Admin';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     // Fetch related user for location
@@ -5868,6 +5970,7 @@ window.chatboxSendClient = async function (clientId) {
   const myName = adminUser.fullName || adminUser.name || 'Admin';
 
   try {
+    window.isBillDeleteMode = false;
     const { db, firestore } = await window._getAdminDb();
 
     let location = client.rawLocation || null;
