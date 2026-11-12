@@ -6,6 +6,7 @@ import { db } from '../config/firebase';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { resolveStatementDate, buildCustomerLedger, computePriorBillingState, getPlanBaseAmount } from '../utils/billingHelpers';
 
 const { width } = Dimensions.get('window');
 
@@ -541,27 +542,10 @@ export default function OverviewScreen({ user, navigation }) {
 
                 const isPaidReceipt = activeRec.status === 'paid' || activeRec.collection === 'payments';
 
-                const statementDateObj = isPaidReceipt
-                  ? new Date(activeRec.datePaid || activeRec.date || activeRec.dateSent || 0)
-                  : new Date(activeRec.dateSent || activeRec.date || 0);
+                const statementDateObj = resolveStatementDate(activeRec);
                 const statementDateStr = statementDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-                const allPays = [];
-                (typeof paymentsData !== 'undefined' ? paymentsData : []).forEach(p => {
-                  let origDateSent = p.dateSent || p.date || p.datePaid || '';
-                  if (p.billId) {
-                    const bMatch = (typeof billsData !== 'undefined' ? billsData : []).find(b => b.id === p.billId);
-                    if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
-                  }
-                  allPays.push({ ...p, isPaidRec: true, sortDate: origDateSent });
-                });
-                (typeof billsData !== 'undefined' ? billsData : []).forEach(b => {
-                  if (b.status !== 'paid') {
-                    allPays.push({ ...b, isPaidRec: false, sortDate: b.dateSent || b.datePaid || b.date || '' });
-                  }
-                });
-
-                allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
+                const allPays = buildCustomerLedger(typeof paymentsData !== 'undefined' ? paymentsData : [], typeof billsData !== 'undefined' ? billsData : []);
 
                 const amount = parseFloat(String(activeRec.amount || 0).replace(/[^0-9.]/g, '')) || 0;
                 const actualCurrentCharges = amount;
@@ -570,29 +554,12 @@ export default function OverviewScreen({ user, navigation }) {
                 let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
 
                 if (baseAmount === 0) {
-                  const pStr = String(userData.plan || userData.Plan || activeRec.plan || '').toLowerCase();
-                  if (pStr.includes('200')) baseAmount = 3500;
-                  else if (pStr.includes('100')) baseAmount = 2500;
-                  else if (pStr.includes('70')) baseAmount = 2000;
-                  else if (pStr.includes('50')) baseAmount = 1500;
-                  else if (pStr.includes('30')) baseAmount = 1000;
-                  else baseAmount = amount > 0 ? amount : 0;
+                  baseAmount = getPlanBaseAmount(userData.plan || userData.Plan || activeRec.plan, amount > 0 ? amount : 0);
                 }
 
-                let prevPaid = true;
-                let prevCharges = 0; // Default to 0 for start of records
-                const currentIdx = allPays.findIndex(p => p.id === activeRec.id || p.billId === activeRec.id);
-                if (currentIdx > 0) {
-                  prevPaid = allPays[currentIdx - 1].isPaidRec;
-                  if (!prevPaid) {
-                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
-                  } else {
-                    prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
-                  }
-                }
+                const { prevPaid, prevCharges, remainingBalance } = computePriorBillingState(allPays, activeRec.id, baseAmount);
 
                 let currentCharges = baseAmount > 0 ? baseAmount : amount;
-                let remainingBalance = prevPaid ? 0 : prevCharges;
 
                 let paymentMade = isPaidReceipt ? amount : 0;
                 let totalAmountDue = currentCharges + remainingBalance - paymentMade;
@@ -600,6 +567,9 @@ export default function OverviewScreen({ user, navigation }) {
 
                 if (!isPaidReceipt && activeRec.status === 'partially_paid') {
                   totalAmountDue = parseFloat(String(activeRec.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+                }
+                if (activeRec.totalAmountDueOverride !== undefined && activeRec.totalAmountDueOverride !== null) {
+                  totalAmountDue = parseFloat(String(activeRec.totalAmountDueOverride).replace(/[^0-9.]/g, '')) || 0;
                 }
 
                 let previousCharges = prevCharges;

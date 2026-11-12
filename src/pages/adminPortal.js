@@ -1,3 +1,5 @@
+import { parseBillingMonthInfo, resolveStatementDate, buildCustomerLedger, computePriorBillingState, getPlanBaseAmount } from '../utils/billingHelpers.js';
+
 window.renderAdminLayout = (activeRoute, pageTitle, contentHtml) => {
   let isAdmin = false;
   let adminRole = 'Minimal';
@@ -1582,13 +1584,8 @@ export const adminViews = {
           }
         });
 
-        const now = new Date();
         const monthSelect = document.getElementById('comm-billing-month');
-        const isAdvance = monthSelect && monthSelect.value === 'next';
-        const billingDate = isAdvance ? new Date(now.getFullYear(), now.getMonth() + 1, 1) : now;
-        const billingMonth = billingDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const dueDate = new Date(billingDate.getFullYear(), billingDate.getMonth(), 7);
-        const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const { billingMonth, statementDate, statementIso, dueDateStr } = parseBillingMonthInfo(monthSelect ? monthSelect.value : 'current');
 
         let newBillId = '';
         for (let d = 0; d < 12; d++) {
@@ -1608,7 +1605,8 @@ export const adminViews = {
           address: '',
           billingMonth: billingMonth,
           dueDate: dueDateStr,
-          dateSent: now.toISOString(),
+          dateSent: statementIso,
+          timestamp: Timestamp.fromDate(statementDate),
           status: 'unread',
           type: 'billing_statement'
         };
@@ -1654,7 +1652,7 @@ export const adminViews = {
 
       try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, collection, getDocs, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { getFirestore, collection, getDocs, addDoc, Timestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
         const db = getFirestore();
         const usersSnapshot = await getDocs(collection(db, "users"));
@@ -1668,13 +1666,8 @@ export const adminViews = {
 
         let sentCount = 0;
 
-        const now = new Date();
         const allMonthSelect = document.getElementById('comm-all-billing-month');
-        const isAdvanceAll = allMonthSelect && allMonthSelect.value === 'next';
-        const billingDateAll = isAdvanceAll ? new Date(now.getFullYear(), now.getMonth() + 1, 1) : now;
-        const billingMonth = billingDateAll.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const dueDate = new Date(billingDateAll.getFullYear(), billingDateAll.getMonth(), 7);
-        const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const { billingMonth, statementDate, statementIso, dueDateStr } = parseBillingMonthInfo(allMonthSelect ? allMonthSelect.value : 'current');
 
         const logBody = document.getElementById('comm-log-body');
         if (logBody) {
@@ -1730,7 +1723,8 @@ export const adminViews = {
             address: '',
             billingMonth: billingMonth,
             dueDate: dueDateStr,
-            dateSent: now.toISOString(),
+            dateSent: statementIso,
+            timestamp: Timestamp.fromDate(statementDate),
             status: 'unread',
             type: 'billing_statement'
           };
@@ -1810,7 +1804,13 @@ export const adminViews = {
     const curMonthStr = nowBilling.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     const nextDateBilling = new Date(nowBilling.getFullYear(), nowBilling.getMonth() + 1, 1);
     const nextMonthStr = nextDateBilling.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-    const monthOptionsHTML = `<option value="current">${curMonthStr} (Current)</option><option value="next">${nextMonthStr} (Advance)</option>`;
+    let pastMonthsHTML = '';
+    for (let i = 1; i <= 11; i++) {
+      const pastD = new Date(nowBilling.getFullYear(), nowBilling.getMonth() - i, 1);
+      const pastStr = pastD.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      pastMonthsHTML += `<option value="${pastStr}">${pastStr}</option>`;
+    }
+    const monthOptionsHTML = `<option value="current" selected>${curMonthStr} (Current)</option><option value="next">${nextMonthStr} (Advance)</option>${pastMonthsHTML}`;
 
     const content = `
       <div style="margin-bottom: 1.5rem;">
@@ -4484,85 +4484,6 @@ window.requestAdminClientUpdate = async function () {
 };
 
 
-window.sendBillingEmail = async function () {
-  const acctInput = document.getElementById('comm-acct-number');
-  const statusEl = document.getElementById('comm-status');
-  const sendBtn = document.getElementById('comm-send-btn');
-  const accountNumber = acctInput ? acctInput.value.trim() : '';
-
-  if (!accountNumber) {
-    statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">Please enter an account number.</div>';
-    return;
-  }
-
-  sendBtn.disabled = true;
-  sendBtn.innerHTML = 'Sending...';
-  statusEl.innerHTML = '';
-
-  try {
-    window.isBillDeleteMode = false;
-    const { db, firestore } = await window._getAdminDb();
-
-    // Query users
-    const q = firestore.query(firestore.collection(db, "users"), firestore.where("accountNumber", "==", accountNumber));
-    const snapshot = await firestore.getDocs(q);
-
-    if (snapshot.empty) {
-      statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">No user found with account number: <strong>' + accountNumber + '</strong></div>';
-      sendBtn.disabled = false;
-      sendBtn.innerHTML = 'Send Billing Statement';
-      return;
-    }
-
-    const userData = snapshot.docs[0].data();
-    const userId = snapshot.docs[0].id;
-
-    if (!userData.email) {
-      statusEl.innerHTML = '<div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #f59e0b; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">Customer does not have an email address on file.</div>';
-      sendBtn.disabled = false;
-      sendBtn.innerHTML = 'Send Billing Statement';
-      return;
-    }
-
-    const today = new Date();
-    const currentMonth = today.toLocaleString('default', { month: 'long', year: 'numeric' });
-    const dueDate = new Date(today);
-    dueDate.setDate(dueDate.getDate() + 15);
-    const dueDateStr = dueDate.toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    let amountToBill = parseFloat(String(userData.amount || userData.ammount || '').replace(/[^0-9.]/g, '')) || 0;
-    if (!amountToBill) {
-      const PLAN_RATES = {
-        '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
-        '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
-        '200Mbps': 2000, '300Mbps': 2700
-      };
-      amountToBill = PLAN_RATES[userData.plan] || 0;
-    }
-
-    await firestore.addDoc(firestore.collection(db, 'users', userId, 'billing_emails'), {
-      to: userData.email,
-      customerName: userData.fullName || 'Customer',
-      accountNumber: userData.accountNumber,
-      month: currentMonth,
-      plan: userData.plan || 'Unknown',
-      amount: amountToBill,
-      dueDate: dueDateStr,
-      status: 'Pending',
-      createdAt: firestore.serverTimestamp()
-    });
-
-    statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Billing statement queued for ' + (userData.fullName || 'Customer') + ' (' + userData.email + ')</div>';
-    acctInput.value = '';
-
-  } catch (err) {
-    statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">Error: ' + err.message + '</div>';
-  }
-
-  sendBtn.disabled = false;
-  sendBtn.innerHTML = 'Send Billing Statement';
-};
-
 window.sendMaintenanceAdvisory = async function () {
   const type = document.getElementById('comm-advisory-type').value;
   const target = document.getElementById('comm-advisory-target').value;
@@ -4677,107 +4598,70 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
 
     let address = 'N/A';
     let baseAmount = 0;
-    if (pm.accountNumber) {
+    let targetUserId = pm.userId || null;
+    if (pm.accountNumber && pm.accountNumber !== 'N/A') {
       const uq = firestore.query(firestore.collection(db, "users"), firestore.where("accountNumber", "==", pm.accountNumber));
       const uSnap = await firestore.getDocs(uq);
       if (!uSnap.empty) {
         const u = uSnap.docs[0].data();
+        targetUserId = uSnap.docs[0].id;
         address = u.address || 'N/A';
-        if (u.amount) {
-          baseAmount = parseFloat(String(u.amount).replace(/[^0-9.]/g, '')) || 0;
+        const rawUserAmt = u.amount || u.ammount;
+        if (rawUserAmt) {
+          baseAmount = parseFloat(String(rawUserAmt).replace(/[^0-9.]/g, '')) || 0;
         }
       }
     }
 
     const recordAmount = parseFloat(String(pm.amount).replace(/[^0-9.]/g, '')) || 0;
 
-    // If we didn't find baseAmount in the user doc, deduce it from their plan or the billed amount!
     if (baseAmount === 0 && recordAmount > 0) {
-      const pStr = pm.plan || '';
-      if (pStr.includes('300Mbps')) baseAmount = 2700;
-      else if (pStr.includes('200Mbps')) baseAmount = 2000;
-      else if (pStr.includes('150Mbps')) baseAmount = 1700;
-      else if (pStr.includes('100Mbps')) baseAmount = 1500;
-      else if (pStr.includes('70Mbps')) baseAmount = 1300;
-      else if (pStr.includes('60Mbps')) baseAmount = 1200;
-      else if (pStr.includes('50Mbps')) baseAmount = 1000;
-      else if (pStr.includes('45Mbps')) baseAmount = 900;
-      else if (pStr.includes('30Mbps')) baseAmount = 800;
-      else if (pStr.includes('20Mbps')) baseAmount = 599;
-      else {
-        // If we still don't know, guess based on multiples of common rates
-        if (recordAmount % 2000 === 0) baseAmount = 2000;
-        else if (recordAmount % 1500 === 0) baseAmount = 1500;
-        else if (recordAmount % 1000 === 0) baseAmount = 1000;
-        else baseAmount = recordAmount; // Last resort fallback
-      }
+      baseAmount = getPlanBaseAmount(pm.plan, recordAmount);
     }
 
     let prevCharges = 0;
     let prevPaid = true;
+    let remainingBalance = 0;
     try {
-      if (pm.accountNumber && pm.accountNumber !== 'N/A') {
-        const uq = firestore.query(firestore.collection(db, "users"), firestore.where("accountNumber", "==", pm.accountNumber));
-        const uSnap = await firestore.getDocs(uq);
-        let billsData = [];
-        if (!uSnap.empty) {
-          const uDoc = uSnap.docs[0];
-          const billsSnap = await firestore.getDocs(firestore.collection(db, "users", uDoc.id, "billing_emails"));
-          billsSnap.forEach(d => { billsData.push({ id: d.id, ...d.data() }); });
-        }
+      let billsData = [];
+      if (targetUserId) {
+        const billsSnap = await firestore.getDocs(firestore.collection(db, "users", targetUserId, "billing_emails"));
+        billsSnap.forEach(d => { billsData.push({ id: d.id, ...d.data() }); });
+      }
 
+      const paymentDocs = [];
+      if (pm.accountNumber && pm.accountNumber !== 'N/A') {
         const paymentsQ = firestore.query(firestore.collection(db, "payments"), firestore.where("accountNumber", "==", pm.accountNumber));
         const allPaySnap = await firestore.getDocs(paymentsQ);
-        const allPays = [];
-        allPaySnap.forEach(d => {
-          const pd = d.data();
-          let origDateSent = pd.dateSent || pd.date || pd.datePaid || '';
-          if (pd.billId) {
-            const bMatch = billsData.find(b => b.id === pd.billId);
-            if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
-          }
-          allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: origDateSent });
-        });
-
-        billsData.forEach(bd => {
-          if (bd.status !== 'paid') {
-            allPays.push({ id: bd.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || bd.datePaid || bd.date || '' });
-          }
-        });
-
-        allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
-
-        const currentIdx = allPays.findIndex(p => p.id === paymentId || p.billId === paymentId);
-        if (currentIdx > 0) {
-          prevPaid = allPays[currentIdx - 1].isPaidRec;
-          prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
-        }
+        allPaySnap.forEach(d => { paymentDocs.push({ id: d.id, ...d.data() }); });
       }
+      if (targetUserId) {
+        const paymentsByUidQ = firestore.query(firestore.collection(db, "payments"), firestore.where("userId", "==", targetUserId));
+        const uidPaySnap = await firestore.getDocs(paymentsByUidQ);
+        uidPaySnap.forEach(d => { paymentDocs.push({ id: d.id, ...d.data() }); });
+      }
+
+      const allPays = buildCustomerLedger(paymentDocs, billsData);
+      const priorState = computePriorBillingState(allPays, paymentId, baseAmount);
+      prevPaid = priorState.prevPaid;
+      prevCharges = priorState.prevCharges;
+      remainingBalance = priorState.remainingBalance;
     } catch (e) { console.warn('Could not fetch previous charges:', e); }
 
     let amountPaid = isPending ? 0 : recordAmount;
-    let currentCharges = isPending ? recordAmount : baseAmount;
-    let remainingBalance = prevPaid ? 0 : prevCharges;
-    let totalAmountDue = isPending ? (currentCharges + remainingBalance) : 0;
+    let currentCharges = isPending ? (recordAmount || baseAmount) : (baseAmount > 0 ? baseAmount : recordAmount);
+    let totalAmountDue = Math.max(0, currentCharges + remainingBalance - amountPaid);
+    if (pm.totalAmountDueOverride !== undefined && pm.totalAmountDueOverride !== null) {
+      totalAmountDue = parseFloat(String(pm.totalAmountDueOverride).replace(/[^0-9.]/g, '')) || 0;
+    }
     let previousChargesText = prevPaid && prevCharges > 0 ? '\u20b1' + prevCharges.toLocaleString(undefined, { minimumFractionDigits: 2 }) + ' CR' : '\u20b10.00';
 
-    let pDate = new Date();
-    if (pm.timestamp && pm.timestamp.toDate) pDate = pm.timestamp.toDate();
-    else if (pm.datePaid) pDate = new Date(pm.datePaid);
-    else if (pm.date) pDate = new Date(pm.date);
-    else if (pm.dateSent) pDate = new Date(pm.dateSent);
-    else if (pm.billingMonth) {
-      const bmDate = new Date(pm.billingMonth);
-      if (!isNaN(bmDate.getTime())) pDate = bmDate;
-    }
-
+    const pDate = resolveStatementDate(pm);
     const dateStr = pDate.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     let dueStr = pm.dueDate || '';
     if (!dueStr) {
-      let due = new Date(pDate);
-      due.setDate(7);
-      dueStr = due.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      dueStr = parseBillingMonthInfo(pm.billingMonth || pm.month || pm.period || pDate).dueDateStr;
     }
 
     const customerName = pm.customerName || pm.name || 'Unknown';
@@ -4959,9 +4843,15 @@ window.openReceiptPage = async function (paymentId, isPending = false) {
                 <span>Monthly Service Fee (${plan})</span>
                 <span>${fmt(currentCharges)}</span>
               </div>
+              ${!isPending ? `
+              <div class="ch-row">
+                <span><em>Less:</em> Payment Received — Thank You!</span>
+                <span>${fmt(amountPaid)} CR</span>
+              </div>
+              ` : ''}
               <div class="ch-sub">
-                <span><b>Total Current Charges</b></span>
-                <span>${fmt(currentCharges)}</span>
+                <span><b>Total Current Charges</b>${!isPending ? ' — <span style="font-weight:400; color:#64748b;">After Payment</span>' : ''}</span>
+                <span>${fmt(Math.max(0, currentCharges - amountPaid))}</span>
               </div>
             </div>
             
@@ -5157,29 +5047,23 @@ window.unpaidAdminBill = async function (paymentId, customerId, cName) {
         let uData = {};
         if (userDoc.exists()) uData = userDoc.data();
 
+        const billMonthVal = pm.billingMonth || pm.month || pm.period || '-';
+        const bInfo = parseBillingMonthInfo(billMonthVal);
         const billData = {
           amount: pm.amount || uData.ammount || uData.amount || 0,
-          billingMonth: pm.billingMonth || pm.month || pm.period || '-',
+          billingMonth: billMonthVal !== '-' ? billMonthVal : bInfo.billingMonth,
           plan: pm.plan || uData.Plan || uData.plan || '-',
           status: 'Pending',
-          timestamp: firestore.serverTimestamp(),
+          timestamp: firestore.Timestamp.fromDate(bInfo.statementDate),
           name: pm.customerName || pm.name || uData.name || cName || 'Unknown',
           accountNumber: pm.accountNumber || uData.accountNumber || '',
           email: uData.email || '',
           phone: uData.phone || '',
           facebook: uData.facebook || '',
-          dateSent: new Date().toISOString(),
+          dateSent: bInfo.statementIso,
+          dueDate: pm.dueDate || bInfo.dueDateStr,
           type: 'billing_statement'
         };
-
-        // Try to calculate due date if missing
-        if (pm.dueDate) {
-          billData.dueDate = pm.dueDate;
-        } else {
-          const n = new Date();
-          const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-          billData.dueDate = months[n.getMonth()] + ' 7, ' + n.getFullYear();
-        }
 
         await firestore.addDoc(firestore.collection(db, "users", uid, "billing_emails"), billData);
       }
@@ -5299,6 +5183,9 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
     btn.innerHTML = 'Processing...';
 
     const billDocRef = firestore.doc(db, "users", customerId, "billing_emails", billId);
+    const existingBillSnap = await firestore.getDoc(billDocRef);
+    const existingBillData = existingBillSnap.exists() ? existingBillSnap.data() : {};
+    const bInfo = parseBillingMonthInfo(billMonth || existingBillData.billingMonth || existingBillData.month || existingBillData.period);
 
     const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
     const adminName = adminUser.fullName || adminUser.name || adminUser.email || 'Admin';
@@ -5309,10 +5196,12 @@ window.markAdminBillPaid = async function (btn, billId, customerId, amountStr, b
       userId: customerId,
       billId: billId,
       amount: parseFloat(String(amountStr).replace(/,/g, '')) || 0,
-      billingMonth: billMonth || '-',
+      billingMonth: billMonth || existingBillData.billingMonth || bInfo.billingMonth,
       plan: billPlan || '-',
       method: 'Cash',
       paymentMethod: 'Cash',
+      dateSent: existingBillData.dateSent || bInfo.statementIso,
+      dueDate: existingBillData.dueDate || bInfo.dueDateStr,
       datePaid: now.toISOString(),
       status: 'completed',
       timestamp: firestore.serverTimestamp(),

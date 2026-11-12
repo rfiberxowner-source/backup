@@ -1,3 +1,5 @@
+import { parseBillingMonthInfo, resolveStatementDate, buildCustomerLedger, computePriorBillingState, getPlanBaseAmount } from '../utils/billingHelpers.js';
+
 export const clientViews = {
   '/clientlogin': () => {
     // Hide footer/header globally
@@ -1229,12 +1231,10 @@ export const clientViews = {
         const clientAddress = userObj.address || 'None';
         const accountNumber = pay.accountNumber || userObj.accountNumber || 'N/A';
         const datePaidStr = pay.datePaid ? new Date(pay.datePaid).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : (isPaid ? 'N/A' : 'UNPAID');
-        let pDate = pay.dateSent ? new Date(pay.dateSent) : (pay.datePaid ? new Date(pay.datePaid) : (pay.billingMonth && !isNaN(new Date(pay.billingMonth).getTime()) ? new Date(pay.billingMonth) : new Date()));
+        let pDate = resolveStatementDate(pay);
         let dueDate = pay.dueDate || '';
         if (!dueDate) {
-          let due = new Date(pDate);
-          due.setDate(7);
-          dueDate = due.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          dueDate = parseBillingMonthInfo(pay.billingMonth || pay.month || pay.period || pDate).dueDateStr;
         }
         const rawPlan = pay.plan || '-';
         let plan = rawPlan;
@@ -1258,63 +1258,51 @@ export const clientViews = {
         let baseAmount = parseFloat(baseAmountStr.replace(/[^0-9.]/g, '')) || 0;
 
         if (baseAmount === 0) {
-          const pStr = String(userObj.plan || userObj.Plan || pay.plan || '').toLowerCase();
-          if (pStr.includes('200')) baseAmount = 3500;
-          else if (pStr.includes('100')) baseAmount = 2500;
-          else if (pStr.includes('70')) baseAmount = 2000;
-          else if (pStr.includes('50')) baseAmount = 1500;
-          else if (pStr.includes('30')) baseAmount = 1000;
-          else baseAmount = amount > 0 ? amount : 0;
+          baseAmount = getPlanBaseAmount(userObj.plan || userObj.Plan || pay.plan, amount > 0 ? amount : 0);
         }
 
         let prevPaid = true;
         let prevCharges = 0; // Default to 0 for start of records
+        let remainingBalance = 0;
         try {
-          if (accountNumber && accountNumber !== 'N/A') {
-            const userId = userObj.id || userObj.uid;
+          const userId = userObj.id || userObj.uid;
+          if ((accountNumber && accountNumber !== 'N/A') || userId) {
             let billsData = [];
             if (userId) {
               const billsSnap = await getDocs(collection(db, "users", userId, "billing_emails"));
               billsSnap.forEach(d => { billsData.push({ id: d.id, ...d.data() }); });
             }
 
-            const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
-            const allPaySnap = await getDocs(paymentsQ);
-            const allPays = [];
-            allPaySnap.forEach(d => {
-              const pd = d.data();
-              let origDateSent = pd.dateSent || pd.date || pd.datePaid || '';
-              if (pd.billId) {
-                const bMatch = billsData.find(b => b.id === pd.billId);
-                if (bMatch && bMatch.dateSent) origDateSent = bMatch.dateSent;
-              }
-              allPays.push({ id: d.id, ...pd, isPaidRec: true, sortDate: origDateSent });
-            });
-
-            billsData.forEach(bd => {
-              if (bd.status !== 'paid') {
-                allPays.push({ id: bd.id, ...bd, isPaidRec: false, sortDate: bd.dateSent || bd.datePaid || bd.date || '' });
-              }
-            });
-
-            allPays.sort((a, b) => new Date(a.sortDate) - new Date(b.sortDate));
-
-            const currentIdx = allPays.findIndex(p => p.id === paymentDocId || p.billId === paymentDocId);
-            if (currentIdx > 0) {
-              prevPaid = allPays[currentIdx - 1].isPaidRec;
-              prevCharges = parseFloat(String(allPays[currentIdx - 1].amount).replace(/[^0-9.]/g, '')) || baseAmount;
+            const paymentDocs = [];
+            if (accountNumber && accountNumber !== 'N/A') {
+              const paymentsQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
+              const allPaySnap = await getDocs(paymentsQ);
+              allPaySnap.forEach(d => { paymentDocs.push({ id: d.id, ...d.data() }); });
             }
+            if (userId) {
+              const paymentsByUidQ = query(collection(db, "payments"), where("userId", "==", userId));
+              const uidPaySnap = await getDocs(paymentsByUidQ);
+              uidPaySnap.forEach(d => { paymentDocs.push({ id: d.id, ...d.data() }); });
+            }
+
+            const allPays = buildCustomerLedger(paymentDocs, billsData);
+            const priorState = computePriorBillingState(allPays, paymentDocId, baseAmount);
+            prevPaid = priorState.prevPaid;
+            prevCharges = priorState.prevCharges;
+            remainingBalance = priorState.remainingBalance;
           }
         } catch (e) { console.warn('Could not fetch previous charges:', e); }
 
         let currentCharges = baseAmount > 0 ? baseAmount : amount;
-        let remainingBalance = prevPaid ? 0 : prevCharges;
         let paymentMade = isPaid ? amount : 0;
         let totalAmountDue = currentCharges + remainingBalance - paymentMade;
         if (totalAmountDue < 0) totalAmountDue = 0; // Overpayments shouldn't show negative due here unless designed so
 
         if (!isPaid && pay.status === 'partially_paid') {
           totalAmountDue = parseFloat(String(pay.amount || 0).replace(/[^0-9.]/g, '')) || 0;
+        }
+        if (pay.totalAmountDueOverride !== undefined && pay.totalAmountDueOverride !== null) {
+          totalAmountDue = parseFloat(String(pay.totalAmountDueOverride).replace(/[^0-9.]/g, '')) || 0;
         }
 
         let previousCharges = prevCharges;
@@ -1385,7 +1373,7 @@ export const clientViews = {
                     <span>\u20b1${previousCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #444; margin-bottom: 0.25rem; padding-left: 1rem;">
-                    <span><em>Less:</em> Payments Received — Thank You!</span>
+                    <span><em>Less:</em> Payments Received — ${prevPaid && previousCharges > 0 ? 'Thank You!' : 'Unpaid'}</span>
                     <span>${prevPaymentText}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #1a1a1a; padding-left: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; margin-top: 0.5rem;">
