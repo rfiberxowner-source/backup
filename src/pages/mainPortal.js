@@ -775,25 +775,6 @@ export const mainViews = {
       </div>
     </section>
 
-
-
-    <!-- Owner Section -->
-    <section id="owner" class="section-container scroll-animate">
-      <div class="about-owner">
-        <div class="about-owner-avatar">
-          <div class="about-owner-placeholder">&#128100;</div>
-        </div>
-        <div class="about-owner-info">
-          <h3 class="about-owner-kicker">Leadership</h3>
-          <h2 class="about-owner-name">The Founder</h2>
-          <h3 style="font-size: 1.75rem; margin-bottom: 1rem; color: var(--accent-color);">Rendell Blanco Noceto</h3>
-          <p class="about-owner-role">Founder & CEO, RFiberX Network and Data Solution</p>
-          <p class="about-owner-bio">Driven by a passion for technology and a commitment to our hometown, our founder established RFiberX to bring reliable, high-speed internet directly to Magdalena. From our very first installation to where we are today, we have remained dedicated to providing our neighbors with the dependable connectivity they need to learn, work, and stay entertained.</p>
-          <blockquote class="about-owner-quote">"Our goal is simple — to ensure our community has the seamless connection it deserves."</blockquote>
-        </div>
-      </div>
-    </section>
-
     <!-- Our Journey Timeline -->
     <section id="journey" class="journey-section scroll-animate">
       <div class="journey-header">
