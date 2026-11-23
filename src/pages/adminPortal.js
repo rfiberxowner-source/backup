@@ -1481,6 +1481,173 @@ export const adminViews = {
         console.log("Expo Push sent (opaque response).");
       } catch (error) { console.error('Error sending push notification:', error); }
     };
+
+    window.getBillingDispatchLogsHTML = function () {
+      let log = null;
+      try {
+        const raw = localStorage.getItem('rfiberx_billing_dispatch_logs');
+        if (raw) log = JSON.parse(raw);
+      } catch (e) { }
+
+      if (!log || (!log.sent && !log.alreadyPaid && !log.alreadySent && !log.excluded)) {
+        return `
+          <div style="background: rgba(11, 15, 25, 0.6); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px; padding: 3rem 1.5rem; text-align: center;">
+            <div style="width: 44px; height: 44px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: #3b82f6;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div style="color: #fff; font-size: 0.95rem; font-weight: 600;">No Billing Dispatch Logs Yet</div>
+            <div style="color: #64748b; font-size: 0.85rem; margin-top: 0.35rem; max-width: 480px; margin-left: auto; margin-right: auto;">
+              When you click <strong>Send Bill Statement to all</strong>, a complete report of sent statements, skipped accounts (already paid or already sent), and excluded accounts will be recorded here and will stay visible even when you switch pages.
+            </div>
+          </div>
+        `;
+      }
+
+      const sent = log.sent || [];
+      const paid = log.alreadyPaid || [];
+      const alreadySent = log.alreadySent || [];
+      const excluded = log.excluded || [];
+
+      function renderList(list, badgeBg, badgeColor, badgeText, showAmount, showReason) {
+        if (!list || list.length === 0) {
+          return '<div style="padding: 0.75rem 1rem; color: #64748b; font-size: 0.85rem; font-style: italic; background: #0b0f19; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">None</div>';
+        }
+        let html = `
+          <div style="max-height: 240px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; background: #0b0f19;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); color: #94a3b8; font-size: 0.72rem; text-transform: uppercase;">
+                  <th style="padding: 0.6rem 1rem;">Account #</th>
+                  <th style="padding: 0.6rem 1rem;">Client Name</th>
+                  <th style="padding: 0.6rem 1rem;">Plan</th>
+                  ${showAmount ? '<th style="padding: 0.6rem 1rem;">Amount</th>' : ''}
+                  ${showReason ? '<th style="padding: 0.6rem 1rem;">Reason / Status</th>' : ''}
+                  <th style="padding: 0.6rem 1rem; text-align: right;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+        list.forEach(item => {
+          html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+              <td style="padding: 0.55rem 1rem; color: #fff; font-family: monospace; font-size: 0.85rem;">${item.accountNumber || '-'}</td>
+              <td style="padding: 0.55rem 1rem; color: #e2e8f0; font-weight: 500;">${item.name || '-'}</td>
+              <td style="padding: 0.55rem 1rem; color: #94a3b8;">${item.plan || '-'}</td>
+              ${showAmount ? `<td style="padding: 0.55rem 1rem; color: #fff; font-weight: 600;">₱${parseFloat(String(item.amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>` : ''}
+              ${showReason ? `<td style="padding: 0.55rem 1rem; color: #cbd5e1; font-size: 0.8rem;">${item.reason || '-'}</td>` : ''}
+              <td style="padding: 0.55rem 1rem; text-align: right;">
+                <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">${badgeText}</span>
+              </td>
+            </tr>
+          `;
+        });
+        html += '</tbody></table></div>';
+        return html;
+      }
+
+      return `
+        <!-- Header Info -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 700;">Billing Month:</span>
+            <span style="background: rgba(229, 57, 53, 0.15); color: #ff6b6b; padding: 0.25rem 0.75rem; border-radius: 6px; font-weight: 700; font-size: 0.9rem;">${log.billingMonth || '-'}</span>
+          </div>
+          <div style="color: #64748b; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Last Dispatch: <span style="color: #cbd5e1;">${log.displayTime || '-'}</span>
+          </div>
+        </div>
+
+        <!-- 4 Summary Counter Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem;">
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.85rem 1rem;">
+            <div style="color: #10b981; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">✓ Sent Statements</div>
+            <div style="color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">${sent.length}</div>
+            <div style="color: #94a3b8; font-size: 0.75rem;">Received new bill</div>
+          </div>
+          <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 0.85rem 1rem;">
+            <div style="color: #3b82f6; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⭐ Skipped (Already Paid)</div>
+            <div style="color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">${paid.length}</div>
+            <div style="color: #94a3b8; font-size: 0.75rem;">Protected from double billing</div>
+          </div>
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 0.85rem 1rem;">
+            <div style="color: #f59e0b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">⚠️ Skipped (Already Sent)</div>
+            <div style="color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">${alreadySent.length}</div>
+            <div style="color: #94a3b8; font-size: 0.75rem;">Statement already exists</div>
+          </div>
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0.85rem 1rem;">
+            <div style="color: #ef4444; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">✕ Did Not Receive</div>
+            <div style="color: #fff; font-size: 1.6rem; font-weight: 700; margin-top: 0.2rem;">${excluded.length}</div>
+            <div style="color: #94a3b8; font-size: 0.75rem;">Disconnected / Non-payment</div>
+          </div>
+        </div>
+
+        <!-- Category Lists -->
+        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+          <!-- 1. Skipped (Already Paid) -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;"></span>
+                <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Skipped Accounts — Already Paid (${paid.length})</span>
+              </div>
+              <span style="color: #94a3b8; font-size: 0.75rem;">No duplicate statement sent</span>
+            </div>
+            ${renderList(paid, 'rgba(59,130,246,0.15)', '#60a5fa', 'Already Paid', true, true)}
+          </div>
+
+          <!-- 2. Skipped (Already Sent) -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;"></span>
+                <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Skipped Accounts — Statement Already Issued (${alreadySent.length})</span>
+              </div>
+              <span style="color: #94a3b8; font-size: 0.75rem;">Active bill in portal</span>
+            </div>
+            ${renderList(alreadySent, 'rgba(245,158,11,0.15)', '#fbbf24', 'Already Sent', true, true)}
+          </div>
+
+          <!-- 3. Did Not Receive (Disconnected / Deleted / Inactive / Non-Payment) -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
+                <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Did Not Receive Billing (${excluded.length})</span>
+              </div>
+              <span style="color: #94a3b8; font-size: 0.75rem;">Disconnected / Unpaid previous / Deleted</span>
+            </div>
+            ${renderList(excluded, 'rgba(239,68,68,0.15)', '#f87171', 'Not Billed', false, true)}
+          </div>
+
+          <!-- 4. Successfully Sent -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+                <span style="color: #fff; font-size: 0.9rem; font-weight: 600;">Successfully Sent Billing Statements (${sent.length})</span>
+              </div>
+              <span style="color: #94a3b8; font-size: 0.75rem;">Dispatched to client portals</span>
+            </div>
+            ${renderList(sent, 'rgba(16,185,129,0.15)', '#34d399', 'Sent', true, false)}
+          </div>
+        </div>
+      `;
+    };
+
+    window.renderBillingDispatchLogs = function () {
+      const container = document.getElementById('comm-dispatch-log-wrapper');
+      if (container && window.getBillingDispatchLogsHTML) {
+        container.innerHTML = window.getBillingDispatchLogsHTML();
+      }
+    };
+
+    window.clearBillingDispatchLogs = function () {
+      if (!confirm("Are you sure you want to clear the billing dispatch log?")) return;
+      localStorage.removeItem('rfiberx_billing_dispatch_logs');
+      window.renderBillingDispatchLogs();
+    };
+
     window.sendDailyReminders = async function () {
       const btn = document.getElementById('comm-reminder-btn');
       const statusEl = document.getElementById('comm-reminder-status');
@@ -1586,6 +1753,48 @@ export const adminViews = {
 
         const monthSelect = document.getElementById('comm-billing-month');
         const { billingMonth, statementDate, statementIso, dueDateStr } = parseBillingMonthInfo(monthSelect ? monthSelect.value : 'current');
+        const targetMonthNorm = billingMonth.trim().toLowerCase();
+
+        // Safeguard: Check if account already paid for this month
+        const payQ = query(collection(db, "payments"), where("accountNumber", "==", accountNumber));
+        const paySnap = await getDocs(payQ);
+        let alreadyPaid = false;
+        paySnap.forEach(d => {
+          const pd = d.data();
+          const pMonth = (pd.billingMonth || pd.month || pd.period || '').trim().toLowerCase();
+          if (pMonth && (pMonth === targetMonthNorm || parseBillingMonthInfo(pMonth).billingMonth.toLowerCase() === targetMonthNorm)) {
+            alreadyPaid = true;
+          }
+        });
+
+        const billingRef = collection(db, "users", userId, "billing_emails");
+        const existingBillsSnap = await getDocs(billingRef);
+        let alreadyBilled = false;
+        existingBillsSnap.forEach(d => {
+          const bd = d.data();
+          const bMonth = (bd.billingMonth || bd.month || bd.period || '').trim().toLowerCase();
+          if (bMonth && (bMonth === targetMonthNorm || parseBillingMonthInfo(bMonth).billingMonth.toLowerCase() === targetMonthNorm)) {
+            if (String(bd.status || '').toLowerCase() === 'paid') {
+              alreadyPaid = true;
+            } else {
+              alreadyBilled = true;
+            }
+          }
+        });
+
+        if (alreadyPaid) {
+          statusEl.innerHTML = '<div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">ℹ</div> Account <strong>' + (userData.name || accountNumber) + '</strong> has <strong>already paid</strong> for ' + billingMonth + '. Statement was not sent to avoid duplicate billing.</div>';
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send Billing Statement';
+          return;
+        }
+
+        if (alreadyBilled) {
+          statusEl.innerHTML = '<div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">⚠️</div> A billing statement for <strong>' + billingMonth + '</strong> has already been sent to <strong>' + (userData.name || accountNumber) + '</strong>.</div>';
+          sendBtn.disabled = false;
+          sendBtn.textContent = 'Send Billing Statement';
+          return;
+        }
 
         let newBillId = '';
         for (let d = 0; d < 12; d++) {
@@ -1611,18 +1820,9 @@ export const adminViews = {
           type: 'billing_statement'
         };
 
-        const billingRef = collection(db, "users", userId, "billing_emails");
         await addDoc(billingRef, billingEmailData);
 
         statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Billing statement sent to <strong>' + (userData.name || accountNumber) + '</strong> (₱' + billingEmailData.amount + ' - ' + billingMonth + ')</div>';
-
-        const logBody = document.getElementById('comm-log-body');
-        if (logBody) {
-          const noRowsMsg = logBody.querySelector('.no-rows');
-          if (noRowsMsg) noRowsMsg.remove();
-
-          logBody.innerHTML = '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">' + (userData.name || '-') + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + accountNumber + '</td><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">' + (billingEmailData.plan || '-') + '</td><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">₱' + billingEmailData.amount + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + billingMonth + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + dueDateStr + '</td><td style="padding: 0.75rem 1rem;"><span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Sent</span></td></tr>' + logBody.innerHTML;
-        }
 
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send Billing Statement';
@@ -1647,15 +1847,24 @@ export const adminViews = {
       if (!confirm("Are you sure you want to send a billing statement to ALL active users?")) return;
 
       sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
+      sendBtn.textContent = 'Analyzing & Sending...';
       statusEl.innerHTML = '';
 
       try {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, collection, getDocs, addDoc, Timestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const { getFirestore, collection, getDocs, addDoc, Timestamp, query, collectionGroup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
         const db = getFirestore();
-        const usersSnapshot = await getDocs(collection(db, "users"));
+        const allMonthSelect = document.getElementById('comm-all-billing-month');
+        const { billingMonth, statementDate, statementIso, dueDateStr } = parseBillingMonthInfo(allMonthSelect ? allMonthSelect.value : 'current');
+        const targetMonthNorm = billingMonth.trim().toLowerCase();
+
+        // 1. Fetch users, payments, and existing bills in parallel
+        const [usersSnapshot, paymentsSnapshot, billingEmailsSnapshot] = await Promise.all([
+          getDocs(collection(db, "users")),
+          getDocs(collection(db, "payments")),
+          getDocs(query(collectionGroup(db, 'billing_emails')))
+        ]);
 
         if (usersSnapshot.empty) {
           statusEl.innerHTML = '<div style="background: rgba(229,57,53,0.1); border: 1px solid rgba(229,57,53,0.2); color: #E53935; padding: 1rem; border-radius: 8px; font-size: 0.9rem;">No users found in database.</div>';
@@ -1664,47 +1873,101 @@ export const adminViews = {
           return;
         }
 
+        // 2. Build set of accounts that already paid for targetMonth
+        const paidAccountsSet = new Set();
+        paymentsSnapshot.docs.forEach(docSnap => {
+          const pd = docSnap.data();
+          const pMonth = (pd.billingMonth || pd.month || pd.period || '').trim().toLowerCase();
+          if (pMonth && (pMonth === targetMonthNorm || parseBillingMonthInfo(pMonth).billingMonth.toLowerCase() === targetMonthNorm)) {
+            if (pd.accountNumber) paidAccountsSet.add(String(pd.accountNumber).trim());
+            if (pd.userId) paidAccountsSet.add(String(pd.userId).trim());
+          }
+        });
+
+        // 3. Build set of accounts that already have a statement for targetMonth
+        const existingBillsSet = new Set();
+        billingEmailsSnapshot.docs.forEach(docSnap => {
+          const bd = docSnap.data();
+          const bMonth = (bd.billingMonth || bd.month || bd.period || '').trim().toLowerCase();
+          if (bMonth && (bMonth === targetMonthNorm || parseBillingMonthInfo(bMonth).billingMonth.toLowerCase() === targetMonthNorm)) {
+            const bStatus = String(bd.status || '').trim().toLowerCase();
+            const parentUid = docSnap.ref && docSnap.ref.parent && docSnap.ref.parent.parent ? docSnap.ref.parent.parent.id : (bd.userId || '');
+            if (bStatus === 'paid') {
+              if (bd.accountNumber) paidAccountsSet.add(String(bd.accountNumber).trim());
+              if (parentUid) paidAccountsSet.add(String(parentUid).trim());
+            } else {
+              if (bd.accountNumber) existingBillsSet.add(String(bd.accountNumber).trim());
+              if (parentUid) existingBillsSet.add(String(parentUid).trim());
+            }
+          }
+        });
+
+        const sentAccounts = [];
+        const skippedAlreadyPaid = [];
+        const skippedAlreadySent = [];
+        const didNotReceive = [];
         let sentCount = 0;
 
-        const allMonthSelect = document.getElementById('comm-all-billing-month');
-        const { billingMonth, statementDate, statementIso, dueDateStr } = parseBillingMonthInfo(allMonthSelect ? allMonthSelect.value : 'current');
-
-        const logBody = document.getElementById('comm-log-body');
-        if (logBody) {
-          const noRowsMsg = logBody.querySelector('.no-rows');
-          if (noRowsMsg) noRowsMsg.remove();
-        }
+        const PLAN_RATES = {
+          '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
+          '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
+          '200Mbps': 2000, '300Mbps': 2700
+        };
 
         for (const docSnap of usersSnapshot.docs) {
           const userId = docSnap.id;
           const userData = docSnap.data();
-
+          const userAcct = String(userData.accountNumber || userData.account || '').trim();
+          const userName = userData.name || userData.fullName || userData.customerName || (userAcct ? 'Acct ' + userAcct : 'Customer');
           const status = String(userData.status || '').trim().toLowerCase();
-          if (status === 'disconnected') continue;
-
           let rawPlan = String(userData.plan || userData.Plan || 'TBD').trim();
-          if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) continue;
+
+          // Category 1: Did Not Receive (Disconnected, Inactive, Deleted, Non-payment Plan)
+          if (status === 'disconnected') {
+            didNotReceive.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, reason: 'Disconnected account (unpaid / suspended)' });
+            continue;
+          }
+          if (status === 'deleted' || status === 'inactive') {
+            didNotReceive.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, reason: 'Deleted or inactive account' });
+            continue;
+          }
+          if (rawPlan.includes('NON-PAYMENT') || rawPlan.includes('UNLIMITED')) {
+            didNotReceive.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, reason: 'Non-billing plan (' + rawPlan + ')' });
+            continue;
+          }
 
           rawPlan = rawPlan.replace(/mbps/i, 'Mbps');
-
-          const PLAN_RATES = {
-            '20Mbps': 599, '30Mbps': 800, '45Mbps': 900, '50Mbps': 1000,
-            '60Mbps': 1200, '70Mbps': 1300, '100Mbps': 1500, '150Mbps': 1700,
-            '200Mbps': 2000, '300Mbps': 2700
-          };
-
           let amountStr = String(userData.amount || userData.ammount || '').trim();
           let finalAmount = 0;
           if (PLAN_RATES[rawPlan]) {
             finalAmount = PLAN_RATES[rawPlan];
           } else {
-            if (!amountStr || amountStr === '0' || amountStr === '') continue;
+            if (!amountStr || amountStr === '0' || amountStr === '') {
+              didNotReceive.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, reason: 'No plan rate or billing amount on file' });
+              continue;
+            }
             amountStr = amountStr.replace(/[^0-9.]/g, '');
             finalAmount = parseFloat(amountStr) || 0;
           }
 
-          const userAcct = userData.accountNumber || userData.account || 'TBD';
+          if (finalAmount <= 0) {
+            didNotReceive.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, reason: 'Calculated bill amount is zero' });
+            continue;
+          }
 
+          // Category 2: Skipped (Already Paid)
+          if ((userAcct && paidAccountsSet.has(userAcct)) || paidAccountsSet.has(userId)) {
+            skippedAlreadyPaid.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, amount: finalAmount, reason: 'Already paid for ' + billingMonth });
+            continue;
+          }
+
+          // Category 3: Skipped (Already Sent)
+          if ((userAcct && existingBillsSet.has(userAcct)) || existingBillsSet.has(userId)) {
+            skippedAlreadySent.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, amount: finalAmount, reason: 'Bill statement already exists for ' + billingMonth });
+            continue;
+          }
+
+          // Category 4: Send Statement
           let newBillId = '';
           for (let d = 0; d < 12; d++) {
             newBillId += Math.floor(Math.random() * 10).toString();
@@ -1731,21 +1994,34 @@ export const adminViews = {
 
           const billingRef = collection(db, "users", userId, "billing_emails");
           await addDoc(billingRef, billingEmailData);
+          sentAccounts.push({ name: userName, accountNumber: userAcct || 'N/A', plan: rawPlan, amount: finalAmount, dueDate: dueDateStr });
           sentCount++;
-
-          if (logBody) {
-            logBody.innerHTML = '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">' + (userData.name || '-') + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + userAcct + '</td><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">' + (billingEmailData.plan || '-') + '</td><td style="padding: 0.75rem 1rem; color: #fff; font-size: 0.85rem;">₱' + billingEmailData.amount + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + billingMonth + '</td><td style="padding: 0.75rem 1rem; color: #94a3b8; font-size: 0.85rem;">' + dueDateStr + '</td><td style="padding: 0.75rem 1rem;"><span style="background: rgba(16,185,129,0.1); color: #10b981; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">Sent</span></td></tr>' + logBody.innerHTML;
-          }
         }
 
-        statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Billing statements sent successfully to <strong>' + sentCount + '</strong> accounts! Generating Google Sheet...</div>';
+        // 4. Save Dispatch Log to localStorage for persistent viewing
+        const dispatchLog = {
+          id: 'LOG-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          displayTime: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+          billingMonth: billingMonth,
+          sent: sentAccounts,
+          alreadyPaid: skippedAlreadyPaid,
+          alreadySent: skippedAlreadySent,
+          excluded: didNotReceive
+        };
+        localStorage.setItem('rfiberx_billing_dispatch_logs', JSON.stringify(dispatchLog));
+        if (window.renderBillingDispatchLogs) {
+          window.renderBillingDispatchLogs();
+        }
+
+        statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Batch billing complete for <strong>' + billingMonth + '</strong>: <strong>' + sentCount + '</strong> sent, <strong>' + skippedAlreadyPaid.length + '</strong> skipped (already paid), <strong>' + skippedAlreadySent.length + '</strong> skipped (already sent), <strong>' + didNotReceive.length + '</strong> did not receive. Full details saved in the log box below!</div>';
+
         try {
           await fetch(window.BACKEND_URL + '/api/admin/create-month-sheet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ dateStr: billingMonth })
           });
-          statusEl.innerHTML = '<div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 1rem; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem;"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; flex-shrink: 0;">✓</div> Billing statements sent successfully to <strong>' + sentCount + '</strong> accounts! Google Sheet for "' + billingMonth + '" has been generated/synced!</div>';
         } catch (sheetErr) {
           console.error("Failed to generate Google Sheet", sheetErr);
         }
@@ -1908,42 +2184,27 @@ export const adminViews = {
 
       </div>
 
-      <!-- Maintenance Advisory Section -->
+      <!-- Billing Dispatch & Activity Log Section -->
       <div style="background: #151a27; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-          <div style="width: 40px; height: 40px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="width: 40px; height: 40px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div>
+              <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Billing Dispatch Log</h3>
+              <p style="color: #64748b; font-size: 0.8rem; margin: 0;">Detailed status of sent, skipped, and excluded client accounts</p>
+            </div>
           </div>
-          <div>
-            <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600; margin: 0;">Maintenance Advisory</h3>
-            <p style="color: #64748b; font-size: 0.8rem; margin: 0;">Send outage or maintenance announcements to clients</p>
-          </div>
+          <button id="comm-clear-log-btn" onclick="window.clearBillingDispatchLogs()" style="background: rgba(229, 57, 53, 0.1); color: #E53935; border: 1px solid rgba(229, 57, 53, 0.25); padding: 0.5rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem;" onmouseover="this.style.background='rgba(229, 57, 53, 0.2)'" onmouseout="this.style.background='rgba(229, 57, 53, 0.1)'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear Log
+          </button>
         </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-           <div>
-             <label style="display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Method</label>
-             <select id="comm-advisory-type" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; cursor:pointer;">
-               <option value="Email">Email Broadcast</option>
-               <option value="Messenger">Messenger Chat</option>
-             </select>
-           </div>
-           <div>
-             <label style="display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Target Audience</label>
-             <select id="comm-advisory-target" style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; cursor:pointer;">
-               <option value="All">All Active Clients</option>
-               <option value="Affected">Affected Area Only</option>
-             </select>
-           </div>
-           <div style="grid-column: span 2;">
-             <label style="display: block; color: #94a3b8; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase;">Advisory Message</label>
-             <textarea id="comm-advisory-msg" rows="4" placeholder="Enter the maintenance details..." style="width: 100%; background: #0b0f19; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.95rem; outline: none; resize: vertical; box-sizing: border-box;"></textarea>
-           </div>
+
+        <div id="comm-dispatch-log-wrapper">
+          ${window.getBillingDispatchLogsHTML ? window.getBillingDispatchLogsHTML() : ''}
         </div>
-        <button id="comm-advisory-btn" onclick="window.sendMaintenanceAdvisory()" style="background: #f59e0b; color: #000; border: none; padding: 0.85rem 2rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(245,158,11,0.3); display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
-          Send Advisory
-        </button>
-        <div id="comm-advisory-status"></div>
       </div>
     `;
     return window.renderAdminLayout('communications', 'Communications', content);
